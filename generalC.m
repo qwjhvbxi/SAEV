@@ -1,5 +1,5 @@
-% [Res]=GENERAL11(P[,extsave,dispiter])
-% Run SAEV simulation and relocation/charge otpimization.
+% [Res]=GENERALC(P[,extsave,dispiter])
+% Run SAEV simulation and relocation/charge otpimization with coordinates.
 % Vehicles start at beginning of time step, arrive at end of time step
 % 
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
