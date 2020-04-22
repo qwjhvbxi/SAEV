@@ -9,7 +9,8 @@ P.scenario='NYC2016';
 P.tripfile='NYC2016_Jan13-Mar16_10days';
 P.scenarioid=1;
 % load(['data/scenarios/' P.scenario{1} '.mat'],'T');
-% P.T=T;
+load(['data/scenarios/' P.scenario '.mat'],'T');
+P.T=T;
 
 % electricity profile 
 P.eleproftype='TokyoDA-FY2017-Reduced';
@@ -30,6 +31,7 @@ P.trlayeralg='opti';%'simplified';
 P.v2g=true;
 
 % model parameters: times
+P.tau=1;            % dataset resolution scaling factor
 P.e=2;              % time step length in minutes
 P.beta=15;
 P.thor=10;          % horizon (time steps)

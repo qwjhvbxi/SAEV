@@ -77,8 +77,8 @@ ad=P.consumption/P.battery*P.e;      % discharge rate (consumptionpermin/battery
 %     tpd=0;
 %     scenariotpd='';
 % end
-% Tr=round(P.T/P.e);
-% n=size(Tr,1);
+Tr=round(P.T/P.e);
+n=size(Tr,1);
 
 elep=repelem(P.melep,P.beta);
 % maxt=max(max(Tr)); % max distance in time steps
