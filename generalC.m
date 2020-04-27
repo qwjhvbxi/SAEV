@@ -78,7 +78,7 @@ end
 n=size(P.T,1);           % number of nodes
 tsim=1440/P.e;          % number of time steps in transport layer
 mtsim=tsim/P.beta;      % number of time steps in energy layer
-Tr=round(P.T/P.e);      % distance matrix in transport layer steps
+Tr=max(1,round(P.T/P.e));      % distance matrix in transport layer steps
 ac=round(P.chargekw/P.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.consumption/P.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(P.melep,P.beta);
