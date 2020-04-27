@@ -33,7 +33,11 @@ else
     tsim=f; % number of time steps
     b=NaN;
     
-    a=zeros(n,n,tsim);
+    a=zeros(n,n,tsim,'uint16');
+
+%     for i=1:length(A)
+%         a(A(i,1),A(i,2),Atimes(i,1))=a(A(i,1),A(i,2),Atimes(i,1))+1;
+%     end
     
     for i=1:tsim
         kt=(Atimes(:,1)==i);
