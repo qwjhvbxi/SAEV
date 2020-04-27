@@ -90,8 +90,8 @@ q(1,:)=P.initialsoc.*ones(1,P.m);      % initial state of charge
 e=zeros(tsim,P.m,'double');            % charging
 u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 u(1,:)=randi(n,1,P.m);               % initial position of vehicles
-a=zeros(tsim,n^2,'double');            % number of passengers waiting in stations
-p=zeros(P.m,2); % last position
+% a=zeros(tsim,n^2,'double');            % number of passengers waiting in stations
+% p=zeros(P.m,2); % last position
 v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
 w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
 b=zeros(mtsim,n,'double');           % imbalance
@@ -159,6 +159,9 @@ Q.selling=1;
 Q.cyclingcost=P.cyclingcost;
 % P.consumption*P.speedkmh/P.battery/60
 
+zmacro=zeros(4,mtsim+P.mthor); % matrix of optimal control variables for energy layer
+relodist=zeros(ceil(tsim/P.tx),1); % distances of relocation
+
 % all in units of time steps
 Trips.dkmed=dkemd;
 Trips.dkod=dkod;
@@ -166,12 +169,8 @@ Trips.dktrip=dktrip;
 Trips.fk=fk;
 
 
-%% setup transport layer
 
-zmacro=zeros(4,mtsim+P.mthor); % matrix of optimal control variables for energy layer
-relodist=zeros(ceil(tsim/P.tx),1); % distances of relocation
-
-stdepselector=repmat(eye(n),n,1);
+% stdepselector=repmat(eye(n),n,1);
 
 
 
@@ -216,7 +215,7 @@ for i=1:tsim
     
     %% energy layer
     
-    if ~strcmp(P.enlayeralg,'no') && rem(i,P.beta)==1 % only cases with energy layer
+    if rem(i,P.beta)==1 % only cases with energy layer
         
         % current time
         lasttimemacro=cputime;
@@ -224,36 +223,44 @@ for i=1:tsim
         % index of energy layer
         macroindex=(i-1)/P.beta+1;
         
-        if strcmp(P.enlayeralg,'opti')
+        
+        switch P.enlayeralg
             
-            % ....
+            case 'no'
+                
+                % charge as much as possible
+                zmacro(1,macroindex)=1;
             
-        elseif strcmp(P.enlayeralg,'aggregate')
+            case 'aggregate'
             
 
-            if strcmp(P.trlayeralg,'simplified') 
-                qnow=q(i,:);
-            else
-                qnow=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
-            end
-            extrasoc=0.15; % extra soc for macro simulation to account for aggregate uncertainty
-            actualminsoc=min(P.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of macro simulation
-            Q.storagemin=P.battery*P.m*actualminsoc; % kWh
+                if strcmp(P.trlayeralg,'simplified') 
+                    qnow=q(i,:);
+                else
+                    qnow=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
+                end
+                extrasoc=0.15; % extra soc for macro simulation to account for aggregate uncertainty
+                actualminsoc=min(P.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of macro simulation
+                Q.storagemin=P.battery*P.m*actualminsoc; % kWh
 
-            % dynamic variables
-            % time steps spent traveling during this horizon
-            dktripnow=dktrip(macroindex:macroindex+P.mthor-1); 
-            Q.einit=sum(qnow)*P.battery;            % total initial energy [kWh]
-            Q.etrip=dktripnow*P.consumption;        % energy used per step [kWh] 
-            Q.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
-            Q.electricityprice=P.melep(macroindex:macroindex+P.mthor-1); 
+                % dynamic variables
+                % time steps spent traveling during this horizon
+                dktripnow=dktrip(macroindex:macroindex+P.mthor-1); 
+                Q.einit=sum(qnow)*P.battery;            % total initial energy [kWh]
+                Q.etrip=dktripnow*P.consumption;        % energy used per step [kWh] 
+                Q.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
+                Q.electricityprice=P.melep(macroindex:macroindex+P.mthor-1); 
 
-            E=aevopti11(Q);
-            
-            % make sure that there is no discharging when V2G is not allowed
-            if P.v2g==0
-                E.discharging(:)=0;
-            end
+                E=aevopti11(Q);
+
+                % make sure that there is no discharging when V2G is not allowed
+                if P.v2g==0
+                    E.discharging(:)=0;
+                end
+
+                maxc=Q.dkav*Q.maxchargeminute;
+                zmacro(:,macroindex:macroindex+P.mthor-1)=[E.charging./maxc , E.discharging./maxc , maxc , Q.etrip]';
+                zmacro(isnan(zmacro))=0;
             
         end
         
@@ -271,188 +278,209 @@ for i=1:tsim
     
     %% transport layer
     
-    if strcmp(P.trlayeralg,'simplified') % simplified relocation 
+    switch P.trlayeralg
         
-        %% relocation
+        case 'opti'
+            
+            % need to re-implement
         
-        % if it's time for a relocation decision
-        if mod(i-1,P.tx)==0
-            
-            % current relocation number
-            kt=(i-1)/P.tx+1;
-            
-            % number of vehicles at each station
-            uv=histc(u(i,:),1:n);
-            
-            % expected imbalance at stations
-            b(kt,:)=uv ...
-                -a(i,:)*stdepselector ...  number of passengers waiting at each station
-                +sum(fd(i:i+P.ts,:)) ...  expected arrivals between now and now+P.ts
-                -sum(fo(i:i+P.ts+P.tr,:)) ...     expected requests between now and now+P.ts+t
-                +histc(reshape(w(i:i+P.ts,:),P.m*(P.ts+1),1),1:n)';% vehicles relocating here between now and now+P.ts
-            
-            % identify feeder and receiver stations
-            F=min(uv,(b(kt,:)-P.bmin).*(b(kt,:)>=P.bmin)); % feeders
-            R=(-b(kt,:)+P.bmin).*(b(kt,:)<P.bmin); % receivers
-            
-            % if there are imbalances and available vehicles
-            if sum(R)>0 && sum(F)>0
-                
-                % identify optimal relocation flux
-                x=optimalrelocationfluxes(F,R,Tr);
-                
-                % read results
-                [Fs,Rs,Vr]=find(x);
-                
-                % distance of relocation
-                arri=Tr(sub2ind(size(Tr),Fs,Rs)); 
-                
-                % duplicate fluxes with multiple vehicles
-                Fs=repelem(Fs,Vr);
-                Rs=repelem(Rs,Vr);
-                arri=repelem(arri,Vr);
-                
-                % satisfy longer relocation tasks first
-                [arris,dstnid]=sort(arri,'descend');
+        case 'simplified'       % simplified relocation 
+        
+            %% charging variables
 
-                for ka=1:length(arris)
+            v2gallowed=q(i,:)>P.v2gminsoc;
+            chargevector=(ones(1,P.m)*zmacro(1,macroindex)-v2gallowed*zmacro(2,macroindex))*ac;
 
-                    % find candidate vehicles for the task with enough soc
-                    candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)); 
-                    
-                    % remove unavailable vehicles
-                    candidates(candidates==0)=NaN;
-                    
-                    % sort candidate vehicles by SOC
-                    [ur,ui]=max(candidates);
 
-                    % if there is a vehicle available
-                    if ~isnan(ur)
-                        
-                        % update destination station
-                        u(i,ui)=0;
-                        
-                        % send relocation instruction
-                        w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
-                        
-                        % save length of relocation
-                        relodist(kt)=relodist(kt)+arris(ka);
-                        
+            %% relocation
+
+            % if it's time for a relocation decision
+            if mod(i-1,P.tx)==0
+
+                % current relocation number
+                kt=(i-1)/P.tx+1;
+
+                % number of vehicles at each station
+                uv=histc(u(i,:),1:n);
+
+                % number of waiting passenger at station
+                if sum(queue)>0
+                    dw=histc(A(queue(queue>0),1)',1:n);
+                else 
+                    dw=zeros(1,n);
+                end
+
+                % expected imbalance at stations
+                b(kt,:)=uv ...
+                    -dw ...  number of passengers waiting at each station
+                    +sum(fd(i:i+P.ts,:)) ...  expected arrivals between now and now+P.ts
+                    -sum(fo(i:i+P.ts+P.tr,:)) ...     expected requests between now and now+P.ts+t
+                    +histc(reshape(w(i:i+P.ts,:),P.m*(P.ts+1),1),1:n)';% vehicles relocating here between now and now+P.ts
+
+                % identify feeder and receiver stations
+                F=min(uv,(b(kt,:)-P.bmin).*(b(kt,:)>=P.bmin)); % feeders
+                R=(-b(kt,:)+P.bmin).*(b(kt,:)<P.bmin); % receivers
+
+                % if there are imbalances and available vehicles
+                if sum(R)>0 && sum(F)>0
+
+                    % identify optimal relocation flux
+                    x=optimalrelocationfluxes(F,R,Tr);
+
+                    % read results
+                    [Fs,Rs,Vr]=find(x);
+
+                    % distance of relocation
+                    arri=Tr(sub2ind(size(Tr),Fs,Rs)); 
+
+                    % duplicate fluxes with multiple vehicles
+                    Fs=repelem(Fs,Vr);
+                    Rs=repelem(Rs,Vr);
+                    arri=repelem(arri,Vr);
+
+                    % satisfy longer relocation tasks first
+                    [arris,dstnid]=sort(arri,'descend');
+
+                    for ka=1:length(arris)
+
+                        % find candidate vehicles for the task with enough soc
+                        candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)); 
+
+                        % remove unavailable vehicles
+                        candidates(candidates==0)=NaN;
+
+                        % sort candidate vehicles by SOC
+                        [ur,ui]=max(candidates);
+
+                        % if there is a vehicle available
+                        if ~isnan(ur)
+
+                            % update destination station
+                            u(i,ui)=0;
+
+                            % send relocation instruction
+                            w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
+
+                            % save length of relocation
+                            relodist(kt)=relodist(kt)+arris(ka);
+
+                        end
                     end
                 end
             end
-        end
+            
         
-        %% trip assignment
-        
-    
+            %% trip assignment
 
+            % generate trip requests for this time step
+            trips=(AbuckC((i-1)*P.e+1)+1:AbuckC(i*P.e+1))';
 
-        % generate trip requests for this time step
-        trips=(AbuckC((i-1)*P.e+1)+1:AbuckC(i*P.e+1))';
-        
-        % initialize 
-        ql=0;
-        
-        % add queued requests
-        if sum(queue)>0
-            trips=[queue(queue>0);trips];
-%             poolingok=[queuepoolingok(queue>0);poolingok];
-            queue(:)=0;
-        end
-        
-        % if there are trips
-        if ~isempty(trips)
-        
-            % for each station
-            for j=1:n
+            % initialize 
+            ql=0;
 
-                % trips starting at station k
-                tripsK=trips((A(trips,1)==j));
+            % add queued requests
+            if sum(queue)>0
+                trips=[queue(queue>0);trips];
+                queue(:)=0;
+            end
 
-                % if there are passengers waiting at station k
-                if ~isempty(tripsK)
+            % if there are trips
+            if ~isempty(trips)
 
-                    % vehicles at this station
-                    uid=(u(i,:)==j);
+                % for each station
+                for j=1:n
 
-                    % distance to move
-                    distancetomove=Tr(j,A(tripsK,2));
+                    % trips starting at station k
+                    tripsK=trips((A(trips,1)==j));
 
-                    % destination station
-                    destinations=A(tripsK,2);
+                    % if there are passengers waiting at station k
+                    if ~isempty(tripsK)
 
-                    % sort trips by distance (highest first)
-                    [distancetomovesorted,sortid]=sort(distancetomove,'descend');
-                    
-                    % for each trip
-                    for ka=1:length(distancetomovesorted)
+                        % vehicles at this station
+                        uid=find(u(i,:)==j);
 
-                        % trip ID
-                        tripID=tripsK(sortid(ka));
-                        
-                        % find candidate vehicles for the task with enough soc
-                        candidates=q(i,:).*uid.*(q(i,:) >= distancetomovesorted(ka)*ad);
+                        % soc of vehicles at this station (sorted by high soc)
+                        [qj,usortid]=sort(q(i,uid),'descend');
 
-                        % vehicle with highest soc goes
-                        [ur,ui]=max(candidates);
+                        % vehicle ID:
+                        % uid(usortid)
 
-                        if ur>0
-                            
-                            % accept request and update vehicle position
-                            u(i,ui)=0;
-                            uid(ui)=0;
-                            v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
-                            
-                            % update distance traveled
-%                             Trips.movedist(i)=Trips.movedist(i)+distancetomove;
+                        % destination station
+                        destinations=A(tripsK,2);
 
-                        else
-                            
-                            % check wait time
-                            if waiting(tripID)<P.maxwait
-                                % if waiting time of this request is less than max. wait time
-                                ql=ql+1;  % current trip
-                                waiting(tripID)=waiting(tripID)+1;
-                                queue(ql)=tripID;
-%                                 queuepoolingok(ql)=poolingok(k);
+                        % distance to move
+                        distancetomove=Tr(j,destinations);
+
+                        % sort trips by distance (highest first)
+                        [distancetomovesorted,sortid]=sort(distancetomove,'descend');
+
+                        % for each trip
+                        for ka=1:length(distancetomovesorted)
+
+                            % trip ID
+                            tripID=tripsK(sortid(ka));
+
+                            % candidates
+                            candidates=(qj>=distancetomovesorted(ka)*ad+P.minsoc);
+
+                            % if there are vehicles with enough soc
+                            if sum(candidates)>0
+
+                                % vehicle with highest soc goes
+                                usortedi=find(candidates,1);
+
+                                % vehicle id
+                                ui=uid(usortid(usortedi));
+
+                                % accept request and update vehicle position
+                                u(i,ui)=0;
+                                qj(usortedi)=0;
+                                v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
+
                             else
-                                % if max waiting exceeded, request dropped
-                                if pooling(tripID)>0
-                                    tripsdropped=find(pooling==pooling(tripID));
+
+                                % check if wait time of this request is less than max. wait time (minutes)
+                                if waiting(tripID)<P.maxwait
+
+                                    % increase waiting time (minutes) for this trip
+                                    ql=ql+1;  % current trip
+                                    waiting(tripID)=waiting(tripID)+P.e;
+
+                                    % add this trip to the queue
+                                    queue(ql)=tripID;
+
                                 else
-                                    tripsdropped=tripID;
+
+                                    % if max waiting exceeded, request dropped
+                                    if pooling(tripID)>0
+                                        tripsdropped=find(pooling==pooling(tripID));
+                                    else
+                                        tripsdropped=tripID;
+                                    end
+
+                                    % register this as a dropped request
+                                    dropped(tripsdropped)=1;
+
                                 end
-%                                 Trips.rejected(i,A(trips(k),1))=Trips.rejected(i,A(trips(k),1))+length(tripsdropped);
-                                dropped(tripsdropped)=1;
+
                             end
-                            
                         end
-                    end 
+                    end
                 end
             end
-        end
 
-        maxc=Q.dkav*Q.maxchargeminute;
-        zmacro(:,macroindex:macroindex+P.mthor-1)=[E.charging./maxc , E.discharging./maxc , maxc , Q.etrip]';
-        zmacro(isnan(zmacro))=0;
 
-        v2gallowed=q(i,:)>P.v2gminsoc;
-        
-        chargevector=(ones(1,P.m)*zmacro(1,macroindex)-v2gallowed*zmacro(2,macroindex))*ac;
-        
-        % update SOC for vehicles charging
-        e(i,:)=min(P.maxsoc,max(P.minsoc,q(i,:)+(u(i,:)>0).*chargevector))-q(i,:);
-        
-        % update SOC 
-        q(i+1,:)=min(P.maxsoc,max(P.minsoc,q(i,:)+e(i,:)-(u(i,:)==0).*ad));
-        
-        % update idle vehicle positions
-        u(i+1,:)=u(i,:)+v(i,:)+w(i,:);
-        
-        % update waiting passengers
-        a(i+1,:)=a(i,:);
-        
+            %% simulation variables update
+
+            % update SOC for vehicles charging
+            e(i,:)=min(P.maxsoc,max(P.minsoc,q(i,:)+(u(i,:)>0).*chargevector))-q(i,:);
+
+            % update SOC 
+            q(i+1,:)=min(P.maxsoc,max(P.minsoc,q(i,:)+e(i,:)-(u(i,:)==0).*ad));
+
+            % update idle vehicle positions
+            u(i+1,:)=u(i,:)+v(i,:)+w(i,:);
+
     end
     
     % record time
@@ -464,9 +492,11 @@ end
 
 %% final calculations
 
+% A(Asortindex,:)=A;
+% Atimes(Asortindex,:)=Atimes;
+
 if strcmp(P.trlayeralg,'simplified') 
     
-    Sim.d=reshape(a,tsim+1,n,n); % waiting passengers at stations [tsim x n^2]
     Sim.u=u; % final destination of vehicles (station) [tsim x m]
     Sim.q=q; % state of charge 
     Sim.e=e/ac*P.chargekw;
@@ -476,76 +506,13 @@ if strcmp(P.trlayeralg,'simplified')
     Internals.w=w;
     Internals.zmacro=zmacro;
     
-%     cfinal=reshape(c(1:n^2*tsim),n^2,tsim);
-%     dfinal=a';
-    
 end
-
-
-% %% calculate waiting times
-% 
-% % arrivals [origin/destinationPair  timesteps]
-% cfinal=[zeros(n^2,1) cfinal zeros(n^2,1)];
-% 
-% % waiting at stations [origin/destinationPair  timesteps]
-% dfinal=[dfinal zeros(n^2,1)];
-% 
-% % total arrivals
-% totalarrivals=sum(sum(cfinal));
-% 
-% % cumulative arrivals at each origin/destinationPair
-% totalenodi=[0 ; cumsum(sum(cfinal,2))];
-% 
-% % total waiting minutes
-% waitingtimesteps=zeros(totalarrivals,3);
-% 
-% % for each origin/destinationPair
-% for k=1:n^2
-%     
-%     % find moments with arrivals at origin/destinationPair
-%     arrivi=find(cfinal(k,:));
-%     
-%     % how many arrivals for each moment
-%     numeroarrivi=cfinal(k,(cfinal(k,:)>0));
-%     
-%     % initialize
-%     num=1;
-%     
-%     % for each moment when there are arrivals
-%     for k2=1:length(arrivi)
-% 
-%         for j=1:numeroarrivi(k2)
-% 
-%             davantiinfila=dfinal(k,:)-(cumsum(cfinal(k,:))-num+1);
-%             waitingtimesteps(totalenodi(k)+num,1)=arrivi(k2); % time step of request
-%             waitingtimesteps(totalenodi(k)+num,2)=k;         % origin/destination pair
-%             waitingtimesteps(totalenodi(k)+num,3)=find((davantiinfila(arrivi(k2):end)<0),1)-1; % waiting time
-% 
-%             num=num+1;
-%             
-%         end
-%     end
-% end
-% 
-% % waiting time for each passenger in minutes
-% waiting=[waitingtimesteps(:,1:2) , waitingtimesteps(:,3)*P.e];
-% 
-% % moving average [what???]
-% binsize=round(10/P.e);
-% halfbin=floor(binsize/2);
-% waitingprof4=zeros(tsim,1);
-% for k2=1:tsim
-%     waitingprof4(k2)=mean(    waiting(   logical((waiting(:,1)>=k2-halfbin).*(waiting(:,1)<=k2+halfbin))   ,3)   ,'omitnan');
-% end
-% waitingprof4(isnan(waitingprof4))=0; % for bins without arrivals, assume 0 waiting
-
-
 
 % waiting times
 Sim.waiting=waiting;
-% Sim.waitingMAV10min=waitingprof4;
-% Sim.waitsummary=[  prctile(waiting(:,3),[0,2.5,25,50,75,97.5,100])' ; mean(waiting(:,3)) ; std(waiting(:,3))  ];
-% Sim.waitsummaryLgnd=["min";"2.5 pctile";"25 pctile";"50 pctile";"75 pctile";"97.5 pctile";"max";"mean";"st.dev."];
+
+% dropped requests
+Sim.dropped=dropped;
 
 %relocation minutes
 Sim.relodist=relodist*P.e;
@@ -553,16 +520,11 @@ Sim.relodist=relodist*P.e;
 
 %% create Res struct and save results
 
-% A(Asortindex,:)=A;
-% Atimes(Asortindex,:)=Atimes;
-
-
-
 % total cpu time
 elapsed=cputime-S.starttime;
 
 % parameters of simulation
-Params.Tr=Tr;
+Params.Tr=uint8(Tr);
 Params.elep=elep;
 Params.tsim=tsim;
 
@@ -573,9 +535,10 @@ Res.Sim=Sim;
 Res.Internals=Internals;
 Res.Stats=S;
 Res.cputime=elapsed;
-Res.cost=(sum(Sim.e/60*P.e,2)')*Params.elep(1:tsim);
-Res.peakwait=max(waiting(:,3));
-Res.avgwait=mean(waiting(:,3));
+Res.cost=(sum(Sim.e/60*P.e,2)')*elep(1:tsim);
+Res.dropped=sum(dropped)/length(A);
+Res.peakwait=max(waiting);
+Res.avgwait=mean(waiting);
 
 % save results
 if extsave>0
