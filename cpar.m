@@ -9,7 +9,8 @@ P.scenario='NYC2016';
 P.tripfile='NYC2016_Jan13-Mar16_10days';
 P.scenarioid=1;
 % load(['data/scenarios/' P.scenario{1} '.mat'],'T');
-load(['data/scenarios/' P.scenario '.mat'],'T');
+load(['data/scenarios/' P.scenario '.mat'],'T','C');
+P.coords=C;
 P.T=T;
 
 % electricity profile 
@@ -27,7 +28,7 @@ P.chargingstations=[4,4;5,6];
 % model options
 P.mpcpredict=1;
 P.enlayeralg='aggregate';%'opti';
-P.trlayeralg='opti';%'simplified';
+P.trlayeralg='simplified';%'opti';
 P.v2g=true;
 
 % model parameters: times
@@ -44,11 +45,11 @@ P.rho3=0.01;        % weight of charging objective for SOC
 P.rho4=0.000001;    % weight for fixed charge
 
 % model parameters: fleet
-P.m=10;             % number of vehicles
+P.m=10000;             % number of vehicles
 P.battery=50;
 P.chargekw=20;
-P.consumption=0.15*30/60;% consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
-P.cyclingcost=20000/2000; % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
+P.consumption=0.15*30/60;   % consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
+P.cyclingcost=20000/2000;   % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
 
 % operational parameters
 P.initialsoc=0.7;
@@ -57,3 +58,10 @@ P.maxsoc=1;
 P.mminsoc=0.3;  % macro min soc
 P.mmaxsoc=1;    % macro max soc
 P.v2gminsoc=0.5;
+P.maxwait=10;
+
+% model parameters: aggregate
+P.tx=5;
+P.ts=15;
+P.tr=15;
+P.bmin=0;
