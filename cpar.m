@@ -2,13 +2,17 @@
 % Create default P struct.
 % 
 % see also SCENARIOGENERATOR
-
+function P=cpar(Scenario)
 
 % scenario data
-P.scenario='NYC2016';
-P.tripfile='NYC2016_Jan13-Mar16_10days';
+P.scenario=Scenario;
+switch Scenario 
+    case 'NYC2016'
+        P.tripfile='NYC2016_Jan13-Mar16_10days';
+    case 'NYC2018'
+        P.tripfile='NY_trips_10wed_0103-0307_minutes';
+end
 P.scenarioid=1;
-% load(['data/scenarios/' P.scenario{1} '.mat'],'T');
 load(['data/scenarios/' P.scenario '.mat'],'T','C');
 P.coords=C;
 P.T=T;
@@ -32,7 +36,6 @@ P.trlayeralg='simplified';%'opti';
 P.v2g=true;
 
 % model parameters: times
-P.tau=1;            % dataset resolution scaling factor
 P.e=2;              % time step length in minutes
 P.beta=15;
 P.thor=10;          % horizon (time steps)
@@ -65,3 +68,5 @@ P.tx=5;
 P.ts=15;
 P.tr=15;
 P.bmin=0;
+
+
