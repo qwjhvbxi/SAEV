@@ -57,9 +57,7 @@ end
 %% load external files: trips and energy
 
 % Note: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,ASortInd,AbuckC, ...
-    ODistToNode,ONodeID,DDistToNode,DNodeID]=...
-    generateGPStrips(P);
+[A,Atimes,ASortInd,AbuckC,~,~,~,~]=generateGPStrips(P);
 
 load(['data/' P.eleproftype '.mat'],'u','x');
 melep=repmat(repelem(x(:,P.eleprofseed),2/P.e,1),2,1);      % macro elep
@@ -75,8 +73,7 @@ mtsim=tsim/P.beta;          % number of time steps in energy layer
 Tr=max(1,round(P.T/P.e));   % distance matrix in transport layer steps
 ac=round(P.chargekw/P.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.consumption/P.battery*P.e;             % discharge rate per time step (normalized)
-elep=repelem(melep,P.beta);               % electricity price in each transport layer time step
-% maxt=max(max(Tr)); % max distance in time steps
+elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
 
 % main variables
 q=zeros(tsim,P.m,'double');            % SOC
@@ -85,8 +82,6 @@ u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
 w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
 b=zeros(mtsim,n,'double');             % imbalance
-% a=zeros(tsim,n^2,'double');            % number of passengers waiting in stations
-% p=zeros(P.m,2); % last position
 
 % working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
@@ -464,9 +459,6 @@ end
 
 %% final calculations
 
-% A(Asortindex,:)=A;
-% Atimes(Asortindex,:)=Atimes;
-
 if strcmp(P.trlayeralg,'simplified') 
     
     Sim.u=u; % final destination of vehicles (station) [tsim x m]
@@ -481,10 +473,10 @@ if strcmp(P.trlayeralg,'simplified')
 end
 
 % waiting times
-Sim.waiting=waiting;
+Sim.waiting=sparse(reorderVectors(waiting,ASortInd));
 
 % dropped requests
-Sim.dropped=dropped;
+Sim.dropped=sparse(reorderVectors(dropped,ASortInd));
 
 %relocation minutes
 Sim.relodist=relodist*P.e;
