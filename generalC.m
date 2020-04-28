@@ -2,6 +2,17 @@
 % Run SAEV simulation and relocation/charge otpimization with coordinates.
 % Vehicles start at beginning of time step, arrive at end of time step
 % 
+
+
+
+
+% dkav, maxchargeminute.. in minutes?? maxgrid??? it's a mess!!
+
+
+
+
+
+%
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
 % CONTROLLA PREVISIONE TRIP: COME è CALCOLATA?
@@ -65,43 +76,53 @@ if extsave<2
 end
 
 
-%% load trips
+%% load external files: trips and energy
 
-% can add secondary trip file (real vs expected/forecasted)
+% Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC, ...
     ODistToNode,ONodeID,DDistToNode,DNodeID]=...
     generateGPStrips(P);
 
+load(['data/' P.eleproftype '.mat'],'u','x');
+melep=repmat(repelem(x(:,P.eleprofseed),2/P.e,1),2,1);      % macro elep
+clear u x;
+
 
 %% parameters of simulation
 
-n=size(P.T,1);           % number of nodes
-tsim=1440/P.e;          % number of time steps in transport layer
-mtsim=tsim/P.beta;      % number of time steps in energy layer
-Tr=max(1,round(P.T/P.e));      % distance matrix in transport layer steps
+% parameters
+n=size(P.T,1);              % number of nodes
+tsim=1440/P.e;              % number of time steps in transport layer
+mtsim=tsim/P.beta;          % number of time steps in energy layer
+Tr=max(1,round(P.T/P.e));   % distance matrix in transport layer steps
 ac=round(P.chargekw/P.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.consumption/P.battery*P.e;             % discharge rate per time step (normalized)
-elep=repelem(P.melep,P.beta);
+elep=repelem(melep,P.beta);               % electricity price in each transport layer time step
 % maxt=max(max(Tr)); % max distance in time steps
 
 % main variables
 q=zeros(tsim,P.m,'double');            % SOC
-q(1,:)=P.initialsoc.*ones(1,P.m);      % initial state of charge
 e=zeros(tsim,P.m,'double');            % charging
 u=zeros(tsim,P.m,'double');            % vehicles in charging stations
-u(1,:)=randi(n,1,P.m);               % initial position of vehicles
-% a=zeros(tsim,n^2,'double');            % number of passengers waiting in stations
-% p=zeros(P.m,2); % last position
 v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
 w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
-b=zeros(mtsim,n,'double');           % imbalance
+b=zeros(mtsim,n,'double');             % imbalance
+% a=zeros(tsim,n^2,'double');            % number of passengers waiting in stations
+% p=zeros(P.m,2); % last position
 
+% working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
 % poolid=0;                    % index of pool
+
+% results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
 dropped=zeros(length(A),1);  % request is dropped?
-traveled=zeros(length(A),1); % trip length (minutes)
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
+% traveled=zeros(length(A),1); % trip length (minutes)
+
+% initial states
+q(1,:)=P.initialsoc.*ones(1,P.m);      % initial state of charge
+u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
 
 
 %% trip processing
@@ -109,20 +130,17 @@ pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % generate number of arrivals at each station
 statsname=['data/temp/tripstats-' P.tripfile '-' num2str(P.scenarioid) '-N' num2str(n) '.mat'];
 if exist(statsname,'file')
-    load(statsname,'Atimes','fo','fd','dk');
+    load(statsname,'fo','fd','dk');
 else
     [Atimes,fo,fd,dk]=tripstats2(A,Atimes,P.T);
     save(statsname,'Atimes','fo','fd','dk');
 end
 
-% c=double(convertAtimes(A,Atimes,n,tsim));
-% C=reshape(c(1:n^2*tsim),n^2,tsim); % arrivals actual
-
 
 %% setup energy layer
 
 % generate EMD in case of aggregate energy layer
-emdname=['data/temp/emd-' P.tripfile '-' num2str(P.scenarioid) '.mat'];
+emdname=['data/temp/emd-' P.tripfile '-' num2str(P.scenarioid) '-' num2str(mtsim) '.mat'];
 if exist(emdname,'file')
     load(emdname,'dkemd','dkod','dktrip','fk');
 else
@@ -144,19 +162,16 @@ else
     
 end
 
-% static variables
-Q.minfinalsoc=1; % this only works for optimization horizon of ~24h
-Q.storagemax=P.battery*P.m*P.maxsoc; % kWh
-Q.maxchargeminute=ac*P.battery;%P.chargekw/60*P.e;  % kWh per time step per vehicle
-Q.T=P.mthor;
-Q.v2g=P.v2g;
-Q.socboost=0;
-Q.eta=1;
-gridexchange=P.chargekw*P.m*P.beta;
-Q.gridimportconstraint=gridexchange;
-Q.gridexportconstraint=gridexchange;
-Q.selling=1;
-Q.cyclingcost=P.cyclingcost;
+% energy layer variable: static values
+E.minfinalsoc=1;            % this only works for optimization horizon of ~24h
+E.socboost=0;
+E.v2g=P.v2g;
+E.storagemax=P.battery*P.m*P.maxsoc; % kWh
+E.maxchargeminute=ac*P.battery;%P.chargekw/60*P.e;  % kWh per time step per vehicle
+E.T=P.mthor;                % number of time steps in energy layer
+E.eta=1;
+E.selling=1;
+E.cyclingcost=P.cyclingcost;
 % P.consumption*P.speedkmh/P.battery/60
 
 zmacro=zeros(4,mtsim+P.mthor); % matrix of optimal control variables for energy layer
@@ -167,11 +182,6 @@ Trips.dkmed=dkemd;
 Trips.dkod=dkod;
 Trips.dktrip=dktrip;
 Trips.fk=fk;
-
-
-
-% stdepselector=repmat(eye(n),n,1);
-
 
 
 
@@ -232,34 +242,32 @@ for i=1:tsim
                 zmacro(1,macroindex)=1;
             
             case 'aggregate'
-            
-
+                
+                % dynamic variables
                 if strcmp(P.trlayeralg,'simplified') 
                     qnow=q(i,:);
                 else
                     qnow=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
                 end
-                extrasoc=0.15; % extra soc for macro simulation to account for aggregate uncertainty
-                actualminsoc=min(P.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of macro simulation
-                Q.storagemin=P.battery*P.m*actualminsoc; % kWh
+                extrasoc=0.15; % extra soc for energy layer to account for aggregate uncertainty
+                actualminsoc=min(P.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+                E.storagemin=P.battery*P.m*actualminsoc; % kWh
 
-                % dynamic variables
-                % time steps spent traveling during this horizon
-                dktripnow=dktrip(macroindex:macroindex+P.mthor-1); 
-                Q.einit=sum(qnow)*P.battery;            % total initial energy [kWh]
-                Q.etrip=dktripnow*P.consumption;        % energy used per step [kWh] 
-                Q.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
-                Q.electricityprice=P.melep(macroindex:macroindex+P.mthor-1); 
+                dktripnow=dktrip(macroindex:macroindex+P.mthor-1); % time steps spent traveling during this horizon
+                E.einit=sum(qnow)*P.battery;            % total initial energy [kWh]
+                E.etrip=dktripnow*P.consumption;        % energy used per step [kWh] 
+                E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
+                E.electricityprice=melep(macroindex:macroindex+P.mthor-1); 
 
-                E=aevopti11(Q);
+                ELayerResults=aevopti11(E);
 
                 % make sure that there is no discharging when V2G is not allowed
                 if P.v2g==0
-                    E.discharging(:)=0;
+                    ELayerResults.discharging(:)=0;
                 end
 
-                maxc=Q.dkav*Q.maxchargeminute;
-                zmacro(:,macroindex:macroindex+P.mthor-1)=[E.charging./maxc , E.discharging./maxc , maxc , Q.etrip]';
+                maxc=E.dkav*E.maxchargeminute;
+                zmacro(:,macroindex:macroindex+P.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
                 zmacro(isnan(zmacro))=0;
             
         end
@@ -313,8 +321,8 @@ for i=1:tsim
                 % expected imbalance at stations
                 b(kt,:)=uv ...
                     -dw ...  number of passengers waiting at each station
-                    +sum(fd(i:i+P.ts,:)) ...  expected arrivals between now and now+P.ts
-                    -sum(fo(i:i+P.ts+P.tr,:)) ...     expected requests between now and now+P.ts+t
+                    +sum(fd((i-1)*P.e+1:(i+P.ts)*P.e,:)) ...  expected arrivals between now and now+P.ts
+                    -sum(fo((i-1)*P.e+1:(i+P.ts+P.tr)*P.e,:)) ...     expected requests between now and now+P.ts+t
                     +histc(reshape(w(i:i+P.ts,:),P.m*(P.ts+1),1),1:n)';% vehicles relocating here between now and now+P.ts
 
                 % identify feeder and receiver stations
