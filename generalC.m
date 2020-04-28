@@ -3,6 +3,7 @@
 % Vehicles start at beginning of time step, arrive at end of time step
 % 
 % TO DO:
+% reorganize results
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
 % CONTROLLA PREVISIONE TRIP: COME è CALCOLATA?
@@ -54,7 +55,9 @@ if extsave<2
 end
 
 
-%% load external files: trips and energy
+%% load external files: scenario, trips and energy
+
+load(['data/scenarios/' P.scenario '.mat'],'T','C');
 
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,~,~,~,~]=generateGPStrips(P);
@@ -67,10 +70,10 @@ clear u x;
 %% parameters of simulation
 
 % parameters
-n=size(P.T,1);              % number of nodes
+n=size(T,1);              % number of nodes
 tsim=1440/P.e;              % number of time steps in transport layer
 mtsim=tsim/P.beta;          % number of time steps in energy layer
-Tr=max(1,round(P.T/P.e));   % distance matrix in transport layer steps
+Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
 ac=round(P.chargekw/P.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.consumption/P.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
@@ -105,7 +108,7 @@ statsname=['data/temp/tripstats-' P.tripfile '-' num2str(P.scenarioid) '-N' num2
 if exist(statsname,'file')
     load(statsname,'fo','fd','dk');
 else
-    [Atimes,fo,fd,dk]=tripstats2(A,Atimes,P.T);
+    [Atimes,fo,fd,dk]=tripstats2(A,Atimes,T);
     save(statsname,'Atimes','fo','fd','dk');
 end
 
@@ -129,7 +132,7 @@ else
         % dkemd, dkod, dktrip are the number of minutes of travel for
         % relocation, serving trips, and total, respectively, for each
         % energy layer time step. fk
-        [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,P.T,mtsim);
+        [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,mtsim);
     end
     save(emdname,'dkemd','dkod','dktrip','fk');
     
