@@ -2,36 +2,14 @@
 % Run SAEV simulation and relocation/charge otpimization with coordinates.
 % Vehicles start at beginning of time step, arrive at end of time step
 % 
-
-
-
-
-% dkav, maxchargeminute.. in minutes?? maxgrid??? it's a mess!!
-
-
-
-
-
-%
+% TO DO:
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
 % CONTROLLA PREVISIONE TRIP: COME è CALCOLATA?
-% CHECK P.T: SHOULD BE MINUTES, NOT TIME STEPS
 % PUT ALL INFO OF LAYERS INTO STRUCT WITH ALL RELEVANT INFO
 % AT WHICH STATIONS VEHICLES ARE CHARGED? (where to put charging stations) 
 % FAI DOCUMENTATION
-% 
 % add model version to Hash?
-% 
-% what do I still want in Results?
-% simulation variables:
-% - moving vehicles (p) -> change into more meaningful variable
-% decision variables:
-% - relocation decisions
-% - pickup decisions (associated with each request)
-% - charging decision at energy layer
-% internals:
-% - variables dependent on algorithm
 % 
 % see also PARAMS
 
@@ -184,24 +162,6 @@ Trips.dktrip=dktrip;
 Trips.fk=fk;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 %% variables for progress display and display initializations
 
 S.starttime=cputime;
@@ -269,7 +229,11 @@ for i=1:tsim
                 maxc=E.dkav*E.maxchargeminute;
                 zmacro(:,macroindex:macroindex+P.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
                 zmacro(isnan(zmacro))=0;
+
+            otherwise
             
+                error('energy layer must be either ''no'' or ''aggregate'' ');
+
         end
         
         % record time
@@ -279,11 +243,6 @@ for i=1:tsim
     end
     
     
-    
-    
-    
-    
-    
     %% transport layer
     
     switch P.trlayeralg
@@ -291,6 +250,7 @@ for i=1:tsim
         case 'opti'
             
             % need to re-implement
+            error('''opti'' transport layer is under implementation');
         
         case 'simplified'       % simplified relocation 
         
@@ -488,6 +448,10 @@ for i=1:tsim
 
             % update idle vehicle positions
             u(i+1,:)=u(i,:)+v(i,:)+w(i,:);
+            
+        otherwise
+            
+            error('transport layer must be either ''opti'' or ''simplified'' ');
 
     end
     

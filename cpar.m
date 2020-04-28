@@ -62,9 +62,9 @@ P.v2gminsoc=0.5;
 P.maxwait=10;
 
 % model parameters: aggregate
-P.tx=5;
-P.ts=15;
-P.tr=15;
+P.tx=5;  % time steps
+P.ts=15; % time steps
+P.tr=15; % time steps
 P.bmin=0;
 
 
