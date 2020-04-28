@@ -62,7 +62,7 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,~,~,~,~]=generateGPStrips(P);
 
-load(['data/' P.eleproftype '.mat'],'u','x');
+load(['data/eleprices/' P.eleproftype '.mat'],'u','x');
 melep=repmat(repelem(x(:,P.eleprofseed),2/P.e,1),2,1);      % macro elep
 clear u x;
 
@@ -74,8 +74,8 @@ n=size(T,1);              % number of nodes
 tsim=1440/P.e;              % number of time steps in transport layer
 mtsim=tsim/P.beta;          % number of time steps in energy layer
 Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
-ac=round(P.chargekw/P.battery/60*P.e,3);    % charge rate per time step (normalized)
-ad=P.consumption/P.battery*P.e;             % discharge rate per time step (normalized)
+ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
+ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
 
 % main variables
@@ -97,7 +97,7 @@ pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 
 % initial states
-q(1,:)=P.initialsoc.*ones(1,P.m);      % initial state of charge
+q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
 u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
 
 
@@ -142,16 +142,16 @@ end
 E.minfinalsoc=1;            % this only works for optimization horizon of ~24h
 E.socboost=0;
 E.v2g=P.v2g;
-E.storagemax=P.battery*P.m*P.maxsoc; % kWh
-E.maxchargeminute=ac*P.battery;%P.chargekw/60*P.e;  % kWh per time step per vehicle
-E.T=P.mthor;                % number of time steps in energy layer
+E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc; % kWh
+E.maxchargeminute=ac*P.Tech.battery;%P.chargekw/60*P.e;  % kWh per time step per vehicle
+E.T=P.EnergyLayer.mthor;                % number of time steps in energy layer
 E.eta=1;
 E.selling=1;
-E.cyclingcost=P.cyclingcost;
+E.cyclingcost=P.Tech.cyclingcost;
 % P.consumption*P.speedkmh/P.battery/60
 
-zmacro=zeros(4,mtsim+P.mthor); % matrix of optimal control variables for energy layer
-relodist=zeros(ceil(tsim/P.tx),1); % distances of relocation
+zmacro=zeros(4,mtsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
+relodist=zeros(ceil(tsim/P.TransportLayer.tx),1); % distances of relocation
 
 % all in units of time steps
 Trips.dkmed=dkemd;
@@ -208,14 +208,14 @@ for i=1:tsim
                     qnow=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
                 end
                 extrasoc=0.15; % extra soc for energy layer to account for aggregate uncertainty
-                actualminsoc=min(P.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
-                E.storagemin=P.battery*P.m*actualminsoc; % kWh
+                actualminsoc=min(P.Operations.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+                E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
-                dktripnow=dktrip(macroindex:macroindex+P.mthor-1); % time steps spent traveling during this horizon
-                E.einit=sum(qnow)*P.battery;            % total initial energy [kWh]
-                E.etrip=dktripnow*P.consumption;        % energy used per step [kWh] 
+                dktripnow=dktrip(macroindex:macroindex+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
+                E.einit=sum(qnow)*P.Tech.battery;            % total initial energy [kWh]
+                E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
-                E.electricityprice=melep(macroindex:macroindex+P.mthor-1); 
+                E.electricityprice=melep(macroindex:macroindex+P.EnergyLayer.mthor-1); 
 
                 ELayerResults=aevopti11(E);
 
@@ -225,7 +225,7 @@ for i=1:tsim
                 end
 
                 maxc=E.dkav*E.maxchargeminute;
-                zmacro(:,macroindex:macroindex+P.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
+                zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
                 zmacro(isnan(zmacro))=0;
 
             otherwise
@@ -254,17 +254,17 @@ for i=1:tsim
         
             %% charging variables
 
-            v2gallowed=q(i,:)>P.v2gminsoc;
+            v2gallowed=q(i,:)>P.Operations.v2gminsoc;
             chargevector=(ones(1,P.m)*zmacro(1,macroindex)-v2gallowed*zmacro(2,macroindex))*ac;
 
 
             %% relocation
 
             % if it's time for a relocation decision
-            if mod(i-1,P.tx)==0
+            if mod(i-1,P.TransportLayer.tx)==0
 
                 % current relocation number
-                kt=(i-1)/P.tx+1;
+                kt=(i-1)/P.TransportLayer.tx+1;
 
                 % number of vehicles at each station
                 uv=histc(u(i,:),1:n);
@@ -279,13 +279,13 @@ for i=1:tsim
                 % expected imbalance at stations
                 b(kt,:)=uv ...
                     -dw ...  number of passengers waiting at each station
-                    +sum(fd((i-1)*P.e+1:(i+P.ts)*P.e,:)) ...  expected arrivals between now and now+P.ts
-                    -sum(fo((i-1)*P.e+1:(i+P.ts+P.tr)*P.e,:)) ...     expected requests between now and now+P.ts+t
-                    +histc(reshape(w(i:i+P.ts,:),P.m*(P.ts+1),1),1:n)';% vehicles relocating here between now and now+P.ts
+                    +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+P.ts
+                    -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+P.ts+t
+                    +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+P.ts
 
                 % identify feeder and receiver stations
-                F=min(uv,(b(kt,:)-P.bmin).*(b(kt,:)>=P.bmin)); % feeders
-                R=(-b(kt,:)+P.bmin).*(b(kt,:)<P.bmin); % receivers
+                F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
+                R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
 
                 % if there are imbalances and available vehicles
                 if sum(R)>0 && sum(F)>0
@@ -387,7 +387,7 @@ for i=1:tsim
                             tripID=tripsK(sortid(ka));
 
                             % candidates
-                            candidates=(qj>=distancetomovesorted(ka)*ad+P.minsoc);
+                            candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
 
                             % if there are vehicles with enough soc
                             if sum(candidates)>0
@@ -406,7 +406,7 @@ for i=1:tsim
                             else
 
                                 % check if wait time of this request is less than max. wait time (minutes)
-                                if waiting(tripID)<P.maxwait
+                                if waiting(tripID)<P.Operations.maxwait
 
                                     % increase waiting time (minutes) for this trip
                                     ql=ql+1;  % current trip
@@ -439,10 +439,10 @@ for i=1:tsim
             %% simulation variables update
 
             % update SOC for vehicles charging
-            e(i,:)=min(P.maxsoc,max(P.minsoc,q(i,:)+(u(i,:)>0).*chargevector))-q(i,:);
+            e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(u(i,:)>0).*chargevector))-q(i,:);
 
             % update SOC 
-            q(i+1,:)=min(P.maxsoc,max(P.minsoc,q(i,:)+e(i,:)-(u(i,:)==0).*ad));
+            q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(u(i,:)==0).*ad));
 
             % update idle vehicle positions
             u(i+1,:)=u(i,:)+v(i,:)+w(i,:);
@@ -466,7 +466,7 @@ if strcmp(P.trlayeralg,'simplified')
     
     Sim.u=u; % final destination of vehicles (station) [tsim x m]
     Sim.q=q; % state of charge 
-    Sim.e=e/ac*P.chargekw;
+    Sim.e=e/ac*P.Tech.chargekw;
     
     Internals.b=b;
     Internals.v=v;

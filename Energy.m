@@ -2,8 +2,8 @@
 
 P=cpar('NYC2018');
 P.scenarioid=1;
-P.maxwait=0;
 P.e=2;
+P.Operations.maxwait=0;
 % P.enlayeralg='no';
 % P.consumption=0;
 Res2=generalC(P,-1,1)

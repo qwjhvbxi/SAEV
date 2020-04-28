@@ -32,20 +32,20 @@ P.trlayeralg='simplified';%'opti';
 P.v2g=true;
 P.e=2;              % time step length in minutes
 P.beta=15;
+P.m=10000;             % number of vehicles
 
 % technical parameters
-P.m=10000;             % number of vehicles
-P.battery=50;
-P.chargekw=20;
-P.consumption=0.15*30/60;   % consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
-P.cyclingcost=20000/2000;   % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
+Tech.battery=50;
+Tech.chargekw=20;
+Tech.consumption=0.15*30/60;   % consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
+Tech.cyclingcost=20000/2000;   % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
 
 % operational parameters
-P.initialsoc=0.7;
-P.minsoc=0.2;
-P.maxsoc=1;
-P.v2gminsoc=0.5;
-P.maxwait=10;
+Operations.initialsoc=0.7;
+Operations.minsoc=0.2;
+Operations.maxsoc=1;
+Operations.v2gminsoc=0.5;
+Operations.maxwait=10;
 
 % % transport layer: opti
 % Transport.thor=10;          % horizon (time steps)
@@ -58,30 +58,16 @@ P.maxwait=10;
 Transport.tx=5;  % time steps
 Transport.ts=15; % time steps
 Transport.tr=15; % time steps
+Transport.bmin=0;
 
 % energy layer: aggregate
 Energy.mthor=48;         % macro horizon (macro time step)
-Energy.bmin=0;
 Energy.mminsoc=0.3;  % macro min soc
 Energy.mmaxsoc=1;    % macro max soc
 
-P.Energy=Energy;
-P.Transport=Transport;
-
-
-% % transport layer opti
-% P.thor=10;          % horizon (time steps)
-% P.rho1=0.01;        % weight of secondary objective
-% P.rho2=0.01;        % weight of charging objective for electricity price
-% P.rho3=0.01;        % weight of charging objective for SOC
-% P.rho4=0.000001;    % weight for fixed charge
-% 
-% % energy layer: aggregate
-% P.mthor=48;         % macro horizon (macro time step)
-% P.tx=5;  % time steps
-% P.ts=15; % time steps
-% P.tr=15; % time steps
-% P.bmin=0;
-% P.mminsoc=0.3;  % macro min soc
-% P.mmaxsoc=1;    % macro max soc
+% append to main struct
+P.Tech=Tech;
+P.Operations=Operations;
+P.EnergyLayer=Energy;
+P.TransportLayer=Transport;
 
