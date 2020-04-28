@@ -9,8 +9,6 @@
 %   v2g                 boolean
 %   socboost
 %   eta
-%   gridimportconstraint
-%   gridexportconstraint
 %   selling
 %   cyclingcost
 %   einit
@@ -18,6 +16,8 @@
 %   dkav
 %   electricityprice
 % optional:
+%   gridimportconstraint
+%   gridexportconstraint
 %   generators          format: [ min , max , cost/kWh , costOn ]
 %   startupinit
 %   surplus
@@ -42,6 +42,12 @@ if ~isfield(Q,'startupinit')
 end
 if ~isfield(Q,'emissionsGridProfile')
     Q.emissionsGridProfile=zeros(Q.T,1);
+end
+if ~isfield(Q,'gridimportconstraint')
+    Q.gridimportconstraint=Inf;
+end
+if ~isfield(Q,'gridexportconstraint')
+    Q.gridexportconstraint=Inf;
 end
 
 
