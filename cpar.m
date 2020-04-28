@@ -20,8 +20,6 @@ P.T=T;
 % electricity profile 
 P.eleproftype='TokyoDA-FY2017-Reduced';
 P.eleprofseed=311;%u(1);
-load(['data/' P.eleproftype '.mat'],'u','x');
-P.melep=repmat(x(:,P.eleprofseed),2,1);      % macro elep
 
 % clear T u x
 
