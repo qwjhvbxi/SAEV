@@ -7,7 +7,6 @@
 %   maxchargeminute
 %   T
 %   v2g                 boolean
-%   socboost
 %   eta
 %   selling
 %   cyclingcost
@@ -16,6 +15,7 @@
 %   dkav
 %   electricityprice
 % optional:
+%   socboost
 %   gridimportconstraint
 %   gridexportconstraint
 %   generators          format: [ min , max , cost/kWh , costOn ]
@@ -48,6 +48,9 @@ if ~isfield(Q,'gridimportconstraint')
 end
 if ~isfield(Q,'gridexportconstraint')
     Q.gridexportconstraint=Inf;
+end
+if ~isfield(Q,'socboost')
+    Q.socboost=0;
 end
 
 
