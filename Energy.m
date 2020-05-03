@@ -6,7 +6,7 @@ P.e=2;
 P.Operations.maxwait=0;
 % P.enlayeralg='no';
 % P.consumption=0;
-Res2=generalC(P,-1,1)
+Res2=generalC(P,-1,2)
 
 
 %% launch over several days
