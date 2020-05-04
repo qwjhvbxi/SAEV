@@ -32,6 +32,8 @@ scatter(C(:,1),C(:,2),5)
 
 axis equal
 
+save('data/scenarios/NYC2016-small.mat','C','T');
+
 
 %% select only a part of the trips
 
@@ -53,6 +55,5 @@ axis equal
 figure
 plot(histc(Atimes(:,1),0:10:1440))
 
-
-
+save([DataFolder 'trips/NYC2016-small_13Jan.mat'],'A','Atimes');
 

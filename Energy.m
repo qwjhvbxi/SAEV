@@ -1,11 +1,6 @@
 %% launch simulation
 
-P=cpar('NYC2018');
-P.scenarioid=1;
-P.e=2;
-P.Operations.maxwait=0;
-% P.enlayeralg='no';
-% P.consumption=0;
+P=cpar('NYC2016-small');
 Res2=generalC(P,-1,2)
 
 

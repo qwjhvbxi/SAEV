@@ -9,7 +9,7 @@
 function P=cpar(Scenario)
 
 % scenario name (corresponding to associated file in 'data/scenarios/')
-P.scenario=Scenario;    
+P.scenario=Scenario;
 
 % trip file associated with scenario
 switch Scenario 
@@ -17,6 +17,8 @@ switch Scenario
         P.tripfile='NYC2016_Jan13-Mar16_10days';
     case 'NYC2018'
         P.tripfile='NY_trips_10wed_0103-0307_minutes';
+    case 'NYC2016-small'
+        P.tripfile='NYC2016-small_13Jan';
 end
 P.scenarioid=1;     % which day of the trip file
 
@@ -27,8 +29,6 @@ P.eleprofseed=311;  % which day of the electricity file
 
 % simulation options
 P.mpcpredict=1;
-P.enlayeralg='aggregate';%'opti';
-P.trlayeralg='simplified';%'opti';
 P.v2g=true;
 P.e=2;              % time step length in minutes
 P.beta=15;
@@ -47,20 +47,24 @@ Operations.maxsoc=1;
 Operations.v2gminsoc=0.5;
 Operations.maxwait=10;
 
+
 % % transport layer: opti
-% Transport.thor=10;          % horizon (time steps)
-% Transport.rho1=0.01;        % weight of secondary objective
-% Transport.rho2=0.01;        % weight of charging objective for electricity price
-% Transport.rho3=0.01;        % weight of charging objective for SOC
-% Transport.rho4=0.000001;    % weight for fixed charge
+P.trlayeralg='opti';
+Transport.thor=10;          % horizon (time steps)
+Transport.rho1=0.01;        % weight of secondary objective
+Transport.rho2=0.01;        % weight of charging objective for electricity price
+Transport.rho3=0.01;        % weight of charging objective for SOC
+Transport.rho4=0.000001;    % weight for fixed charge
 
 % transport layer: simplified
-Transport.tx=5;  % time steps
-Transport.ts=15; % time steps
-Transport.tr=15; % time steps
-Transport.bmin=0;
+% P.trlayeralg='simplified';
+% Transport.tx=5;  % time steps
+% Transport.ts=15; % time steps
+% Transport.tr=15; % time steps
+% Transport.bmin=0;
 
 % energy layer: aggregate
+P.enlayeralg='aggregate';
 Energy.mthor=48;         % macro horizon (macro time step)
 Energy.mminsoc=0.3;  % macro min soc
 Energy.mmaxsoc=1;    % macro max soc
@@ -70,4 +74,11 @@ P.Tech=Tech;
 P.Operations=Operations;
 P.EnergyLayer=Energy;
 P.TransportLayer=Transport;
+
+% case-dependent adjustments
+switch Scenario 
+    case 'NYC2016-small'
+        P.m=30;
+        
+end
 
