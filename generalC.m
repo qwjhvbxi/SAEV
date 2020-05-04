@@ -4,13 +4,9 @@
 % 
 % TO DO:
 % reorganize results
+% add mode choice
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
-% CONTROLLA PREVISIONE TRIP: COME è CALCOLATA?
-% PUT ALL INFO OF LAYERS INTO STRUCT WITH ALL RELEVANT INFO
-% AT WHICH STATIONS VEHICLES ARE CHARGED? (where to put charging stations) 
-% FAI DOCUMENTATION
-% add model version to Hash?
 % 
 % see also PARAMS
 
@@ -108,7 +104,7 @@ statsname=['data/temp/tripstats-' P.tripfile '-' num2str(P.scenarioid) '-N' num2
 if exist(statsname,'file')
     load(statsname,'fo','fd','dk');
 else
-    [Atimes,fo,fd,dk]=tripstats2(A,Atimes,T);
+    [~,fo,fd,dk]=tripstats2(A,Atimes,T);
     save(statsname,'Atimes','fo','fd','dk');
 end
 
@@ -140,7 +136,6 @@ end
 
 % energy layer variable: static values
 E.minfinalsoc=1;            % this only works for optimization horizon of ~24h
-E.socboost=0;
 E.v2g=P.v2g;
 E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc; % kWh
 E.maxchargeminute=ac*P.Tech.battery;%P.chargekw/60*P.e;  % kWh per time step per vehicle
@@ -160,6 +155,55 @@ Trips.dktrip=dktrip;
 Trips.fk=fk;
 
 
+%% setup opti transport layer
+
+if strcmp(P.trlayeralg,'opti') 
+    
+    maxt=max(Tr(:));
+    varno=n^2+P.m*n*(2+maxt)+P.m; % passengers waiting, cars positions, cars waiting |  ~58 million in my model
+    ctrno=n^2*P.m*2+P.m*2;
+
+    % create transport layer matrices
+    [namesim]=generatematrices2(n,P.m,Tr,maxt,ac,ad,P.TransportLayer.thor,P.Operations.maxsoc,P.Operations.minsoc);
+    load(namesim);
+    
+    % initializations of state variables
+    uinit=zeros(n,P.m);           % vehicles waiting at a station - binary variable
+    uinit(u(1,:)+(0:P.m-1)*n)=1;
+    uinit=reshape(uinit,[n*P.m,1]);
+    x=[zeros(n^2,1);zeros(n*P.m*(maxt+1),1);uinit;q(1,:)];
+    
+    % initializations of simulation variables
+    cname=['data/temp/c-' P.tripfile '-' num2str(P.scenarioid) '.mat'];
+    if exist(cname,'file')
+        load(cname,'c');
+    else
+        c=double(convertAtimes(A,Atimes,n,tsim));
+        save(cname,'c');
+    end
+	X=[x zeros(length(x),tsim)];          % matrix of results
+    z=zeros(ctrno,tsim);        % matrix of optimal control variables
+    C=zeros(varno,tsim);        % matrix of static values
+    C(1:n^2,:)=reshape(c(1:n^2*tsim),n^2,tsim); % add arrivals
+    zmacro=zeros(4,mtsim+P.mthor); % matrix of optimal control variables for energy layer
+    
+    % intlinprog options
+    if parcomp || dispiter==0
+        displayopt='none';
+    else
+        displayopt='iter';
+    end
+    
+    % Matlab version check
+    try
+        options=optimoptions('intlinprog','RelativeGapTolerance',0.02,'IntegerTolerance',1e-4,'MaxTime',1000,'LPMaxIterations',5e5,'Display',displayopt);%,'MaxNodes',10000,'Heuristics','none');%,'IntegerTolerance',1e-3);
+    catch
+        options=optimoptions('intlinprog','TolGapRel',0.02,'MaxTime',1000,'LPMaxIter',5e5,'Display',displayopt); % matlab 2015
+    end
+    
+end
+
+
 %% variables for progress display and display initializations
 
 S.starttime=cputime;
@@ -176,9 +220,9 @@ comptime=[cputime;zeros(tsim,1)];
 for i=1:tsim
     
     
-	%% display progress    
+	% display progress    
     
-    displayState(i,tsim,dispiter,comptime,40)
+    displayState(i,tsim,dispiter,comptime(i)-comptime(1),40)
     
     
     %% energy layer
@@ -202,17 +246,12 @@ for i=1:tsim
             case 'aggregate'
                 
                 % dynamic variables
-                if strcmp(P.trlayeralg,'simplified') 
-                    qnow=q(i,:);
-                else
-                    qnow=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
-                end
                 extrasoc=0.15; % extra soc for energy layer to account for aggregate uncertainty
-                actualminsoc=min(P.Operations.minsoc+extrasoc,mean(qnow)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+                actualminsoc=min(P.Operations.minsoc+extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
                 dktripnow=dktrip(macroindex:macroindex+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
-                E.einit=sum(qnow)*P.Tech.battery;            % total initial energy [kWh]
+                E.einit=sum(q(i,:))*P.Tech.battery;            % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
                 E.electricityprice=melep(macroindex:macroindex+P.EnergyLayer.mthor-1); 
@@ -248,8 +287,68 @@ for i=1:tsim
         case 'opti'
             
             % need to re-implement
-            error('''opti'' transport layer is under implementation');
+            % error('''opti'' transport layer is under implementation');
+            
+            % adjust values of known parameters (vector b)
+
+            % multiply by current Param.x and add static values
+            bdist=bdis*X(1:varno,i)   +bdisc  +bdisC*[c(n^2*(i-1)+1:n^2*i)  ; cexpected(n^2*(i)+1:n^2*(i+P.thor-1))]; % bdist must be positive
+            beqt=beq*X(1:varno,i)    +beqc   ;%+beqC*c(n^2*(i-1)+1:n^2*(i+P.thor));
         
+            % objective function
+            f1=fx+P.rho1*fu ; % transport
+            
+            % add values from energy layer
+            
+            % max charge for each vehicle
+            maxc=Q.dkav*Q.maxchargeminute;
+            
+            % add values from energy layer to transport layer
+            zmacro(:,macroindex:macroindex+P.mthor-1)=[E.charging./maxc , E.discharging./maxc , maxc , Q.etrip]';
+            zmacro(isnan(zmacro))=0;
+            
+            currentsoc=X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m  ,   i);
+            v2gallowed=[ones(P.m,1);(currentsoc>P.v2gminsoc)]*ones(1,P.mthor);
+            chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+P.mthor-1),P.m,1).*v2gallowed,P.mthor*2*P.m,1),P.beta,1);
+            
+            selector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.thor,1));
+            ub(selector)=chargevector(1:P.thor*P.m*2)*ac;
+            
+            f=(f1-(fq-fqv2g)*P.rho4)/P.thor;
+            
+            Aequ=Aeq;
+            beqtu=beqt;
+            
+            
+%         elseif strcmp(P.enlayeralg,'no')
+%             
+%             if scheduled==1
+%                 % add electricity price to objective function
+%                 f=(f1   - fsoc*P.rho3      +P.rho2*(fq).*(repelem(elep(i:i+P.thor-1),ctrno,1))     )/P.thor;
+%             else 
+%                 % unscheduled case
+%                 f=(f1-fq*P.rho4)/P.thor;
+%             end
+%             
+%             Aequ=Aeq;
+%             beqtu=beqt;
+%             
+%         end
+        
+        
+            % transport layer optimization
+        
+            zres=intlinprog(f,intcon,Adis,bdist,Aequ,beqtu,lb,ub,options);
+            
+            z(:,i)=round(zres(1:ctrno),3);
+            
+            % calculate new Param.x (using first time step of solution)
+            X(1:varno,i+1)=round(A*X(1:varno,i)+B*z(:,i)+C(:,i),4);
+            
+            
+            q(i,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
+            
+            
         case 'simplified'       % simplified relocation 
         
             %% charging variables
@@ -457,21 +556,30 @@ for i=1:tsim
     S.trlayerCPUtime(i)=cputime-S.lasttime;
     S.lasttime=cputime;
     
+    % update cputime of this step
+	comptime(i+1)=cputime;
+    
 end
 
 
 %% final calculations
 
+Sim.u=u; % final destination of vehicles (station) [tsim x m]
+Sim.q=q; % state of charge 
+Sim.e=e/ac*P.Tech.chargekw;
+
 if strcmp(P.trlayeralg,'simplified') 
-    
-    Sim.u=u; % final destination of vehicles (station) [tsim x m]
-    Sim.q=q; % state of charge 
-    Sim.e=e/ac*P.Tech.chargekw;
     
     Internals.b=b;
     Internals.v=v;
     Internals.w=w;
     Internals.zmacro=zmacro;
+    
+end
+
+if strcmp(P.trlayeralg,'opti') 
+    
+    Internals.X=X;
     
 end
 
@@ -486,6 +594,8 @@ Sim.relodist=relodist*P.e;
 
 
 %% create Res struct and save results
+
+% Note: need to reorganize results struct
 
 % total cpu time
 elapsed=cputime-S.starttime;
