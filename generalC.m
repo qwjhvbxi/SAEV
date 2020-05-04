@@ -310,7 +310,7 @@ for i=1:tsim
             q(i,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
             
             % create charge vector
-            v2gallowed=[ones(P.m,1);(q(i,:)>P.Operations.v2gminsoc)]*ones(1,P.EnergyLayer.mthor);
+            v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,P.EnergyLayer.mthor);
             chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+P.EnergyLayer.mthor-1),P.m,1).*v2gallowed,P.EnergyLayer.mthor*2*P.m,1),P.beta,1);
             
             selector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.TransportLayer.thor,1));
@@ -345,8 +345,6 @@ for i=1:tsim
             
             % calculate new Param.x (using first time step of solution)
             X(1:varno,i+1)=round(Aopti*X(1:varno,i)+Bopti*z(:,i)+C(:,i),4);
-            
-            
             
             
         case 'simplified'       % simplified relocation 
@@ -481,6 +479,11 @@ for i=1:tsim
 
                         % for each trip
                         for ka=1:length(distancetomovesorted)
+                            
+                            % NOTE: implement choice model here
+                            % 1. estimate waiting time
+                            % 2. estimate cost
+                            % 3. decide 
 
                             % trip ID
                             tripID=tripsK(sortid(ka));

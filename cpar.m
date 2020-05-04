@@ -50,7 +50,7 @@ Operations.maxwait=10;
 
 % % transport layer: opti
 P.trlayeralg='opti';
-Transport.thor=10;          % horizon (time steps)
+Transport.thor=8;          % horizon (time steps)
 Transport.rho1=0.01;        % weight of secondary objective
 Transport.rho2=0.01;        % weight of charging objective for electricity price
 Transport.rho3=0.01;        % weight of charging objective for SOC
