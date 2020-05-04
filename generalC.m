@@ -165,7 +165,7 @@ if strcmp(P.trlayeralg,'opti')
 
     % create transport layer matrices
     [namesim]=generatematrices3(n,P.m,Tr,maxt,ac,ad,P.TransportLayer.thor,P.Operations.maxsoc,P.Operations.minsoc);
-    load(namesim);
+    load(namesim,'Aopti','Bopti','Adis','bdis','bdisc','bdisC','Aeq','beq','beqc','intcon','lb','ub','fu','fx','fq','fqv2g','fsoc');
     
     % initializations of state variables
     uinit=zeros(n,P.m);           % vehicles waiting at a station - binary variable
@@ -181,25 +181,22 @@ if strcmp(P.trlayeralg,'opti')
         c=double(convertAtimes(A,Atimes,n,tsim));
         save(cname,'c');
     end
+    c1=cat(3,c,zeros(n,n,tsim)); % add padding
     
-    % add padding
-    c1=cat(3,c,zeros(n,n,tsim));
-    
-    % create vectors for optimization (cexpected) and simulation (c)
+    % create arrival vectors for optimization (cexpected) and simulation (c)
     c=reshape(c1(:,:,2:tsim+P.TransportLayer.thor+1),[n^2*(tsim+P.TransportLayer.thor),1]);
     if P.mpcpredict==1
         cexpected=c;
     else
-%         cexpected=reshape(c2(:,:,2:tsim+P.thor+1),[n^2*(tsim+P.thor),1]);
+        % NOTE: need to implement case with imperfect predictions
+        error('mpcpredict=0 not implemented'); 
     end
     
-    
-    
-	X=[x zeros(length(x),tsim)];          % matrix of results
+    % create optimization variables
+	X=[x zeros(length(x),tsim)];% matrix of results
     z=zeros(ctrno,tsim);        % matrix of optimal control variables
     C=zeros(varno,tsim);        % matrix of static values
     C(1:n^2,:)=reshape(c(1:n^2*tsim),n^2,tsim); % add arrivals
-    zmacro=zeros(4,mtsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
     
     % intlinprog options
     if parcomp || dispiter==0
@@ -214,6 +211,10 @@ if strcmp(P.trlayeralg,'opti')
     catch
         options=optimoptions('intlinprog','TolGapRel',0.02,'MaxTime',1000,'LPMaxIter',5e5,'Display',displayopt); % matlab 2015
     end
+    
+    % objective function
+    f1=fx+P.TransportLayer.rho1*fu ; 
+    f=(f1-(fq-fqv2g)*P.TransportLayer.rho4)/P.TransportLayer.thor;
     
 end
 
@@ -300,36 +301,21 @@ for i=1:tsim
         
         case 'opti'
             
-            % need to re-implement
-            % error('''opti'' transport layer is under implementation');
-            
-            % adjust values of known parameters (vector b)
-
-            % multiply by current Param.x and add static values
+            % adjust values of known parameters (vector b): multiply by current Param.x and add static values
             bdist=bdis*X(1:varno,i)  +  bdisc  + ...
                 bdisC * [  c(n^2*(i-1)+1:n^2*i)  ; cexpected(n^2*(i)+1:n^2*(i+P.TransportLayer.thor-1))]; % bdist must be positive
             beqt=beq*X(1:varno,i)    +beqc   ;%+beqC*c(n^2*(i-1)+1:n^2*(i+P.TransportLayer.thor));
-        
-            % objective function
-            f1=fx+P.TransportLayer.rho1*fu ; % transport
             
-            % add values from energy layer
+            % calculate current SOC
+            q(i,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
             
-            % max charge for each vehicle
-            maxc=E.dkav*E.maxchargeminute;
-            
-            % add values from energy layer to transport layer
-            zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
-            zmacro(isnan(zmacro))=0;
-            
-            currentsoc=X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m  ,   i);
-            v2gallowed=[ones(P.m,1);(currentsoc>P.Operations.v2gminsoc)]*ones(1,P.EnergyLayer.mthor);
+            % create charge vector
+            v2gallowed=[ones(P.m,1);(q(i,:)>P.Operations.v2gminsoc)]*ones(1,P.EnergyLayer.mthor);
             chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+P.EnergyLayer.mthor-1),P.m,1).*v2gallowed,P.EnergyLayer.mthor*2*P.m,1),P.beta,1);
             
             selector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.TransportLayer.thor,1));
             ub(selector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
             
-            f=(f1-(fq-fqv2g)*P.TransportLayer.rho4)/P.TransportLayer.thor;
             
             Aequ=Aeq;
             beqtu=beqt;
@@ -352,16 +338,15 @@ for i=1:tsim
         
         
             % transport layer optimization
-        
             zres=intlinprog(f,intcon,Adis,bdist,Aequ,beqtu,lb,ub,options);
             
+            % optimal control variables in this time step
             z(:,i)=round(zres(1:ctrno),3);
             
             % calculate new Param.x (using first time step of solution)
             X(1:varno,i+1)=round(Aopti*X(1:varno,i)+Bopti*z(:,i)+C(:,i),4);
             
             
-            q(i,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
             
             
         case 'simplified'       % simplified relocation 
