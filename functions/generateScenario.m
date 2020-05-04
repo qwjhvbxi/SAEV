@@ -1,13 +1,15 @@
 %% 
 
-function [T,C,A,Atimes,tripsubset]=generateScenario(Ac,Atimes,N,setlimits)
+function [T,C,A,Atimes,tripsubset]=generateScenario(AcoordComplete,AtimesComplete,N,setlimits)
 
 
 if nargin==4
-    tripsubset=logical((Ac(:,1)>=setlimits(1,1)).*(Ac(:,1)<=setlimits(1,2)).*(Ac(:,2)>=setlimits(2,1)).*(Ac(:,2)<=setlimits(2,2)).* ...
-                       (Ac(:,3)>=setlimits(1,1)).*(Ac(:,3)<=setlimits(1,2)).*(Ac(:,4)>=setlimits(2,1)).*(Ac(:,4)<=setlimits(2,2)));
+    tripsubset=logical((AcoordComplete(:,1)>=setlimits(1,1)).*(AcoordComplete(:,1)<=setlimits(1,2)).* ...
+                       (AcoordComplete(:,2)>=setlimits(2,1)).*(AcoordComplete(:,2)<=setlimits(2,2)).* ...
+                       (AcoordComplete(:,3)>=setlimits(1,1)).*(AcoordComplete(:,3)<=setlimits(1,2)).* ...
+                       (AcoordComplete(:,4)>=setlimits(2,1)).*(AcoordComplete(:,4)<=setlimits(2,2)));
 else 
-    tripsubset=true(length(Ac),1);
+    tripsubset=true(length(AcoordComplete),1);
 end
 
 if 0
@@ -19,17 +21,28 @@ end
 
 %% create C
 
-Ac2=Ac(tripsubset,:);
-[IDX,C,SUMD,D]=kmeans([Ac2(:,1:2);Ac2(:,3:4)],N);
+Acoords=AcoordComplete(tripsubset,:);
+[IDX,C,SUMD,D]=kmeans([Acoords(:,1:2);Acoords(:,3:4)],N);
 
 
 %% create A, Atimes
 
 A=reshape(IDX,sum(tripsubset),2);
-Atimes=Atimes(tripsubset,:);
+Atimes=AtimesComplete(tripsubset,:);
 
 
 %% create T
+
+TravelTimes=min(60,Atimes(:,2)-Atimes(:,1));
+
+% fix travel times for trips ending next day
+TravelTimes(TravelTimes<-1380)=TravelTimes(TravelTimes<-1380)+1440;
+
+% remove errors/outliers
+ProblemTrips=(TravelTimes<0);
+TravelTimes(ProblemTrips)=[];
+A(ProblemTrips,:)=[];
+Atimes(ProblemTrips,:)=[];
 
 origSelector=zeros(length(A),N);
 destSelector=zeros(length(A),N);
@@ -37,7 +50,7 @@ for i=1:N
     origSelector(:,i)=logical(A(:,1)==i);
     destSelector(:,i)=logical(A(:,2)==i);
 end
-TravelTimes=min(60,Atimes(:,2)-Atimes(:,1));
+
 
 T=zeros(N,N);
 for i=1:N
