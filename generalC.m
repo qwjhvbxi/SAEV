@@ -1,8 +1,15 @@
 % [Res]=GENERALC(P[,extsave,dispiter])
-% Run SAEV simulation and relocation/charge otpimization with coordinates.
-% Vehicles start at beginning of time step, arrive at end of time step
+% Run SAEV simulation and relocation/charge oprimization with coordinates.
+% Vehicles start at beginning of time step, arrive at end of time step.
 % 
 % TO DO:
+% for opti:
+%   fix charge vector
+%   add in results: u (position of vehicles)
+%                 	e (energy exchanged)
+%                   waiting
+%                   dropped
+%                   relodist
 % reorganize results
 % add mode choice
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
@@ -54,9 +61,10 @@ end
 %% load external files: scenario, trips and energy
 
 load(['data/scenarios/' P.scenario '.mat'],'T','C');
+P.coords=C;
 
 % Note: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,ASortInd,AbuckC,~,~,~,~]=generateGPStrips(P);
+[A,Atimes,ASortInd,AbuckC,~,~,~,~,RawDistance]=generateGPStrips(P);
 
 load(['data/eleprices/' P.eleproftype '.mat'],'u','x');
 melep=repmat(repelem(x(:,P.eleprofseed),2/P.e,1),2,1);      % macro elep
@@ -108,6 +116,12 @@ else
     save(statsname,'Atimes','fo','fd','dk');
 end
 
+% calculate benefit of alternative trip
+VOT=15; % value of time
+WalkingSpeed=4;
+% PTSpeed=20;
+AltBenefitWalking=-RawDistance/WalkingSpeed*VOT;
+% AltBenefitPT=-RawDistance/WalkingSpeed*VOT;
 
 %% setup energy layer
 
@@ -480,13 +494,15 @@ for i=1:tsim
                         % for each trip
                         for ka=1:length(distancetomovesorted)
                             
+                            % trip ID
+                            tripID=tripsK(sortid(ka));
+                            
                             % NOTE: implement choice model here
                             % 1. estimate waiting time
                             % 2. estimate cost
                             % 3. decide 
-
-                            % trip ID
-                            tripID=tripsK(sortid(ka));
+%                             UtilitySAEV=Costkm
+%                             AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(AltBenefitWalking(tripID)));
 
                             % candidates
                             candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
@@ -583,6 +599,12 @@ end
 if strcmp(P.trlayeralg,'opti') 
     
     Internals.X=X;
+    
+    d=X(1:n^2,:);
+    p=X(n^2+1:n^2+n*P.m*(maxt+1),:);
+    u=X(n^2+n*P.m*(maxt+1)+1:n^2+n*P.m*(maxt+1)+n*P.m,:);
+    
+    Waiting=calcwaitingtimes(P,c,d);
     
 end
 
