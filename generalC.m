@@ -11,6 +11,7 @@
 %                   dropped
 %                   relodist
 % reorganize results
+% Tr is in timesteps!!! fix with minutes
 % add mode choice
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
@@ -61,7 +62,6 @@ end
 %% load external files: scenario, trips and energy
 
 load(['data/scenarios/' P.scenario '.mat'],'T','C');
-P.coords=C;
 
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,~,~,~,~,RawDistance]=generateGPStrips(P);
@@ -76,7 +76,7 @@ clear u x;
 % parameters
 n=size(T,1);              % number of nodes
 tsim=1440/P.e;              % number of time steps in transport layer
-mtsim=tsim/P.beta;          % number of time steps in energy layer
+etsim=tsim/P.beta;          % number of time steps in energy layer
 Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
@@ -88,7 +88,7 @@ e=zeros(tsim,P.m,'double');            % charging
 u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
 w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
-b=zeros(mtsim,n,'double');             % imbalance
+b=zeros(etsim,n,'double');             % imbalance
 
 % working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
@@ -97,6 +97,7 @@ queue=zeros(100,1);          % temporary variable to store queued arrivals
 % results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
 dropped=zeros(length(A),1);  % request is dropped?
+chosenmode=zeros(length(A),1);% request is dropped?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 
@@ -119,14 +120,15 @@ end
 % calculate benefit of alternative trip
 VOT=15; % value of time
 WalkingSpeed=4;
+CostMinute=0.2;
 % PTSpeed=20;
-AltBenefitWalking=-RawDistance/WalkingSpeed*VOT;
-% AltBenefitPT=-RawDistance/WalkingSpeed*VOT;
+UtilityWalking=-RawDistance/WalkingSpeed*VOT;
+% UtilityPT=-RawDistance/WalkingSpeed*VOT;
 
 %% setup energy layer
 
 % generate EMD in case of aggregate energy layer
-emdname=['data/temp/emd-' P.tripfile '-' num2str(P.scenarioid) '-' num2str(mtsim) '.mat'];
+emdname=['data/temp/emd-' P.tripfile '-' num2str(P.scenarioid) '-' num2str(etsim) '.mat'];
 if exist(emdname,'file')
     load(emdname,'dkemd','dkod','dktrip','fk');
 else
@@ -142,7 +144,7 @@ else
         % dkemd, dkod, dktrip are the number of minutes of travel for
         % relocation, serving trips, and total, respectively, for each
         % energy layer time step. fk
-        [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,mtsim);
+        [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
     end
     save(emdname,'dkemd','dkod','dktrip','fk');
     
@@ -159,7 +161,7 @@ E.selling=1;
 E.cyclingcost=P.Tech.cyclingcost;
 % P.consumption*P.speedkmh/P.battery/60
 
-zmacro=zeros(4,mtsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
+zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
 relodist=zeros(ceil(tsim),1); % distances of relocation
 
 % all in units of time steps
@@ -238,7 +240,7 @@ end
 S.starttime=cputime;
 S.lasttime=S.starttime;
 S.trlayerCPUtime=zeros(tsim,1);
-S.enlayerCPUtime=zeros(mtsim,1);
+S.enlayerCPUtime=zeros(etsim,1);
 
 % set up time variables for cputime calculation
 comptime=[cputime;zeros(tsim,1)];
@@ -501,52 +503,61 @@ for i=1:tsim
                             % 1. estimate waiting time
                             % 2. estimate cost
                             % 3. decide 
-%                             UtilitySAEV=Costkm
-%                             AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(AltBenefitWalking(tripID)));
+                            UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute);
+                            AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
+                            
+                            if rand()<AcceptProbability
+                            
+                                chosenmode(tripID)=1;
+                                
+                                % candidates
+                                candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
 
-                            % candidates
-                            candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
+                                % if there are vehicles with enough soc
+                                if sum(candidates)>0
 
-                            % if there are vehicles with enough soc
-                            if sum(candidates)>0
+                                    % vehicle with highest soc goes
+                                    usortedi=find(candidates,1);
 
-                                % vehicle with highest soc goes
-                                usortedi=find(candidates,1);
+                                    % vehicle id
+                                    ui=uid(usortid(usortedi));
 
-                                % vehicle id
-                                ui=uid(usortid(usortedi));
-
-                                % accept request and update vehicle position
-                                u(i,ui)=0;
-                                qj(usortedi)=0;
-                                v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
-
-                            else
-
-                                % check if wait time of this request is less than max. wait time (minutes)
-                                if waiting(tripID)<P.Operations.maxwait
-
-                                    % increase waiting time (minutes) for this trip
-                                    ql=ql+1;  % current trip
-                                    waiting(tripID)=waiting(tripID)+P.e;
-
-                                    % add this trip to the queue
-                                    queue(ql)=tripID;
+                                    % accept request and update vehicle position
+                                    u(i,ui)=0;
+                                    qj(usortedi)=0;
+                                    v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
 
                                 else
 
-                                    % if max waiting exceeded, request dropped
-                                    if pooling(tripID)>0
-                                        tripsdropped=find(pooling==pooling(tripID));
+                                    % check if wait time of this request is less than max. wait time (minutes)
+                                    if waiting(tripID)<P.Operations.maxwait
+
+                                        % increase waiting time (minutes) for this trip
+                                        waiting(tripID)=waiting(tripID)+P.e;
+
+                                        % add this trip to the queue
+                                        ql=ql+1;  % current trip
+                                        queue(ql)=tripID;
+
                                     else
-                                        tripsdropped=tripID;
+
+                                        % if max waiting exceeded, request dropped
+                                        if pooling(tripID)>0
+                                            tripsdropped=find(pooling==pooling(tripID));
+                                        else
+                                            tripsdropped=tripID;
+                                        end
+
+                                        % register this as a dropped request
+                                        dropped(tripsdropped)=1;
+
                                     end
 
-                                    % register this as a dropped request
-                                    dropped(tripsdropped)=1;
-
                                 end
-
+                            else
+                                
+                                chosenmode(tripID)=0;
+                                
                             end
                         end
                     end
@@ -616,6 +627,9 @@ Sim.dropped=sparse(reorderVectors(dropped,ASortInd));
 
 %relocation minutes
 Sim.relodist=relodist*P.e;
+
+
+Sim.chosenmode=reorderVectors(chosenmode,ASortInd);
 
 
 %% create Res struct and save results
