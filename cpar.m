@@ -6,10 +6,14 @@
 % 
 % see also SCENARIOGENERATOR
 
-function P=cpar(Scenario)
+function P=cpar(Scenario,trlayer)
 
 % scenario name (corresponding to associated file in 'data/scenarios/')
 P.scenario=Scenario;
+
+if nargin<2
+    trlayer='simplified';
+end
 
 % trip file associated with scenario
 switch Scenario 
@@ -47,21 +51,24 @@ Operations.maxsoc=1;
 Operations.v2gminsoc=0.5;
 Operations.maxwait=10;
 
+P.trlayeralg=trlayer;
 
 % % transport layer: opti
-P.trlayeralg='opti';
-Transport.thor=8;          % horizon (time steps)
-Transport.rho1=0.01;        % weight of secondary objective
-Transport.rho2=0.01;        % weight of charging objective for electricity price
-Transport.rho3=0.01;        % weight of charging objective for SOC
-Transport.rho4=0.000001;    % weight for fixed charge
+if strcmp(P.trlayeralg,'opti')
+    Transport.thor=8;          % horizon (time steps)
+    Transport.rho1=0.01;        % weight of secondary objective
+    Transport.rho2=0.01;        % weight of charging objective for electricity price
+    Transport.rho3=0.01;        % weight of charging objective for SOC
+    Transport.rho4=0.000001;    % weight for fixed charge
+end
 
 % transport layer: simplified
-% P.trlayeralg='simplified';
-% Transport.tx=5;  % time steps
-% Transport.ts=15; % time steps
-% Transport.tr=15; % time steps
-% Transport.bmin=0;
+if strcmp(P.trlayeralg,'simplified')
+    Transport.tx=5;  % time steps
+    Transport.ts=15; % time steps
+    Transport.tr=15; % time steps
+    Transport.bmin=0;
+end
 
 % energy layer: aggregate
 P.enlayeralg='aggregate';
