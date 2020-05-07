@@ -97,7 +97,7 @@ queue=zeros(100,1);          % temporary variable to store queued arrivals
 % results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
 dropped=zeros(length(A),1);  % request is dropped?
-chosenmode=zeros(length(A),1);% request is dropped?
+chosenmode=true(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 
@@ -201,11 +201,11 @@ if strcmp(P.trlayeralg,'opti')
     
     % create arrival vectors for optimization (cexpected) and simulation (c)
     c=reshape(c1(:,:,2:tsim+P.TransportLayer.thor+1),[n^2*(tsim+P.TransportLayer.thor),1]);
-    if P.mpcpredict==1
+    if P.mpcpredict==true
         cexpected=c;
     else
         % NOTE: need to implement case with imperfect predictions
-        error('mpcpredict=0 not implemented'); 
+        error('mpcpredict==false not implemented'); 
     end
     
     % create optimization variables
@@ -499,17 +499,21 @@ for i=1:tsim
                             % trip ID
                             tripID=tripsK(sortid(ka));
                             
-                            % NOTE: implement choice model here
-                            % 1. estimate waiting time
-                            % 2. estimate cost
-                            % 3. decide 
-                            UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute);
-                            AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
+                            if P.modechoice
                             
-                            if rand()<AcceptProbability
+                                % NOTE: implement choice model here
+                                % 1. estimate waiting time
+                                % 2. estimate cost
+                                % 3. decide 
+                                UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute);
+                                AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
+
+                                chosenmode(tripID)=(rand()<AcceptProbability);
                             
-                                chosenmode(tripID)=1;
-                                
+                            end
+                            
+                            if chosenmode(tripID)==1
+                            
                                 % candidates
                                 candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
 
@@ -556,7 +560,7 @@ for i=1:tsim
                                 end
                             else
                                 
-                                chosenmode(tripID)=0;
+                                % walking
                                 
                             end
                         end

@@ -32,7 +32,8 @@ P.eleprofseed=311;  % which day of the electricity file
 % P.chargingstations=[4,4;5,6];
 
 % simulation options
-P.mpcpredict=1;
+P.mpcpredict=true;
+P.modechoice=false;
 P.v2g=true;
 P.e=2;              % time step length in minutes
 P.beta=15;
