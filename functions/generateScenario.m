@@ -85,8 +85,11 @@ else
     T=[];
     
     Acoord=AcoordComplete(tripsubset,:);
-    Distances=(Acoord(:,1)*ones(1,N)-ones(length(Acoord),1)*C(:,1)')^2+(Acoord(:,2)*ones(1,N)-ones(length(Acoord),1)*C(:,2)')^2;
-    [~,A]=min(Distances,[],2);
+    DistancesOrigin=(Acoord(:,1)*ones(1,N)-ones(length(Acoord),1)*C(:,1)').^2+(Acoord(:,2)*ones(1,N)-ones(length(Acoord),1)*C(:,2)').^2;
+    DistancesDestination=(Acoord(:,3)*ones(1,N)-ones(length(Acoord),1)*C(:,1)').^2+(Acoord(:,4)*ones(1,N)-ones(length(Acoord),1)*C(:,2)').^2;
+    [~,A1]=min(DistancesOrigin,[],2);
+    [~,A2]=min(DistancesDestination,[],2);
+    A=[A1 A2];
     
 end
 
