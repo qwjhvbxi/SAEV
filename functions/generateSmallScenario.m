@@ -57,3 +57,13 @@ plot(histc(Atimes(:,1),0:10:1440))
 
 save([DataFolder 'trips/NYC2016-small_13Jan.mat'],'A','Atimes');
 
+
+%% even smaller scenario
+
+load([DataFolder 'trips/NYC2016-small_13Jan.mat'],'A','Atimes');
+
+k=100;
+M=randperm(length(A),k);
+A=A(M,:);
+Atimes=Atimes(M,:);
+save([DataFolder 'trips/NYC2016-small2_13Jan.mat'],'A','Atimes');

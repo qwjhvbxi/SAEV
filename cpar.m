@@ -4,6 +4,7 @@
 % - 'NYC2016'
 % - 'NYC2018'
 % - 'NYC2016-small'
+% - 'NYC2016-small2'
 % 
 % see also SCENARIOGENERATOR
 
@@ -24,6 +25,9 @@ switch Scenario
         P.tripfile='NY_trips_10wed_0103-0307_minutes';
     case 'NYC2016-small'
         P.tripfile='NYC2016-small_13Jan';
+    case 'NYC2016-small2'
+        P.scenario='NYC2016-small';
+        P.tripfile='NYC2016-small2_13Jan';
 end
 P.scenarioid=1;     % which day of the trip file
 
@@ -87,7 +91,8 @@ P.TransportLayer=Transport;
 % case-dependent adjustments
 switch Scenario 
     case 'NYC2016-small'
-        P.m=30;
-        
+        P.m=30; 
+    case 'NYC2016-small2'
+        P.m=10;
 end
 
