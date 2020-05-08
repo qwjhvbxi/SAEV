@@ -3,6 +3,7 @@
 % Scenarios currently available: 
 % - 'NYC2016'
 % - 'NYC2018'
+% - 'NYC2016-small'
 % 
 % see also SCENARIOGENERATOR
 
