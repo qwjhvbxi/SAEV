@@ -34,8 +34,28 @@ axis equal
 
 save('data/scenarios/NYC2016-small.mat','C','T');
 
+return
 
 %% select only a part of the trips
+
+
+addpath functions
+load('data/scenarios/NYC2016-small.mat','C','T');
+
+DataFolder=setDataFolder();
+
+P=cpar('NYC2016');
+
+tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
+load(tripFileLocation,'A','Atimes');
+Ac=A;
+Actimes=Atimes;
+Ac10=Ac{P.scenarioid}(tripsubset,:);
+
+setlimits=[0,5;0,5];
+
+[~,~,A2,A2times,tripsubset]=generateScenario(Ac{P.scenarioid},Actimes{P.scenarioid},10,setlimits,C);
+
 
 % remove trips with same origin/destination
 DifferentOD=(A2(:,1)~=A2(:,2));
@@ -51,6 +71,7 @@ Atimes=A3times(M,:);
 
 
 Ac10_3=Ac10_2(M,:);
+colori=lines(10);
 figure
 hold on
 for i=1:10
