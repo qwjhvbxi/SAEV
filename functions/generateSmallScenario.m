@@ -37,17 +37,24 @@ save('data/scenarios/NYC2016-small.mat','C','T');
 
 %% select only a part of the trips
 
+% remove trips with same origin/destination
+DifferentOD=(A2(:,1)~=A2(:,2));
+A3=A2(DifferentOD,:);
+A3times=A2times(DifferentOD,:);
+Ac10_2=Ac10(DifferentOD,:);
+
+
 k=300;
-M=randperm(length(A2),k);
-A=A2(M,:);
-Atimes=A2times(M,:);
+M=randperm(length(A3),k);
+A=A3(M,:);
+Atimes=A3times(M,:);
 
 
-Ac10_2=Ac10(M,:);
+Ac10_3=Ac10_2(M,:);
 figure
 hold on
 for i=1:10
-    scatter(Ac10_2(A(:,1)==i,1),Ac10_2(A(:,1)==i,2),5,colori(i,:))
+    scatter(Ac10_3(A(:,1)==i,1),Ac10_3(A(:,1)==i,2),5,colori(i,:))
 end
 scatter(C(:,1),C(:,2),50)
 axis equal
