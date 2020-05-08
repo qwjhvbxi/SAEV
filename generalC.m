@@ -232,6 +232,13 @@ if strcmp(P.trlayeralg,'opti')
     f1=fx+P.TransportLayer.rho1*fu ; 
     f=(f1-(fq-fqv2g)*P.TransportLayer.rho4)/P.TransportLayer.thor;
     
+    % ub selector for charging constraints
+    ubSelector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.TransportLayer.thor,1));
+    
+    % how many steps of energy layer are considered in transport layer (MPC)
+    EMaxHorizon=ceil(P.TransportLayer.thor/P.beta);
+    % EMaxHorizon=P.EnergyLayer.mthor;
+    
 end
 
 
@@ -294,6 +301,7 @@ for i=1:tsim
                     ELayerResults.discharging(:)=0;
                 end
 
+                % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
                 maxc=E.dkav*E.maxchargeminute;
                 zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
                 zmacro(isnan(zmacro))=0;
@@ -324,13 +332,15 @@ for i=1:tsim
             
             % calculate current SOC
             q(i,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
+                       
+            % determine which vehicles can discharge to grid
+            v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,EMaxHorizon);
             
             % create charge vector
-            v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,P.EnergyLayer.mthor);
-            chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+P.EnergyLayer.mthor-1),P.m,1).*v2gallowed,P.EnergyLayer.mthor*2*P.m,1),P.beta,1);
+            chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+EMaxHorizon-1),P.m,1).*v2gallowed,EMaxHorizon*2*P.m,1),P.beta,1);
             
-            selector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.TransportLayer.thor,1));
-            ub(selector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
+            % apply charging constraints
+            ub(ubSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
             
             
             Aequ=Aeq;
@@ -346,9 +356,6 @@ for i=1:tsim
 %                 % unscheduled case
 %                 f=(f1-fq*P.rho4)/P.TransportLayer.thor;
 %             end
-%             
-%             Aequ=Aeq;
-%             beqtu=beqt;
 %             
 %         end
         
