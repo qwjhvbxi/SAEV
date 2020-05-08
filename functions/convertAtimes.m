@@ -5,7 +5,7 @@
 % from list form to matrix form
 % 
 
-function [a,b]=convertAtimes(c,d,e,f)
+function [a,b]=convertAtimes(c,d,e)
 
 if nargin<2
     
@@ -30,7 +30,7 @@ else
     A=c;
     Atimes=d;
     n=e; % number of nodes
-    tsim=f; % number of time steps
+    tsim=1440; % number of time steps
     b=NaN;
     
     a=zeros(n,n,tsim,'uint16');
