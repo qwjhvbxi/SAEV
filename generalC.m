@@ -176,8 +176,8 @@ Trips.fk=fk;
 if strcmp(P.trlayeralg,'opti') 
     
     maxt=max(Tr(:));
-    varno=n^2+P.m*n*(2+maxt)+P.m; % passengers waiting, cars positions, cars waiting |  ~58 million in my model
-    ctrno=n^2*P.m*2+P.m*2;
+    varno=n^2+P.m*n*(maxt+2)+P.m;   % passengers waiting, cars positions, cars waiting, SOC
+    ctrno=n^2*P.m*2+P.m*2;          % vehicles movements with passenger, for relocaiton, charging power
 
     % create transport layer matrices
     [namesim]=generatematrices3(n,P.m,Tr,maxt,ac,ad,P.TransportLayer.thor,P.Operations.maxsoc,P.Operations.minsoc);
@@ -194,10 +194,17 @@ if strcmp(P.trlayeralg,'opti')
     if exist(cname,'file')
         load(cname,'c');
     else
-        c=double(convertAtimes(A,Atimes,n,tsim));
+        c=double(convertAtimes(A,Atimes,n));
         save(cname,'c');
     end
     c1=cat(3,c,zeros(n,n,tsim)); % add padding
+    
+    % sum arrivals (counted by minute) over one time step
+    if P.e>1
+        L=floor(size(c1,3)/2);
+        c1=permute(squeeze(sum(reshape(permute(c1(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
+%         c2=permute(squeeze(sum(reshape(permute(c2(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
+    end
     
     % create arrival vectors for optimization (cexpected) and simulation (c)
     c=reshape(c1(:,:,2:tsim+P.TransportLayer.thor+1),[n^2*(tsim+P.TransportLayer.thor),1]);
@@ -211,8 +218,8 @@ if strcmp(P.trlayeralg,'opti')
     % create optimization variables
 	X=[x zeros(length(x),tsim)];% matrix of results
     z=zeros(ctrno,tsim);        % matrix of optimal control variables
-    C=zeros(varno,tsim);        % matrix of static values
-    C(1:n^2,:)=reshape(c(1:n^2*tsim),n^2,tsim); % add arrivals
+    B=zeros(varno,tsim);        % matrix of static values
+    B(1:n^2,:)=reshape(c(1:n^2*tsim),n^2,tsim); % add arrivals
     
     % intlinprog options
     if parcomp || dispiter==0
@@ -367,7 +374,7 @@ for i=1:tsim
             z(:,i)=round(zres(1:ctrno),3);
             
             % calculate new Param.x (using first time step of solution)
-            X(1:varno,i+1)=round(Aopti*X(1:varno,i)+Bopti*z(:,i)+C(:,i),4);
+            X(1:varno,i+1)=round(Aopti*X(1:varno,i)+Bopti*z(:,i)+B(:,i),4);
             
             
         case 'simplified'       % simplified relocation 
@@ -605,10 +612,6 @@ end
 
 %% final calculations
 
-Sim.u=u; % final destination of vehicles (station) [tsim x m]
-Sim.q=q; % state of charge 
-Sim.e=e/ac*P.Tech.chargekw;
-
 if strcmp(P.trlayeralg,'simplified') 
     
     Internals.b=b;
@@ -628,7 +631,13 @@ if strcmp(P.trlayeralg,'opti')
     
     Waiting=calcwaitingtimes(P,c,d);
     
+    Sim.Waiting=Waiting;
+    
 end
+
+Sim.u=u; % final destination of vehicles (station) [tsim x m]
+Sim.q=q; % state of charge 
+Sim.e=e/ac*P.Tech.chargekw;
 
 % waiting times
 Sim.waiting=sparse(reorderVectors(waiting,ASortInd));
