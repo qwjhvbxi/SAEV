@@ -78,6 +78,7 @@ A=[     -tril(ones(Q.T)) , tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenera
 A=[A;   tril(ones(Q.T)) , -tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % max SOC constraint (e(t))
 
 % main equation
+%        charge             discharge                   import                  export                              generators        
 A=[A; diag(ones(Q.T,1)) , -diag(ones(Q.T,1))      , -diag(ones(Q.T,1))  ,   diag(ones(Q.T,1)), repmat([zeros(Q.T,Q.T*3), -diag(ones(Q.T,1))],1,numgenerators)];
 
 % generators objective functions
@@ -110,11 +111,11 @@ if Q.v2g==0
     beq=[beq ; zeros(Q.T,1)];
 end
 
-% minimum final soc
+% min final soc
 A=[A; -ones(1,Q.T)      , ones(1,Q.T)             , zeros(1,Q.T*(2+4*numgenerators))];
 
 % vector b for all simulation
-b=[-etripcday-Q.storagemin+Q.einit; ...% min soc
+b=[-etripcday+Q.einit-Q.storagemin; ...% min soc
     etripcday+Q.storagemax-Q.einit; ...% max soc
     Q.surplus  ; % main equation
     zeros(Q.T*numgenerators,1); % gen
@@ -130,10 +131,11 @@ end
 
 % lower and upper bounds on variables
 lb=zeros(Q.T*(4+numgenerators*4),1);
-ub=[Q.dkav*Q.maxchargeminute;Q.dkav*Q.maxchargeminute; ... % charge , discharge
+ub=[Q.dkav*Q.maxchargeminute; ... % charge 
+    Q.dkav*Q.maxchargeminute; ... % discharge
     ones(Q.T,1)*Q.gridimportconstraint; ... % import
     ones(Q.T,1)*Q.gridexportconstraint; ... % export
-    repmat([ones(Q.T*3,1) ; ones(Q.T,1)*maxgen],numgenerators,1)];
+    repmat([ones(Q.T*3,1) ; ones(Q.T,1)*maxgen],numgenerators,1)]; % generators
 
 
 % cost of battery cycling
