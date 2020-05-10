@@ -93,6 +93,6 @@ switch Scenario
     case 'NYC2016-small'
         P.m=30; 
     case 'NYC2016-small2'
-        P.m=10;
+        P.m=5;
 end
 

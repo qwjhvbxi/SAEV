@@ -4,7 +4,7 @@
 % 
 % TO DO:
 % for opti:
-%   fix charge vector
+%   add dropped (check at each step)
 %   add in results: u (position of vehicles)
 %                 	e (energy exchanged)
 %                   waiting
@@ -141,6 +141,7 @@ else
         error('not implemented');
     else
         % calculate from expected arrivals
+        % etsim is the number of energy layer time steps in a day
         % dkemd, dkod, dktrip are the number of minutes of travel for
         % relocation, serving trips, and total, respectively, for each
         % energy layer time step. fk
@@ -151,15 +152,14 @@ else
 end
 
 % energy layer variable: static values
-E.minfinalsoc=1;            % this only works for optimization horizon of ~24h
-E.v2g=P.v2g;
-E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc; % kWh
-E.maxchargeminute=ac*P.Tech.battery;%P.chargekw/60*P.e;  % kWh per time step per vehicle
-E.T=P.EnergyLayer.mthor;                % number of time steps in energy layer
-E.eta=1;
-E.selling=1;
-E.cyclingcost=P.Tech.cyclingcost;
-% P.consumption*P.speedkmh/P.battery/60
+E.v2g=P.v2g;        % use V2G?
+E.eta=1;            % 
+E.selling=1;        % 
+E.minfinalsoc=0.9;    % final SOC. This only works for optimization horizon of ~24h
+E.T=P.EnergyLayer.mthor;            % number of time steps in energy layer
+E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost
+E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
+E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
 
 zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
 relodist=zeros(ceil(tsim),1); % distances of relocation
@@ -309,7 +309,7 @@ for i=1:tsim
                 end
 
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                maxc=E.dkav*E.maxchargeminute;
+                maxc=E.dkav*E.maxchargeminute*P.e; % max exchangeable energy per time step
                 zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
                 zmacro(isnan(zmacro))=0;
 
@@ -336,9 +336,6 @@ for i=1:tsim
             bdist=bdis*X(1:varno,i)  +  bdisc  + ...
                 bdisC * [  c(n^2*(i-1)+1:n^2*i)  ; cexpected(n^2*(i)+1:n^2*(i+P.TransportLayer.thor-1))]; % bdist must be positive
             beqt=beq*X(1:varno,i)    +beqc   ;%+beqC*c(n^2*(i-1)+1:n^2*(i+P.TransportLayer.thor));
-            
-            % calculate current SOC
-            q(i,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
                        
             % determine which vehicles can discharge to grid
             v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,EMaxHorizon);
@@ -376,6 +373,8 @@ for i=1:tsim
             % calculate new Param.x (using first time step of solution)
             X(1:varno,i+1)=round(Aopti*X(1:varno,i)+Bopti*z(:,i)+B(:,i),4);
             
+            % calculate new SOC
+            q(i+1,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i+1  ));
             
         case 'simplified'       % simplified relocation 
         
