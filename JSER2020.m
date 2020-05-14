@@ -32,27 +32,51 @@ end
 Atimes(Atimes>1440)=Atimes(Atimes>1440)-1440;
 Atimes(Atimes<1)=Atimes(Atimes<1)+1440;
 
-% save([DataFolder 'trips/Tokyo2008_1day_189k.mat'],'A','Atimes');
-save([DataFolder 'trips/Tokyo2008_1day_189k.mat'],'A','Atimes');
+% remove trips starting and ending in same node
+SameNode=A(:,1)==A(:,2);
+A(SameNode,:)=[];
+Atimes(SameNode,:)=[];
+
+% save([DataFolder 'trips/Tokyo2008_1day_189k.mat'],'A','Atimes'); % with same node trips
+save([DataFolder 'trips/Tokyo2008_1day_162k.mat'],'A','Atimes');
 
 
 %% create scenario with less stations
 
-figure
-scatter(gridcoord(:,1),gridcoord(:,2))
 limits=[10 30 15 35];
 selection=logical((gridcoord(:,1)>limits(1)).*(gridcoord(:,1)<limits(2)).*(gridcoord(:,2)>limits(3)).*(gridcoord(:,2)<limits(4)));
-figure
-scatter(gridcoord(selection,1),gridcoord(selection,2))
 AllowedStations=find(selection);
 
+% create vector to assign new relative indeces to nodes
+NewIndeces=zeros(514,1);
+NewIndeces(AllowedStations)=1:length(AllowedStations);
+
+% figure
+% scatter(gridcoord(:,1),gridcoord(:,2))
+% figure
+% scatter(gridcoord(selection,1),gridcoord(selection,2))
+
 TripSelection=logical(ismember(A(:,1),AllowedStations).*ismember(A(:,2),AllowedStations));
-A=A(TripSelection,:);
+A=NewIndeces(A(TripSelection,:));
 Atimes=Atimes(TripSelection,:);
-save([DataFolder 'trips/Tokyo2008_1day_54k.mat'],'A','Atimes');
+save([DataFolder 'trips/Tokyo2008_1day_48k.mat'],'A','Atimes');
 
 
-%% create T (from Euclidean distance)
+%% create C, T (from Euclidean distance)
+
+Eta=1.5;
+T=max(1,round(Eta*sqrt((gridcoord(:,1)-gridcoord(:,1)').^2+(gridcoord(:,2)-gridcoord(:,2)').^2)));
+
+C=gridcoord;
+save('data/scenarios/Tokyo514.mat','C','T');
+
+C=gridcoord(selection,:);
+T=T(selection,selection);
+save('data/scenarios/Tokyo189.mat','C','T')
+
+
+
+
 
 
 

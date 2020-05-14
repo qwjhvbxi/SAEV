@@ -28,6 +28,8 @@ switch Scenario
     case 'NYC2016-small2'
         P.scenario='NYC2016-small';
         P.tripfile='NYC2016-small2_13Jan';
+    case 'Tokyo189'
+        P.tripfile='Tokyo2008_1day_48k';
 end
 P.scenarioid=1;     % which day of the trip file
 
@@ -94,5 +96,7 @@ switch Scenario
         P.m=30; 
     case 'NYC2016-small2'
         P.m=5;
+    case 'Tokyo189'
+        P.m=5000;
 end
 
