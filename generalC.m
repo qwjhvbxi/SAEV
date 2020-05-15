@@ -207,7 +207,7 @@ if strcmp(P.trlayeralg,'opti')
     end
     
     % create arrival vectors for optimization (cexpected) and simulation (c)
-    c=reshape(c1(:,:,2:tsim+P.TransportLayer.thor+1),[n^2*(tsim+P.TransportLayer.thor),1]);
+    c=reshape(c1(:,:,1:tsim+P.TransportLayer.thor+1),[n^2*(tsim+P.TransportLayer.thor),1]);
     if P.mpcpredict==true
         cexpected=c;
     else
@@ -615,7 +615,6 @@ if strcmp(P.trlayeralg,'simplified')
     Internals.b=b;
     Internals.v=v;
     Internals.w=w;
-    Internals.zmacro=zmacro;
     
     waiting=reorderVectors(waiting,ASortInd);
     dropped=reorderVectors(dropped,ASortInd);
@@ -641,6 +640,8 @@ if strcmp(P.trlayeralg,'opti')
     u=(u0')*convertMatrix;
     
 end
+
+Internals.zmacro=zmacro;
 
 Sim.u=u; % final destination of vehicles (station) [tsim x m]
 Sim.q=q; % state of charge 
@@ -676,7 +677,7 @@ Res.Params=Params;
 Res.Trips=Trips;
 Res.Sim=Sim;
 Res.Internals=Internals;
-Res.Stats=S;
+Res.CPUtimes=S;
 Res.cputime=elapsed;
 Res.cost=(sum(Sim.e/60*P.e,2)')*elep(1:tsim);
 Res.dropped=sum(dropped)/length(A);
