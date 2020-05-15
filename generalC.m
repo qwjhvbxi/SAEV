@@ -4,12 +4,7 @@
 % 
 % TO DO:
 % for opti:
-%   add in results: u (position of vehicles)
-%                 	e (energy exchanged)
-%                   waiting
-%                   dropped
-%                   relodist
-%   add dropped (check at each step)? NO
+%   add in results: relodist
 % reorganize results
 %   add common results for all sims
 % Tr is in timesteps!!! fix with minutes
@@ -175,6 +170,10 @@ Trips.fk=fk;
 %% setup opti transport layer
 
 if strcmp(P.trlayeralg,'opti') 
+    
+    if isfinite(P.Operations.maxwait) && P.Operations.maxwait>=0
+        warning('maxwait is ignored for opti transport layer: no dropped requests allowed')
+    end
     
     maxt=max(Tr(:));
     varno=n^2+P.m*n*(maxt+2)+P.m;   % passengers waiting, cars positions, cars waiting, SOC
@@ -346,7 +345,6 @@ for i=1:tsim
             
             % apply charging constraints
             ub(ubChargingSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
-            
             
             Aequ=Aeq;
             beqtu=beqt;
@@ -631,13 +629,16 @@ if strcmp(P.trlayeralg,'opti')
     
     d=X(1:n^2,:);
     %p=X(n^2+1:n^2+n*P.m*(maxt+1),:);
-    u=X(n^2+n*P.m*(maxt+1)+1:n^2+n*P.m*(maxt+1)+n*P.m,:);
+    u0=X(n^2+n*P.m*(maxt+1)+1:n^2+n*P.m*(maxt+1)+n*P.m,:);
     
     [waiting,waitinginfo]=calcwaitingtimes(P.e,c,d);
     
     Sim.waitinginfo=waitinginfo;
     
     e=z(P.m*n^2*2+1:end,:)';
+    
+    convertMatrix=kron(eye(P.m),(1:n)');
+    u=(u0')*convertMatrix;
     
 end
 
