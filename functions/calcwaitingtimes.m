@@ -1,7 +1,7 @@
 
 
 
-function Sim=calcwaitingtimes(P,c,dfinal)
+function [waiting,tripinfo]=calcwaitingtimes(P,c,dfinal)
 
 n=sqrt(size(dfinal,1));
 tsim=size(dfinal,2)-1;
@@ -61,25 +61,13 @@ for k=1:n^2
 end
 
 % waiting time for each passenger in minutes
-waiting=[waitingtimesteps(:,1:2) , waitingtimesteps(:,3)*P.e];
+waiting=waitingtimesteps(:,3)*P.e;
 
-% moving average [what???]
-binsize=round(10/P.e);
-halfbin=floor(binsize/2);
-waitingprof4=zeros(tsim,1);
-for k2=1:tsim
-    waitingprof4(k2)=mean(    waiting(   logical((waiting(:,1)>=k2-halfbin).*(waiting(:,1)<=k2+halfbin))   ,3)   ,'omitnan');
-end
-waitingprof4(isnan(waitingprof4))=0; % for bins without arrivals, assume 0 waiting
-
-
-Sim.waiting=waiting;
-Sim.waitingMAV10min=waitingprof4;
-Sim.waitsummary=[  prctile(waiting(:,3),[0,2.5,25,50,75,97.5,100])' ; mean(waiting(:,3)) ; std(waiting(:,3))  ];
-Sim.waitsummaryLgnd=["min";"2.5 pctile";"25 pctile";"50 pctile";"75 pctile";"97.5 pctile";"max";"mean";"st.dev."];
-
+% time step of request, origin/destination pair
+tripinfo=waitingtimesteps(:,1:2);
 
 return
+
 
 
 dfinal=X(1:n^2,:);
