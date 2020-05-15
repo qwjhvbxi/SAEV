@@ -7,7 +7,6 @@
 %   add in results: relodist
 % reorganize results
 %   add common results for all sims
-% Tr is in timesteps!!! fix with minutes
 % add mode choice
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
@@ -158,7 +157,7 @@ E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in ba
 E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
 
 zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
-relodist=zeros(ceil(tsim),1); % distances of relocation
+relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 
 % all in units of time steps
 Trips.dkmed=dkemd;
@@ -207,7 +206,7 @@ if strcmp(P.trlayeralg,'opti')
     end
     
     % create arrival vectors for optimization (cexpected) and simulation (c)
-    c=reshape(c1(:,:,1:tsim+P.TransportLayer.thor+1),[n^2*(tsim+P.TransportLayer.thor),1]);
+    c=reshape(c1(:,:,1:tsim+P.TransportLayer.thor),[n^2*(tsim+P.TransportLayer.thor),1]);
     if P.mpcpredict==true
         cexpected=c;
     else
@@ -453,7 +452,7 @@ for i=1:tsim
                             w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
 
                             % save length of relocation
-                            relodist(kt)=relodist(kt)+arris(ka);
+                            relodist(i)=relodist(i)+arris(ka);
 
                         end
                     end
@@ -624,7 +623,8 @@ end
 
 if strcmp(P.trlayeralg,'opti') 
     
-    Internals.X=X;
+    Internals.X=sparse(X);
+    Internals.z=sparse(z);
     
     d=X(1:n^2,:);
     %p=X(n^2+1:n^2+n*P.m*(maxt+1),:);
@@ -638,6 +638,8 @@ if strcmp(P.trlayeralg,'opti')
     
     convertMatrix=kron(eye(P.m),(1:n)');
     u=(u0')*convertMatrix;
+    
+    relodist=(z(P.m*n^2+1:P.m*n^2*2,:)')*repmat(reshape(Tr,n^2,1),P.m,1);
     
 end
 
