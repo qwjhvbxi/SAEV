@@ -4,13 +4,14 @@
 % 
 % TO DO:
 % for opti:
-%   add dropped (check at each step)
 %   add in results: u (position of vehicles)
 %                 	e (energy exchanged)
 %                   waiting
 %                   dropped
 %                   relodist
+%   add dropped (check at each step)? NO
 % reorganize results
+%   add common results for all sims
 % Tr is in timesteps!!! fix with minutes
 % add mode choice
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
@@ -240,7 +241,7 @@ if strcmp(P.trlayeralg,'opti')
     f=(f1-(fq-fqv2g)*P.TransportLayer.rho4)/P.TransportLayer.thor;
     
     % ub selector for charging constraints
-    ubSelector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.TransportLayer.thor,1));
+    ubChargingSelector=logical(repmat( [zeros(n*n*P.m*2,1)  ;  ones(P.m*2,1) ] , P.TransportLayer.thor,1));
     
     % how many steps of energy layer are considered in transport layer (MPC)
     EMaxHorizon=ceil(P.TransportLayer.thor/P.beta);
@@ -309,7 +310,7 @@ for i=1:tsim
                 end
 
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                maxc=E.dkav*E.maxchargeminute*P.e; % max exchangeable energy per time step
+                maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
                 zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
                 zmacro(isnan(zmacro))=0;
 
@@ -344,7 +345,7 @@ for i=1:tsim
             chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+EMaxHorizon-1),P.m,1).*v2gallowed,EMaxHorizon*2*P.m,1),P.beta,1);
             
             % apply charging constraints
-            ub(ubSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
+            ub(ubChargingSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
             
             
             Aequ=Aeq;
@@ -367,8 +368,8 @@ for i=1:tsim
             % transport layer optimization
             zres=intlinprog(f,intcon,Adis,bdist,Aequ,beqtu,lb,ub,options);
             
-            % optimal control variables in this time step
-            z(:,i)=round(zres(1:ctrno),3);
+            % optimal control variables in this time step (round binary values)
+            z(:,i)=[round(zres(1:P.m*n^2*2));zres(P.m*n^2*2+1:ctrno)];
             
             % calculate new Param.x (using first time step of solution)
             X(1:varno,i+1)=round(Aopti*X(1:varno,i)+Bopti*z(:,i)+B(:,i),4);
@@ -618,6 +619,10 @@ if strcmp(P.trlayeralg,'simplified')
     Internals.w=w;
     Internals.zmacro=zmacro;
     
+    waiting=reorderVectors(waiting,ASortInd);
+    dropped=reorderVectors(dropped,ASortInd);
+    chosenmode=reorderVectors(chosenmode,ASortInd);
+    
 end
 
 if strcmp(P.trlayeralg,'opti') 
@@ -625,12 +630,14 @@ if strcmp(P.trlayeralg,'opti')
     Internals.X=X;
     
     d=X(1:n^2,:);
-    p=X(n^2+1:n^2+n*P.m*(maxt+1),:);
+    %p=X(n^2+1:n^2+n*P.m*(maxt+1),:);
     u=X(n^2+n*P.m*(maxt+1)+1:n^2+n*P.m*(maxt+1)+n*P.m,:);
     
-    Waiting=calcwaitingtimes(P,c,d);
+    [waiting,waitinginfo]=calcwaitingtimes(P.e,c,d);
     
-    Sim.Waiting=Waiting;
+    Sim.waitinginfo=waitinginfo;
+    
+    e=z(P.m*n^2*2+1:end,:)';
     
 end
 
@@ -639,16 +646,16 @@ Sim.q=q; % state of charge
 Sim.e=e/ac*P.Tech.chargekw;
 
 % waiting times
-Sim.waiting=sparse(reorderVectors(waiting,ASortInd));
+Sim.waiting=sparse(waiting);
 
 % dropped requests
-Sim.dropped=sparse(reorderVectors(dropped,ASortInd));
+Sim.dropped=sparse(dropped);
+
+% chosen mode
+Sim.chosenmode=chosenmode;
 
 %relocation minutes
 Sim.relodist=relodist*P.e;
-
-
-Sim.chosenmode=reorderVectors(chosenmode,ASortInd);
 
 
 %% create Res struct and save results
