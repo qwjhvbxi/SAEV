@@ -635,7 +635,7 @@ if strcmp(P.trlayeralg,'opti')
     
     Sim.waitinginfo=waitinginfo;
     
-    e=z(P.m*n^2*2+1:end,:)';
+    e=z(P.m*n^2*2+1:P.m*n^2*2+P.m,:)'-z(P.m*n^2*2+P.m+1:end,:)';
     
     convertMatrix=kron(eye(P.m),(1:n)');
     u=(u0')*convertMatrix;
