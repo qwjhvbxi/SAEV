@@ -1,10 +1,12 @@
+%% [waiting,tripinfo]=calcwaitingtimes(e,c,d)
+% calculate waiting time for each passenger from aggregate matrices for
+% optimal transport layer algorithm. 'e' is the step length in minutes; 'c'
+% is the passenger arrivals, 'd' is the passengers waiting at stations
 
+function [waiting,tripinfo]=calcwaitingtimes(e,c,d)
 
-
-function [waiting,tripinfo]=calcwaitingtimes(P,c,dfinal)
-
-n=sqrt(size(dfinal,1));
-tsim=size(dfinal,2)-1;
+n=sqrt(size(d,1));
+tsim=size(d,2)-1;
 
 if min(size(c))==1
     cfinal=reshape(c(1:n^2*tsim),n^2,tsim);
@@ -21,7 +23,7 @@ end
 cfinal=[zeros(n^2,1) cfinal zeros(n^2,1)];
 
 % waiting at stations [origin/destinationPair  timesteps]
-dfinal=[dfinal zeros(n^2,1)];
+d=[d zeros(n^2,1)];
 
 % total arrivals
 totalarrivals=sum(sum(cfinal));
@@ -49,7 +51,7 @@ for k=1:n^2
 
         for j=1:numeroarrivi(k2)
 
-            davantiinfila=dfinal(k,:)-(cumsum(cfinal(k,:))-num+1);
+            davantiinfila=d(k,:)-(cumsum(cfinal(k,:))-num+1);
             waitingtimesteps(totalenodi(k)+num,1)=arrivi(k2); % time step of request
             waitingtimesteps(totalenodi(k)+num,2)=k;         % origin/destination pair
             waitingtimesteps(totalenodi(k)+num,3)=find((davantiinfila(arrivi(k2):end)<0),1)-1; % waiting time
@@ -61,13 +63,11 @@ for k=1:n^2
 end
 
 % waiting time for each passenger in minutes
-waiting=waitingtimesteps(:,3)*P.e;
+waiting=waitingtimesteps(:,3)*e;
 
 % time step of request, origin/destination pair
 tripinfo=waitingtimesteps(:,1:2);
 
-return
 
 
 
-dfinal=X(1:n^2,:);
