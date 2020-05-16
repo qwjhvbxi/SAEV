@@ -1,6 +1,6 @@
 %% [Pmat,Resmat]=GENERATEPLOTLINE3(mapscenario,outfieldname,varargin)
-% Generate matrices of results from simulations specifying the parameters t
-% test. Useful to then plot the values as lines.
+% Generate matrices of results from simulations specifying the parameters
+% to test. Useful to then plot the values as lines.
 % 
 % If outfieldname is a char, the Resmat is a vector with the values of the
 %   field associated with that name and takes the results from saved files.
@@ -8,7 +8,12 @@
 % If outfieldname is a number, the function runs the simulations with the
 %   corresponding setting in general5 (second parameter) and returns a
 %   struct array of results.  
-% if outfieldname is -2, the function deletes the corresponding files
+% If outfieldname is -2, the function deletes the corresponding files
+% 
+% After the first 2 inputs, specify the parameters to test with the format
+% (...,'FieldName',value,...). You can specify up to two parameters with
+% vector values for sensitivity analysis and an unlimited number of
+% parameters with scalar values (same for all simulations). 
 % 
 % Warning: variables with text values should be inserted between double
 % quotation marks ( " " ) 
@@ -92,8 +97,8 @@ if ischar(outfieldname)
 end
     
 if outfieldname==-2
-	for j=1:N
-    	delete(['out/simulations/' DataHash(Pmat{j}) '.mat']);
+    for j=1:N
+        delete(['out/simulations/' DataHash(Pmat{j}) '.mat']);
     end
     Resmat=NaN;
     return
