@@ -1,4 +1,4 @@
-%% P=CPAR(Scenario)
+%% P=CPAR(Scenario[,trlayer])
 % Create default P struct.
 % Scenarios currently available: 
 % - 'NYC2016'
@@ -31,10 +31,10 @@ switch Scenario
     case 'Tokyo189'
         P.tripfile='Tokyo2008_1day_48k';
 end
-P.scenarioid=1;     % which day of the trip file
+P.tripday=1;     % which day of the trip file
 
-P.eleproftype='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/'
-P.eleprofseed=311;  % which day of the electricity file
+P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/'
+P.gridday=311;  % which day of the electricity file
 
 % P.chargingstations=[4,4;5,6];
 
