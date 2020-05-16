@@ -161,7 +161,7 @@ zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 
 % all in units of time steps
-Trips.dkmed=dkemd;
+Trips.dkemd=dkemd;
 Trips.dkod=dkod;
 Trips.dktrip=dktrip;
 Trips.fk=fk;

@@ -44,6 +44,7 @@ for kt=1:mtsim
 end
 
 dktrip=dkemd+dkod;
+dktrip=repmat(dktrip,2,1);
 
 fk=0;
 
