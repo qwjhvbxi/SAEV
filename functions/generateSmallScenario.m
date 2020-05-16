@@ -17,10 +17,10 @@ Actimes=Atimes;
 
 setlimits=[0,5;0,5];
 
-[T,C,A2,A2times,tripsubset]=generateScenario(Ac{P.scenarioid},Actimes{P.scenarioid},10,setlimits);
+[T,C,A2,A2times,tripsubset]=generateScenario(Ac{P.tripday},Actimes{P.tripday},10,setlimits);
 
 
-Ac10=Ac{P.scenarioid}(tripsubset,:);
+Ac10=Ac{P.tripday}(tripsubset,:);
 colori=lines(10);
 figure
 hold on
@@ -50,11 +50,11 @@ tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
 load(tripFileLocation,'A','Atimes');
 Ac=A;
 Actimes=Atimes;
-Ac10=Ac{P.scenarioid}(tripsubset,:);
+Ac10=Ac{P.tripday}(tripsubset,:);
 
 setlimits=[0,5;0,5];
 
-[~,~,A2,A2times,tripsubset]=generateScenario(Ac{P.scenarioid},Actimes{P.scenarioid},10,setlimits,C);
+[~,~,A2,A2times,tripsubset]=generateScenario(Ac{P.tripday},Actimes{P.tripday},10,setlimits,C);
 
 
 % remove trips with same origin/destination

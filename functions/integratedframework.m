@@ -18,7 +18,7 @@ T=P.Ib;            % time steps
 J=size(P.T,1);     % stations
 DataFolder=setDataFolder();
 starttime=cputime;
-% FileName=[DataFolder 'out/benchmark/outnew-' num2str(J) 'st-' num2str(P.scenarioid) '-' num2str(P.O) '-' num2str(P.Ib) '-' num2str(P.K) '.mat'];
+% FileName=[DataFolder 'out/benchmark/outnew-' num2str(J) 'st-' num2str(P.tripday) '-' num2str(P.O) '-' num2str(P.Ib) '-' num2str(P.K) '.mat'];
 
 %% initialize
 totaldaylength=1440; % minutes
@@ -36,12 +36,12 @@ else
     
     load([DataFolder 'trips/' P.tripfile],'A','Atimes','fd','fo');
     
-    if iscell(A) && P.scenarioid>0
+    if iscell(A) && P.tripday>0
         
-        A=A{P.scenarioid};
-        Atimes=Atimes{P.scenarioid};
-%         fd=fd{P.scenarioid};
-%         fo=fo{P.scenarioid};
+        A=A{P.tripday};
+        Atimes=Atimes{P.tripday};
+%         fd=fd{P.tripday};
+%         fo=fo{P.tripday};
         
     end
 end

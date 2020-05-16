@@ -104,7 +104,7 @@ u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
 %% trip processing
 
 % generate number of arrivals at each station
-statsname=['data/temp/tripstats-' P.tripfile '-' num2str(P.scenarioid) '-N' num2str(n) '.mat'];
+statsname=['data/temp/tripstats-' P.tripfile '-' num2str(P.tripday) '-N' num2str(n) '.mat'];
 if exist(statsname,'file')
     load(statsname,'fo','fd','dk');
 else
@@ -123,7 +123,7 @@ UtilityWalking=-RawDistance/WalkingSpeed*VOT;
 %% setup energy layer
 
 % generate EMD in case of aggregate energy layer
-emdname=['data/temp/emd-' P.tripfile '-' num2str(P.scenarioid) '-' num2str(etsim) '.mat'];
+emdname=['data/temp/emd-' P.tripfile '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
 if exist(emdname,'file')
     load(emdname,'dkemd','dkod','dktrip','fk');
 else
@@ -190,7 +190,7 @@ if strcmp(P.trlayeralg,'opti')
     x=[zeros(n^2,1);zeros(n*P.m*(maxt+1),1);uinit;q(1,:)'];
     
     % initializations of simulation variables
-    cname=['data/temp/c-' P.tripfile '-' num2str(P.scenarioid) '.mat'];
+    cname=['data/temp/c-' P.tripfile '-' num2str(P.tripday) '.mat'];
     if exist(cname,'file')
         load(cname,'c');
     else

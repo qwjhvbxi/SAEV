@@ -1,14 +1,14 @@
 %% 
 
-[~,R1]=generateplotline2(1,'dropped','O',Ovec,'reloctype',2,'K',5000,'scenarioid',1:10);
-[~,R2]=generateplotline2(1,'dropped','O',Ovec,'reloctype',2,'K',5000,'eta',2,'scenarioid',1:10);
-[~,R3]=generateplotline2(1,'dropped','O',0,   'reloctype',4,'K',5000,'scenarioid',1:10);
-[~,R4]=generateplotline2(1,'dropped','O',0,   'reloctype',3,'K',5000,'scenarioid',1:10);
-[~,R5]=generateplotline2(1,'dropped','O',OvecShort2,'reloctype',7,'K',5000,'scenarioid',[7 9 10],'t',60,'ts',60,'tr',60);
-% [~,R5]=generateplotline2(1,'dropped','O',OvecShort2,'reloctype',7,'K',5000,'scenarioid',9,'t',60,'ts',60,'tr',60);
-% [~,R6]=generateplotline2(1,'dropped','O',OvecShort,'reloctype',6,'K',5000,'scenarioid',1:10,'Ib',100); % Boyaci
-[~,R6]=generateplotline2(1,'dropped','O',round(Ovec/2),'reloctype',6,'K',5000,'scenarioid',1:10,'Ib',100); % Boyaci
-[~,R7]=generateplotline2(1,'dropped','O',OvecShort,'reloctype',2,'K',5000,'eta',1,'scenarioid',1:10);
+[~,R1]=generateplotline2(1,'dropped','O',Ovec,'reloctype',2,'K',5000,'tripday',1:10);
+[~,R2]=generateplotline2(1,'dropped','O',Ovec,'reloctype',2,'K',5000,'eta',2,'tripday',1:10);
+[~,R3]=generateplotline2(1,'dropped','O',0,   'reloctype',4,'K',5000,'tripday',1:10);
+[~,R4]=generateplotline2(1,'dropped','O',0,   'reloctype',3,'K',5000,'tripday',1:10);
+[~,R5]=generateplotline2(1,'dropped','O',OvecShort2,'reloctype',7,'K',5000,'tripday',[7 9 10],'t',60,'ts',60,'tr',60);
+% [~,R5]=generateplotline2(1,'dropped','O',OvecShort2,'reloctype',7,'K',5000,'tripday',9,'t',60,'ts',60,'tr',60);
+% [~,R6]=generateplotline2(1,'dropped','O',OvecShort,'reloctype',6,'K',5000,'tripday',1:10,'Ib',100); % Boyaci
+[~,R6]=generateplotline2(1,'dropped','O',round(Ovec/2),'reloctype',6,'K',5000,'tripday',1:10,'Ib',100); % Boyaci
+[~,R7]=generateplotline2(1,'dropped','O',OvecShort,'reloctype',2,'K',5000,'eta',1,'tripday',1:10);
 
 firstel=1;
 firstel2=2;
