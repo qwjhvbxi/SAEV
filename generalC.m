@@ -61,8 +61,8 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,~,~,~,~,RawDistance]=generateGPStrips(P);
 
-load(['data/eleprices/' P.eleproftype '.mat'],'u','x');
-melep=repmat(repelem(x(:,P.eleprofseed),2/P.e,1),2,1);      % macro elep
+load(['data/eleprices/' P.gridfile '.mat'],'u','x');
+melep=repmat(repelem(x(:,P.gridday),2/P.e,1),2,1);      % macro elep
 clear u x;
 
 
