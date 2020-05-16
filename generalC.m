@@ -140,7 +140,8 @@ else
         % dkemd, dkod, dktrip are the number of minutes of travel for
         % relocation, serving trips, and total, respectively, for each
         % energy layer time step. fk
-        [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
+        % [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
+        [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
     end
     save(emdname,'dkemd','dkod','dktrip','fk');
     
