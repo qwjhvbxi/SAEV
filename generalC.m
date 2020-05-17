@@ -60,9 +60,9 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
 load(['data/eleprices/' P.gridfile '.mat'],'x','y');
-melep=repmat(repelem(x(:,P.gridday),2/P.e,1),2,1); % electricity price profiles
+melep=repelem([x(:,P.gridday);x(:,rem(P.gridday,size(x,2))+1)],2/P.e,1); % electricity price profiles
 if exist('y','var') % carbon emissions profiles
-    mco2=repmat(repelem(y(:,P.gridday),2/P.e,1),2,1);
+    mco2=repelem([y(:,P.gridday);y(:,rem(P.gridday,size(y,2))+1)],2/P.e,1);
 else
     mco2=zeros(24*2*2,1);
 end
@@ -98,6 +98,7 @@ dropped=zeros(length(A),1);  % request is dropped?
 chosenmode=true(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
+relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
@@ -125,50 +126,57 @@ UtilityWalking=-RawDistance/WalkingSpeed*VOT;
 
 %% setup energy layer
 
-% generate EMD in case of aggregate energy layer
-emdname=['data/temp/emd-' P.tripfile '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
-if exist(emdname,'file')
-    load(emdname,'dkemd','dkod','dktrip','fk');
-else
-    
-    % is a probability distribution of trips available?
-    probabilistic=false;
+if strcmp(P.trlayeralg,'aggregate') 
 
-    if probabilistic
-        % calculate from known distribution
-        error('not implemented');
+    % generate EMD in case of aggregate energy layer
+    emdname=['data/temp/emd-' P.tripfile '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
+    if exist(emdname,'file')
+        load(emdname,'dkemd','dkod','dktrip','fk');
     else
-        % calculate from expected arrivals
-        % etsim is the number of energy layer time steps in a day
-        % dkemd, dkod, dktrip are the number of minutes of travel for
-        % relocation, serving trips, and total, respectively, for each
-        % energy layer time step. fk
-        % [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
-        [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
+
+        % is a probability distribution of trips available?
+        probabilistic=false;
+
+        if probabilistic
+            % calculate from known distribution
+            error('not implemented');
+        else
+            % calculate from expected arrivals
+            % etsim is the number of energy layer time steps in a day
+            % dkemd, dkod, dktrip are the number of minutes of travel for
+            % relocation, serving trips, and total, respectively, for each
+            % energy layer time step. fk
+            % [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
+            [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
+        end
+        save(emdname,'dkemd','dkod','dktrip','fk');
+
     end
-    save(emdname,'dkemd','dkod','dktrip','fk');
+
+    % energy layer variable: static values
+    E.v2g=P.Operations.v2g;        % use V2G?
+    E.eta=1;            % 
+    E.selling=1;        % 
+    E.minfinalsoc=0.9;    % final SOC. This only works for optimization horizon of ~24h
+    E.T=P.EnergyLayer.mthor;            % number of time steps in energy layer
+    E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost
+    E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
+    E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
+    E.carbonprice=P.carbonprice;
+
+    zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
+
+    Trips.dkemd=dkemd;
+    Trips.dkod=dkod;
+    Trips.dktrip=dktrip;
+    Trips.fk=fk;
+    
+else 
+    
+    Trips=[];
+    zmacro=zeros(4,etsim);
     
 end
-
-% energy layer variable: static values
-E.v2g=P.Operations.v2g;        % use V2G?
-E.eta=1;            % 
-E.selling=1;        % 
-E.minfinalsoc=0.9;    % final SOC. This only works for optimization horizon of ~24h
-E.T=P.EnergyLayer.mthor;            % number of time steps in energy layer
-E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost
-E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
-E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
-E.carbonprice=P.carbonprice;
-
-zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
-relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
-
-% all in units of time steps
-Trips.dkemd=dkemd;
-Trips.dkod=dkod;
-Trips.dktrip=dktrip;
-Trips.fk=fk;
 
 
 %% setup opti transport layer
