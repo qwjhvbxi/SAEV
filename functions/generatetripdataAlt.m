@@ -2,7 +2,6 @@
 function [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,mtsim)
 
 n=size(T,1);
-bmin=0;
 
 % length of each interval
 tlen=round(1440/mtsim);
@@ -15,10 +14,11 @@ b=zeros(mtsim,n);
 for kt=1:mtsim
     
     ThisInterval=(kt-1)*tlen+1:kt*tlen;
-
-    uv=0;
-    dw=0;
-
+ 
+%     bmin=0;
+%     uv=0;
+%     dw=0;
+%
 %     % calculate imbalance
 %     b(kt,:)=uv-dw ...  number of vehicles and passengers waiting at each station
 %             +sum(fd(ThisInterval,:)) ...  expected arrivals between now and now+P.ts

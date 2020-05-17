@@ -3,11 +3,7 @@
 % Vehicles start at beginning of time step, arrive at end of time step.
 % 
 % TO DO:
-% for opti:
-%   add in results: relodist
-% reorganize results
-%   add common results for all sims
-% add mode choice
+% add carbon emissions
 % CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
 % PROVARE TUTTE LE COMBINAZIONI
 % 
@@ -61,9 +57,9 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,~,~,~,~,RawDistance]=generateGPStrips(P);
 
-load(['data/eleprices/' P.gridfile '.mat'],'u','x');
+load(['data/eleprices/' P.gridfile '.mat'],'x');
 melep=repmat(repelem(x(:,P.gridday),2/P.e,1),2,1);      % macro elep
-clear u x;
+clear x;
 
 
 %% parameters of simulation

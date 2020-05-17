@@ -5,6 +5,7 @@
 % - 'NYC2018'
 % - 'NYC2016-small'
 % - 'NYC2016-small2'
+% - 'Tokyo189'
 % 
 % see also SCENARIOGENERATOR
 
