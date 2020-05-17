@@ -57,9 +57,16 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,~,~,~,~,RawDistance]=generateGPStrips(P);
 
-load(['data/eleprices/' P.gridfile '.mat'],'x');
-melep=repmat(repelem(x(:,P.gridday),2/P.e,1),2,1);      % macro elep
-clear x;
+% NOTE: should generalize vector length for cases with different beta, e,
+% etc. Also: change names of variables
+load(['data/eleprices/' P.gridfile '.mat'],'x','y');
+melep=repmat(repelem(x(:,P.gridday),2/P.e,1),2,1); % electricity price profiles
+if exist('y','var') % carbon emissions profiles
+    mco2=repmat(repelem(y(:,P.gridday),2/P.e,1),2,1);
+else
+    mco2=zeros(24*2*2,1);
+end
+clear x y;
 
 
 %% parameters of simulation
