@@ -42,10 +42,10 @@ P.gridday=311;  % which day of the electricity file
 % simulation options
 P.mpcpredict=true;
 P.modechoice=false;
-P.v2g=true;
 P.e=2;              % time step length in minutes
 P.beta=15;
 P.m=10000;             % number of vehicles
+P.carbonprice=0;
 
 % technical parameters
 Tech.battery=50;
@@ -57,6 +57,7 @@ Tech.cyclingcost=20000/2000;   % batterycost[yen/kWh] / lifelength[cycles] -> 10
 Operations.initialsoc=0.7;
 Operations.minsoc=0.2;
 Operations.maxsoc=1;
+Operations.v2g=true;
 Operations.v2gminsoc=0.5;
 Operations.maxwait=10;
 

@@ -151,7 +151,7 @@ else
 end
 
 % energy layer variable: static values
-E.v2g=P.v2g;        % use V2G?
+E.v2g=P.Operations.v2g;        % use V2G?
 E.eta=1;            % 
 E.selling=1;        % 
 E.minfinalsoc=0.9;    % final SOC. This only works for optimization horizon of ~24h
@@ -159,6 +159,7 @@ E.T=P.EnergyLayer.mthor;            % number of time steps in energy layer
 E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost
 E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
 E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
+E.carbonprice=P.carbonprice;
 
 zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
@@ -303,11 +304,12 @@ for i=1:tsim
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
                 E.electricityprice=melep(macroindex:macroindex+P.EnergyLayer.mthor-1); 
+                E.emissionsGridProfile=mco2(macroindex:macroindex+P.EnergyLayer.mthor-1);
 
                 ELayerResults=aevopti11(E);
 
                 % make sure that there is no discharging when V2G is not allowed
-                if P.v2g==0
+                if P.Operations.v2g==0
                     ELayerResults.discharging(:)=0;
                 end
 
