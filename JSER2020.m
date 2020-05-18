@@ -2,6 +2,14 @@
 
 
 
+%% simulations
+
+[P1,R1]=generateplotline3('Tokyo189',[]);
+
+
+
+return
+
 %% generate Tokyo scenario 
 
 DataFolder=setDataFolder();
@@ -75,10 +83,27 @@ T=T(selection,selection);
 save('data/scenarios/Tokyo189.mat','C','T')
 
 
+%% map of Tokyo
+
+load('data/scenarios/Tokyo189.mat');
+
+TokyoMap=imread([DataFolder 'input_files/Tokyo/maps/TokyoStreetMap.png']);
+limits=[10 30 15 35];
+TokyoMapFlipped=flipdim(TokyoMap,1);
+
+figure
+hold on
+image(0:40,0:40,TokyoMapFlipped);
+scatter(C(:,1),C(:,2),'ko','MarkerFaceColor','k')
+% xticks(limits(1):5:limits(2))
+% xticklabels(0:5:20)
+% yticks(limits(3):5:limits(4))
+% yticklabels(0:5:20)
+axis equal off
+axis(limits)
+print([DataFolder 'figures/JSER/TokyoMap189'],'-dpng','-r300');
 
 
 
 
 
-
-%% simulations
