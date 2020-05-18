@@ -58,7 +58,7 @@ for k=1:varparams(1)
 
         N=N+1;
         
-        Pmat{N}=cpar(mapscenario);
+        Pmat(N)=cpar(mapscenario);
 
         for i=1:floor(length(varargin)/2)
             
@@ -74,9 +74,9 @@ for k=1:varparams(1)
             PointPos=find(FieldName=='.');
             
             if isempty(PointPos) 
-                Pmat{N}.(FieldName)=ThisValue;
+                Pmat(N).(FieldName)=ThisValue;
             else
-                Pmat{N}.(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end))=ThisValue;
+                Pmat(N).(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end))=ThisValue;
             end
             
         end
@@ -86,7 +86,7 @@ end
 if ischar(outfieldname)
     for j=1:N
         try
-            load(['out/simulations/' DataHash(Pmat{j})],'Res');
+            load(['out/simulations/' DataHash(Pmat(j))],'Res');
             Resmat(j)=Res.(outfieldname);
         catch
             Resmat(j)=NaN;
@@ -98,14 +98,14 @@ end
     
 if outfieldname==-2
     for j=1:N
-        delete(['out/simulations/' DataHash(Pmat{j}) '.mat']);
+        delete(['out/simulations/' DataHash(Pmat(j)) '.mat']);
     end
     Resmat=NaN;
     return
 end
 
 for j=1:N
-    Resmat(j)=generalC(Pmat{j},outfieldname,-j); 
+    Resmat(j)=generalC(Pmat(j),outfieldname,-j); 
 end
 
 Resmat=reshape(Resmat,fliplr(varparams))';
