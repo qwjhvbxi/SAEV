@@ -126,7 +126,7 @@ UtilityWalking=-RawDistance/WalkingSpeed*VOT;
 
 %% setup energy layer
 
-if strcmp(P.trlayeralg,'aggregate') 
+if strcmp(P.enlayeralg,'aggregate') 
 
     % generate EMD in case of aggregate energy layer
     emdname=['data/temp/emd-' P.tripfile '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
