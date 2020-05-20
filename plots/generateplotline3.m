@@ -104,7 +104,7 @@ if outfieldname==-2
     return
 end
 
-for j=1:N
+parfor j=1:N
     Resmat(j)=generalC(Pmat(j),outfieldname,-j); 
 end
 
