@@ -102,8 +102,11 @@ relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
-u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
-
+if isfield(P.Operations,'uinit')
+    u(1,:)=P.Operations.uinit;
+else
+    u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
+end
 
 %% trip processing
 
@@ -323,7 +326,10 @@ for i=1:tsim
 
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
                 maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
-                zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ELayerResults.charging./maxc , ELayerResults.discharging./maxc , maxc , E.etrip]';
+                zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ ELayerResults.charging./maxc , ...
+                                                                        ELayerResults.discharging./maxc , ...
+                                                                        maxc , ...
+                                                                        E.etrip]';
                 zmacro(isnan(zmacro))=0;
 
             otherwise
@@ -626,8 +632,8 @@ end
 if strcmp(P.trlayeralg,'simplified') 
     
     Internals.b=b;
-    Internals.v=v;
-    Internals.w=w;
+    Internals.v=sparse(v);
+    Internals.w=sparse(w);
     
     waiting=reorderVectors(waiting,ASortInd);
     dropped=reorderVectors(dropped,ASortInd);
@@ -659,9 +665,9 @@ end
 
 Internals.zmacro=zmacro;
 
-Sim.u=u; % final destination of vehicles (station) [tsim x m]
-Sim.q=q; % state of charge 
-Sim.e=e/ac*P.Tech.chargekw;
+Sim.u=uint8(u); % final destination of vehicles (station) [tsim x m]
+Sim.q=single(q); % state of charge 
+Sim.e=sparse(e/ac*P.Tech.chargekw);
 
 % waiting times
 Sim.waiting=sparse(waiting);
