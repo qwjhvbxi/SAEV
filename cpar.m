@@ -99,6 +99,6 @@ switch Scenario
     case 'NYC2016-small2'
         P.m=5;
     case 'Tokyo189'
-        P.m=5000;
+        P.m=3500;
 end
 
