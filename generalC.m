@@ -93,7 +93,7 @@ queue=zeros(100,1);          % temporary variable to store queued arrivals
 % results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
 dropped=zeros(length(A),1);  % request is dropped?
-chosenmode=true(length(A),1);% which mode is chosen?
+chosenmode=false(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
@@ -120,7 +120,7 @@ end
 
 % calculate benefit of alternative trip
 VOT=15; % value of time
-MaxHor=min(15,P.Operations.maxwait); % maximum horizon for waiting time estimation
+MaxHor=min(15,ceil(P.Operations.maxwait/P.e)); % maximum horizon for waiting time estimation
 CostMinute=0.2;
 WalkingSpeed=4;
 UtilityWalking=-RawDistance*1.5/WalkingSpeed*VOT;
@@ -548,37 +548,46 @@ for i=1:tsim
                             
                             if P.modechoice
                             
-                                % NOTE: implement choice model here
-                                % 1. estimate waiting time
-                                % 2. estimate cost
-                                % 3. decide 
-                                
-                                if VehicleAvailable
-                                    
-                                    WaitingTime=0;
-                                    
-                                else
-                                    
-                                    QueueLength=length(distancetomovesorted);
-                                    FirstAvailable=find(DirectedHereSum>QueueLength,1);
-                                    
-                                    % if not in u, v, w, == inf
-                                    if isempty(FirstAvailable)
-                                        WaitingTime=Inf;
+                                % avoid changing chosen mode after deciding
+                                if chosenmode(tripID)==0
+
+                                    % NOTE: implement choice model here
+                                    % 1. estimate waiting time
+                                    % 2. estimate cost
+                                    % 3. decide 
+
+                                    if VehicleAvailable
+
+                                        WaitingTime=0;
+
                                     else
-                                        WaitingTime=FirstAvailable*P.e;
+
+    %                                     QueueLength=length(distancetomovesorted);
+                                        FirstAvailable=find(DirectedHereSum>=ka,1);
+
+                                        % if not in u, v, w, == inf
+                                        if isempty(FirstAvailable)
+                                            WaitingTime=Inf;
+                                        else
+                                            WaitingTime=FirstAvailable*P.e;
+                                        end
+
                                     end
+
+
+                                    UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
+                                    AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
+
+                                    chosenmode(tripID)=(rand()<AcceptProbability);
+
+                                    waitingestimated(tripID)=WaitingTime;
                                     
                                 end
                                 
+                            else
                                 
-                                UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
-                                AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
-
-                                chosenmode(tripID)=(rand()<AcceptProbability);
-                                
-                                waitingestimated(tripID)=WaitingTime;
-                            
+                                chosenmode(tripID)=1;
+                               
                             end
                             
                             if chosenmode(tripID)==1
