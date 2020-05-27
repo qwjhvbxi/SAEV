@@ -123,7 +123,7 @@ VOT=15; % value of time
 MaxHor=min(15,P.Operations.maxwait); % maximum horizon for waiting time estimation
 CostMinute=0.2;
 WalkingSpeed=4;
-UtilityWalking=-RawDistance/WalkingSpeed*VOT;
+UtilityWalking=-RawDistance*1.5/WalkingSpeed*VOT;
 % PTSpeed=20;
 % UtilityPT=-RawDistance/PTSpeed*VOT;
 
