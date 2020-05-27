@@ -32,6 +32,8 @@ if nargin>0
     end
 end
 
+DataFolder=setDataFolder();
+
 numparams=cellfun('length',varargin(2:2:end)); % length of each set of parameter values
 posparams=numparams>1;      % set with more than one values (sensitivity)
 whichparm=find(posparams); 
@@ -84,10 +86,21 @@ for k=1:varparams(1)
 end
 
 if ischar(outfieldname)
+    
+    FieldName=char(outfieldname);
+    PointPos=find(FieldName=='.');
+
     for j=1:N
         try
-            load(['out/simulations/' DataHash(Pmat(j))],'Res');
-            Resmat(j)=Res.(outfieldname);
+            Hash=DataHash(Pmat(j));
+            simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
+            load(simname,'Res');
+            if isempty(PointPos) 
+                Resmat(j)=Res.(FieldName);
+            else
+                Resmat(j)=Res.(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end));
+            end
+            % Resmat(j)=Res.(outfieldname);
         catch
             Resmat(j)=NaN;
         end
@@ -98,7 +111,9 @@ end
     
 if outfieldname==-2
     for j=1:N
-        delete(['out/simulations/' DataHash(Pmat(j)) '.mat']);
+        Hash=DataHash(Pmat(j));
+        simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
+        delete(simname);
     end
     Resmat=NaN;
     return
