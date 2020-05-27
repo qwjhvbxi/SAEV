@@ -1,13 +1,10 @@
 % [Res]=GENERALC(P[,extsave,dispiter])
 % Run SAEV simulation and relocation/charge oprimization with coordinates.
 % Vehicles start at beginning of time step, arrive at end of time step.
+%
+% Mode choice - 0: walking, 1: SAEV
 % 
-% TO DO:
-% add carbon emissions
-% CHECK THAT TOTAL DISTANCES TRAVELED BY EV IS THE SAME
-% PROVARE TUTTE LE COMBINAZIONI
-% 
-% see also PARAMS
+% see also CPAR
 
 function [Res]=generalC(P,extsave,dispiter)
 
@@ -121,11 +118,12 @@ end
 
 % calculate benefit of alternative trip
 VOT=15; % value of time
-WalkingSpeed=4;
+MaxHor=min(15,P.Operations.maxwait); % maximum horizon for waiting time estimation
 CostMinute=0.2;
-% PTSpeed=20;
+WalkingSpeed=4;
 UtilityWalking=-RawDistance/WalkingSpeed*VOT;
-% UtilityPT=-RawDistance/WalkingSpeed*VOT;
+% PTSpeed=20;
+% UtilityPT=-RawDistance/PTSpeed*VOT;
 
 %% setup energy layer
 
@@ -503,12 +501,18 @@ for i=1:tsim
                     % trips starting at station k
                     tripsK=trips((A(trips,1)==j));
 
-                    % if there are passengers waiting at station k
+                    % if there are passengers waiting at station
                     if ~isempty(tripsK)
 
                         % vehicles at this station
                         uid=find(u(i,:)==j);
-
+                        
+                        if P.modechoice
+                            % how many vehicles have destination this station in next 20 minutes
+                            DirectedHere=sum(v(i:i+MaxHor,:)==j,2)+sum(w(i:i+MaxHor,:)==j,2);
+                            DirectedHereSum=cumsum(DirectedHere);
+                        end
+                        
                         % soc of vehicles at this station (sorted by high soc)
                         [qj,usortid]=sort(q(i,uid),'descend');
 
@@ -530,13 +534,39 @@ for i=1:tsim
                             % trip ID
                             tripID=tripsK(sortid(ka));
                             
+                            % candidates
+                            candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
+
+                            % is there a vehicle available?
+                            VehicleAvailable=(sum(candidates)>0);
+                            
                             if P.modechoice
                             
                                 % NOTE: implement choice model here
                                 % 1. estimate waiting time
                                 % 2. estimate cost
                                 % 3. decide 
-                                UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute);
+                                
+                                if VehicleAvailable
+                                    
+                                    WaitingTime=0;
+                                    
+                                else
+                                    
+                                    QueueLength=length(distancetomovesorted);
+                                    FirstAvailable=find(DirectedHereSum>QueueLength,1);
+                                    
+                                    % if not in u, v, w, == inf
+                                    if isempty(FirstAvailable)
+                                        WaitingTime=Inf;
+                                    else
+                                        WaitingTime=FirstAvailable*P.e;
+                                    end
+                                    
+                                end
+                                
+                                
+                                UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*P.e*VOT/60;
                                 AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
 
                                 chosenmode(tripID)=(rand()<AcceptProbability);
@@ -544,12 +574,9 @@ for i=1:tsim
                             end
                             
                             if chosenmode(tripID)==1
-                            
-                                % candidates
-                                candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
 
                                 % if there are vehicles with enough soc
-                                if sum(candidates)>0
+                                if VehicleAvailable
 
                                     % vehicle with highest soc goes
                                     usortedi=find(candidates,1);
