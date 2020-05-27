@@ -84,6 +84,7 @@ u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
 w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
 b=zeros(etsim,n,'double');             % imbalance
+s=zeros(tsim+100,n,'double');          % auxiliary variable to keep track of vehicles arriving at stations
 
 % working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
@@ -469,6 +470,9 @@ for i=1:tsim
                             % send relocation instruction
                             w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
 
+                            % keep track of vehicles arriving at stations
+                            s(i+arris(ka),Rs(dstnid(ka)))=s(i+arris(ka),Rs(dstnid(ka)))+1;
+                            
                             % save length of relocation
                             relodist(i)=relodist(i)+arris(ka);
 
@@ -509,8 +513,9 @@ for i=1:tsim
                         
                         if P.modechoice
                             % how many vehicles have destination this station in next 20 minutes
-                            DirectedHere=sum(v(i:i+MaxHor,:)==j,2)+sum(w(i:i+MaxHor,:)==j,2);
-                            DirectedHereSum=cumsum(DirectedHere);
+                            % DirectedHere=sum(v(i:i+MaxHor,:)==j,2)+sum(w(i:i+MaxHor,:)==j,2);
+                            % DirectedHereSum=cumsum(DirectedHere);
+                            DirectedHereSum=cumsum(s(i:i+MaxHor,j));
                         end
                         
                         % soc of vehicles at this station (sorted by high soc)
@@ -588,6 +593,9 @@ for i=1:tsim
                                     u(i,ui)=0;
                                     qj(usortedi)=0;
                                     v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
+                                    
+                                    % keep track of vehicles arriving at stations
+                                    s(i+distancetomovesorted(ka),destinations(sortid(ka)))=s(i+distancetomovesorted(ka),destinations(sortid(ka)))+1;
 
                                 else
 
