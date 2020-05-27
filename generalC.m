@@ -97,6 +97,7 @@ chosenmode=true(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
+waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
@@ -571,10 +572,12 @@ for i=1:tsim
                                 end
                                 
                                 
-                                UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*P.e*VOT/60;
+                                UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
                                 AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
 
                                 chosenmode(tripID)=(rand()<AcceptProbability);
+                                
+                                waitingestimated(tripID)=WaitingTime;
                             
                             end
                             
@@ -673,6 +676,7 @@ if strcmp(P.trlayeralg,'simplified')
     waiting=reorderVectors(waiting,ASortInd);
     dropped=reorderVectors(dropped,ASortInd);
     chosenmode=reorderVectors(chosenmode,ASortInd);
+    waitingestimated=reorderVectors(waitingestimated,ASortInd);
     
 end
 
@@ -712,6 +716,9 @@ Sim.dropped=sparse(dropped);
 
 % chosen mode
 Sim.chosenmode=chosenmode;
+
+% estimated waiting time (only mode choice)
+Sim.waitingestimated=sparse(waitingestimated);
 
 %relocation minutes
 Sim.relodist=relodist*P.e;
