@@ -106,6 +106,7 @@ if ischar(outfieldname)
         end
     end
     Resmat=reshape(Resmat,fliplr(varparams))';
+    Pmat=reshape(Pmat,fliplr(varparams))';
     return
 end
     
@@ -124,6 +125,7 @@ parfor j=1:N
 end
 
 Resmat=reshape(Resmat,fliplr(varparams))';
+Pmat=reshape(Pmat,fliplr(varparams))';
 
 end
 
