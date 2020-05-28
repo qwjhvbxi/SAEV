@@ -3,15 +3,13 @@
 
 function [Revenue,Costs,OperatingProfits]=calculateCosts3(P,Res,tariff,travelcost)
 
-DataFolder=setDataFolder();
-
 [A,~,ASortInd,~,~,~,~,~,~]=generateGPStrips(P);
 
-
+A=reorderVectors(A,ASortInd);
 
 TraveledTrips=logical(full((Res.Sim.chosenmode==1).*(Res.Sim.dropped==0)));
 
-TraveledDistance=sum(Res.Params.Tr(sub2ind(size(Res.Params.Tr),A1(TraveledTrips,1),A1(TraveledTrips,2))));
+TraveledDistance=sum(Res.Params.Tr(sub2ind(size(Res.Params.Tr),A(TraveledTrips,1),A(TraveledTrips,2))));
 RelocationDistance=sum(Res.Sim.relodist);
 
 % calculate revenues
