@@ -1,16 +1,40 @@
-%% launch simulation
+% %% debug simulation
+% 
+% P1=cpar('NYC2016-small2','simplified');
+% P1.Operations.maxwait=Inf;
+% Res1=generalC(P1,2,2)
+% P=cpar('NYC2016-small2','opti');
+% Res2=generalC(P,2,2)
+% 
+% return
 
-P=cpar('NYC2016-small');
-Res2=generalC(P,-1,2)
+%% comparison between optimal and simplified
+
+addpath plots
+
+P1=cpar('NYC2016-small','opti');
+Res1=generalC(P1,1,2)
+
+P2=cpar('NYC2016-small','simplified');
+P2.Operations.maxwait=Inf;
+Res2=generalC(P2,1,2)
+
+[P,R]=generateplotline3('NYC2016',[],'Operations.maxwait',[10 Inf]);
 
 
-%% launch over several days
+%% simulations over 1 month
 
-% P.uinit=Res.u(end);
+% use carbon emissions from NYISO 2018, Germany 2019 (more renewables)
+% carbon price... 
+
+% P.uinit=Res.Sim.u(end,:)
 % P.initialsoc=...;
     
 
 return
+
+
+
 
 
 %% plot for paper
@@ -82,13 +106,7 @@ xticks(xt)
 xlabel('hours')
 ylabel('average SOC')
 % legend({'power','price'},'Orientation','horizontal','Location','best')
-set(gca,...
-...'Units','normalized',...
-...'Position',[.15 .2 .75 .7],...
-'FontUnits','points',...
-'FontWeight','normal',...
-...'FontSize',9,...
-'FontName','Times')
+set(gca,'FontUnits','points','FontWeight','normal','FontName','Times');
 print -depsc2 figures/soc.eps
 
 
