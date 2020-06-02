@@ -75,6 +75,8 @@ for k=1:varparams(1)
             FieldName=char(varargin{(i-1)*2+1});
             PointPos=find(FieldName=='.');
             
+            % todo: check if ThisValue is string
+            
             if isempty(PointPos) 
                 Pmat(N).(FieldName)=ThisValue;
             else
