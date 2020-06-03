@@ -19,6 +19,9 @@ for k=1:365
     
 end
 
+
+%% SOC during the year
+
 q=[];
 for k=1:365
     
@@ -34,6 +37,10 @@ end
 plot(q)
 
 
+%% costs
+
+DataFolder=setDataFolder();
+
 % calculate baseline cost
 load('data/eleprices/TokyoDA-FY2017-Reduced.mat','x');
 P0=cpar('Tokyo189');
@@ -43,13 +50,11 @@ R0=generalC(P0,1,2);
 
 cost0=(sum(R0.Sim.e/60*P0.e,2)')*repelem(x,P0.beta,1);
 
-
 costComp=[cost0',[R(:).cost]'];
-
-DataFolder=setDataFolder();
 
 figure
 plot(costComp)
+sum(costComp)
 
 % Cost comparison
 figure('Units','centimeters','Position',[10,7,10,7])
@@ -64,12 +69,12 @@ set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Tim
 print([DataFolder 'figures/JSER/CostComparison'],'-dpng','-r300');
 
 
-% charging power and electricity price
+%% charging power and electricity price
 
 z=linspace(0,24,721);
+Day=311;% 7 Nov 2017
 
 figure('Units','centimeters','Position',[10,7,10,7])
-Day=311;% 7 Nov 2017
 hold on
 yyaxis right
 plot(z(1:end-1),R(Day).Params.elep(1:720))
@@ -87,7 +92,6 @@ set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Tim
 % print([DataFolder 'figures/JSER/charging'],'-dpng','-r300');
 print('charging','-dpng','-r300');
 
-
 figure('Units','centimeters','Position',[10,7,10,7])
 plot(z(1:end-1),sum(R0.Sim.e,2))
 xlabel('daily cost (yen)')
@@ -96,7 +100,28 @@ legend({'unscheduled','scheduled'},'Orientation','vertical','Location','NorthWes
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 print([DataFolder 'figures/JSER/charging'],'-dpng','-r300');
 
-sum(costComp)
+
+%% fleet SOC dispersion
+
+% Res=R(Day);
+FleetSOC=Res.Sim.q'*100;
+Meanq=mean(FleetSOC);
+Y=prctile(FleetSOC,[2.5,97.5]);
+
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+plot(z,Meanq,'k-','LineWidth',1.5)
+plot(z,Y(1,:),'r--','LineWidth',1.5)
+plot(z,Y(2,:),'b--','LineWidth',1.5)
+xlim([0,24])
+xlabel('hour')
+ylabel('SOC %')
+lgnd=legend({'Mean SOC','2.5 %tile','97.5 %tile'},'Orientation','vertical','Location','SouthWest');
+lgnd.BoxFace.ColorType='truecoloralpha';
+lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print('SOCdispersion','-dpng','-r300');
+
 
 
 
