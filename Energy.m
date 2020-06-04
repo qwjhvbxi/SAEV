@@ -22,7 +22,14 @@ Res2=generalC(P2,1,2)
 [P,R]=generateplotline3('NYC2016',[],'Operations.maxwait',[10 Inf]);
 
 
-%% simulations over 1 month
+%% sensitivity analysis
+
+[P,R]=generateplotline3('NYC2016',[],'Operations.maxwait',[10 Inf]);
+
+
+
+
+%% simulations over 1 year
 
 % use carbon emissions from NYISO 2018, Germany 2019 (more renewables)
 % carbon price... 
@@ -30,6 +37,32 @@ Res2=generalC(P2,1,2)
 % P.uinit=Res.Sim.u(end,:)
 % P.initialsoc=...;
     
+P=cpar('NYC2016');
+
+SOC=zeros(366,P.m);
+Uinit=zeros(366,P.m);
+
+SOC(1,:)=ones(1,P.m)*0.7;
+uinitfile=['data/uinit/uinit_' P.tripfile '_' num2str(N) '_' num2str(P.K) '.mat'];
+if exist(uinitfile,'file')
+    load(uinitfile,'uinit');
+else
+    uinit=findInitialPos(P,A,Atimes,P.K,15);%50
+    save(uinitfile,'uinit');
+end
+Uinit(1,:)=uinit;
+
+% P.Operations.maxwait=Inf;
+for k=1:365
+    P.tripday=k;
+    P.gridday=k;
+    P.Operations.initialsoc=SOC(k,:);
+    P.Operations.uinit=Uinit(k,:);
+    R(k)=generalC(P,1,-k);
+    SOC(k+1,:)=R(k).Sim.q(end,:);
+    Uinit(k+1,:)=max(1,min(189,R(k).Sim.u(end,:)+sum(R(k).Internals.v(721:end,:))+sum(R(k).Internals.w(721:end,:))));
+end
+
 
 return
 
@@ -72,13 +105,7 @@ xticks(xt)
 xlabel('hours')
 ylabel('electricity price (yen/kWh)')
 legend({'power','price'},'Orientation','horizontal')
-set(gca,...
-...'Units','normalized',...
-...'Position',[.15 .2 .75 .7],...
-'FontUnits','points',...
-'FontWeight','normal',...
-...'FontSize',9,...
-'FontName','Times')
+set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
 print -depsc2 figures/power.eps
 
 % waiting 
@@ -89,13 +116,7 @@ xticks(xt)
 xlabel('hours')
 ylabel('average wait time (min.)')
 % legend({'power','price'},'Orientation','horizontal','Location','best')
-set(gca,...
-...% 'Units','normalized',...
-...% 'Position',[.15 .2 .75 .7],...
-'FontUnits','points',...
-'FontWeight','normal',...
-...'FontSize',9,...
-'FontName','Times')
+set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
 print -depsc2 figures/waiting.eps
 
 % soc 

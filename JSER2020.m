@@ -103,24 +103,24 @@ print([DataFolder 'figures/JSER/charging'],'-dpng','-r300');
 
 %% fleet SOC dispersion
 
-% Res=R(Day);
+Res=R(Day);
 FleetSOC=Res.Sim.q'*100;
 Meanq=mean(FleetSOC);
 Y=prctile(FleetSOC,[2.5,97.5]);
 
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
-plot(z,Meanq,'k-','LineWidth',1.5)
-plot(z,Y(1,:),'r--','LineWidth',1.5)
-plot(z,Y(2,:),'b--','LineWidth',1.5)
+plot(z,Meanq,'-','LineWidth',1)
+plot(z,Y(1,:),'--','LineWidth',1)
+plot(z,Y(2,:),'--','LineWidth',1)
 xlim([0,24])
 xlabel('hour')
 ylabel('SOC %')
-lgnd=legend({'Mean SOC','2.5 %tile','97.5 %tile'},'Orientation','vertical','Location','SouthWest');
+lgnd=legend({'Mean SOC','2.5 prctile','97.5 prctile'},'Orientation','vertical','Location','SouthWest');
 lgnd.BoxFace.ColorType='truecoloralpha';
 lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
-print('SOCdispersion','-dpng','-r300');
+print('SOCdispersion2','-dpng','-r300');
 
 
 
