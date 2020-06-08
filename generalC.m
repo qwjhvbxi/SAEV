@@ -13,8 +13,7 @@ function [Res]=generalC(P,extsave,dispiter)
 
 addpath functions
 addpath utilities
-addpath('../CarSharingModel/functions/stackable');
-addpath('../CarSharingModel/functions/');
+addpath('../CarSharingModel/functions/stackable'); % optimalrelocationfluxes
 DataFolder=setDataFolder();
 
 
