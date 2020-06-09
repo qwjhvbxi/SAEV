@@ -21,7 +21,8 @@ end
 % trip file associated with scenario
 switch Scenario 
     case 'NYC2016'
-        P.tripfile='NYC2016_Jan13-Mar16_10days';
+        % P.tripfile='NYC2016_Jan13-Mar16_10days';
+        P.tripfolder='NYC2016';
     case 'NYC2018'
         P.tripfile='NY_trips_10wed_0103-0307_minutes';
     case 'NYC2016-small'

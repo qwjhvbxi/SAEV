@@ -5,28 +5,32 @@
 % P contains 'tripfile' and 'scenarioid'. In case of GPS coordinates, P
 % contains also the station coordinates 'coords' and (optionally)
 % 'stationradius'
+%
+% See also generalC
 
 function [A,Atimes,ASortInd,AbuckC,ODistToNode,ONodeID,DDistToNode,DNodeID,RawDistance]=generateGPStrips(P)
 
-if ~isfield(P,'tau')
-    P.tau=1;
-end
-if ~isfield(P,'scenarioid') && isfield(P,'tripday') % legacy
-    P.scenarioid=P.tripday;
-end
-
+% set external data folder
 DataFolder=setDataFolder();
 
-% retrieve trip matrix
-tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
-if exist(tripFileLocation,'file') 
+% determine file name
+if isfield(P,'tripfolder')
+    tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' P.tripday '.mat'];
+else
+    tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
+end
+
+% load files
+if exist(tripFileLocation,'file')
     load(tripFileLocation,'A','Atimes');
 else
     error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
 end
-if iscell(A) && P.scenarioid>0 % file with multiple scenarios?
-    A1=double(A{P.scenarioid});
-    Atimes1=double(Atimes{P.scenarioid});
+
+% file with multiple scenarios?
+if iscell(A) && P.tripday>0 
+    A1=double(A{P.tripday});
+    Atimes1=double(Atimes{P.tripday});
 else
     A1=double(A);
     Atimes1=double(Atimes);
@@ -38,7 +42,7 @@ Atimes1(Atimes1(:,1)==0)=1440;
 % fast method for trip generation
 [Atimes,ASortInd]=sortrows(Atimes1,1); % trips sorted by departure time
 A=A1(ASortInd,:); % trips sorted by departure time
-Abuck=histc(Atimes(:,1),1:P.tau:1440*P.tau+1); % number of trips in each minute
+Abuck=histc(Atimes(:,1),1:1441); % number of trips in each minute
 AbuckC=[0;cumsum(Abuck)]; % total number of trips up to each minute
 
 % GPS coordinates mode
@@ -49,7 +53,7 @@ if size(A,2)==4
     
     % check P.coords
     if ~isfield(P,'coords') || length(P.coords)<2
-        try 
+        try
             load(['data/scenarios/' P.scenario '.mat'],'T','C');
             P.coords=C;
         catch
@@ -61,7 +65,7 @@ if size(A,2)==4
     RawDistance=sqrt((A(:,1)-A(:,3)).^2+(A(:,2)-A(:,4)).^2);
     
     % distance of each trip from stations
-    DistancesToNodesFile=[DataFolder 'temp/' P.tripfile '_' num2str(length(P.coords)) 'DistancesToNodes_Day' num2str(P.scenarioid) '.mat'];
+    DistancesToNodesFile=[DataFolder 'temp/' P.tripfile '_' num2str(length(P.coords)) 'DistancesToNodes_Day' num2str(P.tripday) '.mat'];
     if exist(DistancesToNodesFile,'file')
         load(DistancesToNodesFile,'ODistToNode','ONodeID','DDistToNode','DNodeID');
     else
