@@ -24,7 +24,9 @@ Res2=generalC(P2,1,2)
 
 %% sensitivity analysis
 
-[P,R]=generateplotline3('NYC2016',[],'Operations.maxwait',[10 Inf]);
+addpath plots functions utilities
+
+[P,R]=generateplotline3('NYC2016',[],'Operations.maxwait',[Inf],'m',13000,'TransportLayer.ts',10:16,'TransportLayer.tr',6:18);
 
 
 
