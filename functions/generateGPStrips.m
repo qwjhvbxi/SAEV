@@ -15,20 +15,23 @@ DataFolder=setDataFolder();
 
 % determine file name
 if isfield(P,'tripfolder')
-    tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' P.tripday '.mat'];
+    tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday) '.mat'];
+    TripName=P.tripfolder;
 else
     tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
+    TripName=P.tripfile;
 end
 
 % load files
 if exist(tripFileLocation,'file')
     load(tripFileLocation,'A','Atimes');
 else
-    error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
+    %error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
+    error('File ''%s'' does not exist.',tripFileLocation);
 end
 
 % file with multiple scenarios?
-if iscell(A) && P.tripday>0 
+if iscell(A) && P.tripday>0 && ~isfield(P,'tripfolder')
     A1=double(A{P.tripday});
     Atimes1=double(Atimes{P.tripday});
 else
@@ -65,7 +68,7 @@ if size(A,2)==4
     RawDistance=sqrt((A(:,1)-A(:,3)).^2+(A(:,2)-A(:,4)).^2);
     
     % distance of each trip from stations
-    DistancesToNodesFile=[DataFolder 'temp/' P.tripfile '_' num2str(length(P.coords)) 'DistancesToNodes_Day' num2str(P.tripday) '.mat'];
+    DistancesToNodesFile=[DataFolder 'temp/' TripName '_' num2str(length(P.coords)) 'DistancesToNodes_Day' num2str(P.tripday) '.mat'];
     if exist(DistancesToNodesFile,'file')
         load(DistancesToNodesFile,'ODistToNode','ONodeID','DDistToNode','DNodeID');
     else

@@ -13,7 +13,7 @@ function [Res]=generalC(P,extsave,dispiter)
 
 addpath functions
 addpath utilities
-addpath('../CarSharingModel/functions/stackable'); % optimalrelocationfluxes
+% addpath('../CarSharingModel/functions'); % optimalrelocationfluxes
 DataFolder=setDataFolder();
 
 
@@ -64,6 +64,12 @@ else
 end
 clear x y;
 
+if isfield(P,'tripfolder')
+    TripName=P.tripfolder;
+else
+    TripName=P.tripfile;
+end
+
 
 %% parameters of simulation
 
@@ -109,7 +115,7 @@ end
 %% trip processing
 
 % generate number of arrivals at each station
-statsname=['data/temp/tripstats-' P.tripfile '-' num2str(P.tripday) '-N' num2str(n) '.mat'];
+statsname=['data/temp/tripstats-' TripName '-' num2str(P.tripday) '-N' num2str(n) '.mat'];
 if exist(statsname,'file')
     load(statsname,'fo','fd','dk');
 else
@@ -131,7 +137,7 @@ UtilityWalking=-RawDistance*1.5/WalkingSpeed*VOT;
 if strcmp(P.enlayeralg,'aggregate') 
 
     % generate EMD in case of aggregate energy layer
-    emdname=['data/temp/emd-' P.tripfile '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
+    emdname=['data/temp/emd-' TripName '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
     if exist(emdname,'file')
         load(emdname,'dkemd','dkod','dktrip','fk');
     else
@@ -204,7 +210,7 @@ if strcmp(P.trlayeralg,'opti')
     x=[zeros(n^2,1);zeros(n*P.m*(maxt+1),1);uinit;q(1,:)'];
     
     % initializations of simulation variables
-    cname=['data/temp/c-' P.tripfile '-' num2str(P.tripday) '.mat'];
+    cname=['data/temp/c-' TripName '-' num2str(P.tripday) '.mat'];
     if exist(cname,'file')
         load(cname,'c');
     else
