@@ -76,8 +76,8 @@ end
 % transport layer: simplified
 if strcmp(P.trlayeralg,'simplified')
     Transport.tx=5;  % time steps
-    Transport.ts=15; % time steps
-    Transport.tr=15; % time steps
+    Transport.ts=12; % time steps
+    Transport.tr=10; % time steps
     Transport.bmin=0;
 end
 
