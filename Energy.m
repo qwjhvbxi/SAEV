@@ -38,19 +38,22 @@ addpath plots functions utilities
 
 
 
-%% simulations over 1 year
+%% simulations over long period
 
-% use carbon emissions from NYISO 2018, Germany 2019 (more renewables)
-% carbon price... 
+% use carbon emissions from NYISO 2018, Germany 2019 (more renewables), carbon price... 
 
-% P.uinit=Res.Sim.u(end,:)
-% P.initialsoc=...;
-    
+Period=1:100;
+
+% initializations
 P=cpar('NYC2016');
+P.Operations.maxwait=Inf;
+P.tripfolder='NYC2016';
+P.gridfile='Germany_DA_2019';
+P.m=13000;
+SOC=zeros(length(Period)+1,P.m);
+Uinit=zeros(length(Period)+1,P.m);
 
-SOC=zeros(366,P.m);
-Uinit=zeros(366,P.m);
-
+% initial parameters
 SOC(1,:)=ones(1,P.m)*0.7;
 uinitfile=['data/uinit/uinit_' P.tripfile '_' num2str(N) '_' num2str(P.K) '.mat'];
 if exist(uinitfile,'file')
@@ -61,8 +64,8 @@ else
 end
 Uinit(1,:)=uinit;
 
-% P.Operations.maxwait=Inf;
-for k=1:365
+for j=1:length(Period)
+    k=Period(j);
     P.tripday=k;
     P.gridday=k;
     P.Operations.initialsoc=SOC(k,:);

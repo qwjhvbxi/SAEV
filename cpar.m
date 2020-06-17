@@ -35,7 +35,7 @@ switch Scenario
 end
 P.tripday=1;     % which day of the trip file
 
-P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/'
+P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/' (half-hourly, 48x365)
 P.gridday=311;  % which day of the electricity file
 
 % P.chargingstations=[4,4;5,6];
