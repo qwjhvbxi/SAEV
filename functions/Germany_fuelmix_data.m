@@ -1,4 +1,4 @@
-% Germany fuel mix data processing
+%% Germany fuel mix data processing
 
 addpath functions utilities
 DataFolder=setDataFolder();
@@ -23,4 +23,20 @@ plot(CarbonIntensity_kgPerMWh)
 save([DataFolder 'grid/Germany_fuelmix_2019.mat'],'Fuels','CarbonEmissionsByFuel','GenerationByFuel_MW','CarbonEmissions_TonPerMin','CarbonIntensity_kgPerMWh')
 
 
+%% generate file with prices and carbon intensity
+% results should be half-hourly
 
+addpath functions utilities
+DataFolder=setDataFolder();
+
+load([DataFolder 'grid/Germany_fuelmix_2019.mat'],'CarbonIntensity_kgPerMWh');
+load('data/eleprices/DayaheadPrices2018-2019Germany.mat','GermanyDayAheadEURMWh_2019');
+
+% prices
+x=repelem(reshape(GermanyDayAheadEURMWh_2019(1:8760),24,365),2,1); % hourly
+
+% emissions
+y1=mean(reshape(CarbonIntensity_kgPerMWh(1:(8760*4)),2,8760*2)); % quarter hourly
+y=reshape(y1',48,365); 
+
+save('data/eleprices/Germany_DA_2019.mat','x','y');
