@@ -42,7 +42,7 @@ addpath plots functions utilities
 
 % use carbon emissions from NYISO 2018, Germany 2019 (more renewables), carbon price... 
 
-Period=1:100;
+Period=1:30;
 
 % initializations
 P=cpar('NYC2016');
@@ -54,15 +54,12 @@ SOC=zeros(length(Period)+1,P.m);
 Uinit=zeros(length(Period)+1,P.m);
 
 % initial parameters
+load(['data/scenarios/' P.scenario '.mat'],'T');
+n=size(T,1);
 SOC(1,:)=ones(1,P.m)*0.7;
-uinitfile=['data/uinit/uinit_' P.tripfile '_' num2str(N) '_' num2str(P.K) '.mat'];
-if exist(uinitfile,'file')
-    load(uinitfile,'uinit');
-else
-    uinit=findInitialPos(P,A,Atimes,P.K,15);%50
-    save(uinitfile,'uinit');
-end
-Uinit(1,:)=uinit;
+Uinit(1,:)=randi(n,1,P.m);
+
+%%
 
 for j=1:length(Period)
     k=Period(j);
@@ -72,9 +69,25 @@ for j=1:length(Period)
     P.Operations.uinit=Uinit(k,:);
     R(k)=generalC(P,1,-k);
     SOC(k+1,:)=R(k).Sim.q(end,:);
-    Uinit(k+1,:)=max(1,min(189,R(k).Sim.u(end,:)+sum(R(k).Internals.v(721:end,:))+sum(R(k).Internals.w(721:end,:))));
+    Uinit(k+1,:)=max(1, min( n , ...
+        double(R(k).Sim.u(end,:)) + full(sum(R(k).Internals.v(721:end,:))) + full(sum(R(k).Internals.w(721:end,:))) ) );
 end
 
+
+%%
+
+Q=[];
+for j=1:length(Period)
+    k=Period(j);
+    Q=[Q;mean(R(k).Sim.q,2)];
+    
+end
+
+sum([R.cost])
+
+[R.peakwait]
+
+[R.avgwait]
 
 return
 
