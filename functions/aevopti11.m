@@ -77,9 +77,10 @@ beq=[];
 A=[     -tril(ones(Q.T)) , tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % min SOC constraint (e(t))
 A=[A;   tril(ones(Q.T)) , -tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % max SOC constraint (e(t))
 
-% main equation
+% main equation (TODO: need to add curtailment variable in case of large surplus)
 %        charge             discharge                   import                  export                              generators        
-A=[A; diag(ones(Q.T,1)) , -diag(ones(Q.T,1))      , -diag(ones(Q.T,1))  ,   diag(ones(Q.T,1)), repmat([zeros(Q.T,Q.T*3), -diag(ones(Q.T,1))],1,numgenerators)];
+Aeq=[Aeq; diag(ones(Q.T,1)) , -diag(ones(Q.T,1))      , -diag(ones(Q.T,1))  ,   diag(ones(Q.T,1)), repmat([zeros(Q.T,Q.T*3), -diag(ones(Q.T,1))],1,numgenerators)];
+beq=[beq;Q.surplus];
 
 % generators objective functions
 fmgs=zeros(4*Q.T,1); % cost of startup
@@ -117,7 +118,6 @@ A=[A; -ones(1,Q.T)      , ones(1,Q.T)             , zeros(1,Q.T*(2+4*numgenerato
 % vector b for all simulation
 b=[-etripcday+Q.einit-Q.storagemin; ...% min soc
     etripcday+Q.storagemax-Q.einit; ...% max soc
-    Q.surplus  ; % main equation
     zeros(Q.T*numgenerators,1); % gen
     zeros(Q.T*numgenerators,1); % gen
     -etripcday(end)+Q.einit-Q.minfinalsoc*Q.storagemax]; % min final soc
@@ -142,7 +142,8 @@ ub=[Q.dkav*Q.maxchargeminute; ... % charge
 fbat=[ ones(Q.T,1)*Q.cyclingcost    ;   zeros(Q.T*(3+4*numgenerators),1)  ];
 
 % cost of grid exchange
-fgrid=[zeros(2*Q.T,1) ;  Q.electricityprice ; -Q.electricityprice*(Q.selling*.99+0.001) ; zeros(Q.T*(4*numgenerators),1) ];
+% fgrid=[zeros(2*Q.T,1) ;  Q.electricityprice ; -Q.electricityprice*(Q.selling*.99+0.001) ; zeros(Q.T*(4*numgenerators),1) ];
+fgrid=[zeros(2*Q.T,1) ;  Q.electricityprice ; -Q.electricityprice*Q.selling+0.001 ; zeros(Q.T*(4*numgenerators),1) ];
 
 % general cost function
 f=fbat+fmge+fmgs+fgrid+fco2+fsoc*Q.socboost*mean(Q.electricityprice);
