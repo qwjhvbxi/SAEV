@@ -136,6 +136,9 @@ UtilityWalking=-RawDistance*1.5/WalkingSpeed*VOT;
 
 if strcmp(P.enlayeralg,'aggregate') 
 
+    
+    %% TODO: next day should be the actual next day!!! (when using file folder)
+    
     % generate EMD in case of aggregate energy layer
     emdname=['data/temp/emd-' TripName '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
     if exist(emdname,'file')
