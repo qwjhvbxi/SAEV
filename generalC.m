@@ -115,13 +115,13 @@ end
 %% trip processing
 
 % generate number of arrivals at each station
-statsname=['data/temp/tripstats-' TripName '-' num2str(P.tripday) '-N' num2str(n) '.mat'];
-if exist(statsname,'file')
-    load(statsname,'fo','fd','dk');
-else
-    [~,fo,fd,dk]=tripstats2(A,Atimes,T);
-    save(statsname,'Atimes','fo','fd','dk');
-end
+% generate EMD in case of aggregate energy layer
+% calculate from expected arrivals
+% etsim is the number of energy layer time steps in a day
+% dkemd, dkod, dktrip are the number of minutes of travel for
+% relocation, serving trips, and total, respectively, for each
+% energy layer time step. fk
+[fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,P.tripday);
 
 % calculate benefit of alternative trip
 VOT=15; % value of time
@@ -136,32 +136,15 @@ UtilityWalking=-RawDistance*1.5/WalkingSpeed*VOT;
 
 if strcmp(P.enlayeralg,'aggregate') 
 
-    
-    %% TODO: next day should be the actual next day!!! (when using file folder)
-    
-    % generate EMD in case of aggregate energy layer
-    emdname=['data/temp/emd-' TripName '-' num2str(P.tripday) '-' num2str(etsim) '.mat'];
-    if exist(emdname,'file')
-        load(emdname,'dkemd','dkod','dktrip','fk');
-    else
-
-        % is a probability distribution of trips available?
-        probabilistic=false;
-
-        if probabilistic
-            % calculate from known distribution
-            error('not implemented');
-        else
-            % calculate from expected arrivals
-            % etsim is the number of energy layer time steps in a day
-            % dkemd, dkod, dktrip are the number of minutes of travel for
-            % relocation, serving trips, and total, respectively, for each
-            % energy layer time step. fk
-            % [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
-            [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
-        end
-        save(emdname,'dkemd','dkod','dktrip','fk');
-
+    % append values for next day
+    if isfield(P,'tripfolder') 
+        P2=P;
+        P2.tripday=P.tripday+1;
+        [A2,Atimes2,~,~,~,~,~,~,~]=generateGPStrips(P2);
+        [fo2,fd2,Trips2]=generateEMD(A2,Atimes2,T,etsim,TripName,P.tripday+1);
+        fo=[fo(1:1440,:) ; fo2(1:1440,:)];
+        fd=[fd(1:1440,:) ; fd2(1:1440,:)];
+        Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
     end
 
     % energy layer variable: static values
@@ -177,10 +160,6 @@ if strcmp(P.enlayeralg,'aggregate')
 
     zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
 
-    Trips.dkemd=dkemd;
-    Trips.dkod=dkod;
-    Trips.dktrip=dktrip;
-    Trips.fk=fk;
     
 else 
     
@@ -318,7 +297,7 @@ for i=1:tsim
                 actualminsoc=min(P.Operations.minsoc+extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
-                dktripnow=dktrip(macroindex:macroindex+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
+                dktripnow=Trips.dktrip(macroindex:macroindex+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
                 E.einit=sum(q(i,:))*P.Tech.battery;            % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
@@ -781,7 +760,6 @@ end
 
 fprintf('sim #%d successfully completed - avg soc: %0.2f - total time: %d:%0.2d - \n',dispiter,meanqnow,floor(elapsed/60),round(rem(elapsed,60)));
 
-
 end
 
 
@@ -789,5 +767,40 @@ end
 
 
 
+function [fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,tripday)
 
+    n=size(T,1);
+    statsname=['data/temp/tripstats-' TripName '-' num2str(tripday) '-N' num2str(n) '.mat'];
+    if exist(statsname,'file')
+        load(statsname,'fo','fd','dk');
+    else
+        [~,fo,fd,dk]=tripstats2(A,Atimes,T);
+        save(statsname,'Atimes','fo','fd','dk');
+    end
+
+
+    emdname=['data/temp/emd-' TripName '-' num2str(tripday) '-' num2str(etsim) '.mat'];
+    if exist(emdname,'file')
+        load(emdname,'dkemd','dkod','dktrip','fk');
+    else
+
+        % is a probability distribution of trips available?
+        probabilistic=false;
+
+        if probabilistic
+            % calculate from known distribution
+            error('not implemented');
+        else
+            % [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
+            [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
+        end
+        save(emdname,'dkemd','dkod','dktrip','fk');
+
+    end
+    
+    Trips.dkemd=dkemd;
+    Trips.dkod=dkod;
+    Trips.dktrip=dktrip;
+    Trips.fk=fk;
+end
 
