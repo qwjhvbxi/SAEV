@@ -46,10 +46,11 @@ Period=1:30;
 
 % initializations
 P=cpar('NYC2016');
-P.Operations.maxwait=Inf;
+P.Operations.maxwait=20;
 P.tripfolder='NYC2016';
 P.gridfile='Germany_DA_2019';
 P.m=13000;
+P.EnergyLayer.mminsoc=0.35;
 SOC=zeros(length(Period)+1,P.m);
 Uinit=zeros(length(Period)+1,P.m);
 
@@ -60,6 +61,9 @@ SOC(1,:)=ones(1,P.m)*0.7;
 Uinit(1,:)=randi(n,1,P.m);
 
 %%
+
+% Vehicles get very low soc sometimes, with high rejection rates. Possible
+% solution: higher minimum soc
 
 for j=1:length(Period)
     k=Period(j);
