@@ -57,7 +57,7 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 % etc. Also: change names of variables
 load(['data/eleprices/' P.gridfile '.mat'],'x','y');
 melep=repelem([x(:,P.gridday);x(:,rem(P.gridday,size(x,2))+1)],2/P.e,1); % electricity price profiles
-if exist('y','var') % carbon emissions profiles
+if exist('y','var') % carbon emissions profiles [g/kWh]
     mco2=repelem([y(:,P.gridday);y(:,rem(P.gridday,size(y,2))+1)],2/P.e,1);
 else
     mco2=zeros(24*2*2,1);
@@ -81,6 +81,7 @@ Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
+co2=repelem(mco2,P.beta);                 % carbon intensity in each transport layer time step
 
 % main variables
 q=zeros(tsim,P.m,'double');            % SOC
@@ -156,7 +157,7 @@ if strcmp(P.enlayeralg,'aggregate')
     E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
     E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
-    E.carbonprice=P.carbonprice;
+    E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
 
     zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
 
@@ -716,8 +717,11 @@ Sim.chosenmode=chosenmode;
 % estimated waiting time (only mode choice)
 Sim.waitingestimated=sparse(waitingestimated);
 
-%relocation minutes
+% relocation minutes
 Sim.relodist=relodist*P.e;
+
+% emissions [kg]
+Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/1000;
 
 
 %% create Res struct and save results
@@ -730,6 +734,7 @@ elapsed=cputime-S.starttime;
 % parameters of simulation
 Params.Tr=uint8(Tr);
 Params.elep=elep;
+Params.co2=co2;
 Params.tsim=tsim;
 
 % Res struct generation
@@ -739,7 +744,7 @@ Res.Sim=Sim;
 Res.Internals=Internals;
 Res.CPUtimes=S;
 Res.cputime=elapsed;
-Res.cost=(sum(Sim.e/60*P.e,2)')*elep(1:tsim);
+Res.cost=(sum(Sim.e/60*P.e,2)')*elep(1:tsim)+Sim.emissions*P.carbonprice;
 Res.dropped=sum(dropped)/length(A);
 Res.peakwait=max(waiting);
 Res.avgwait=mean(waiting);
