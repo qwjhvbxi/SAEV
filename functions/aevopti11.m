@@ -21,8 +21,8 @@
 %   generators          format: [ min , max , cost/kWh , costOn ]
 %   startupinit
 %   surplus
-%   carbonprice
-%   emissionsGridProfile
+%   carbonprice [$/kg]
+%   emissionsGridProfile [g/kWh]
 
 function [Res]=aevopti11(Q)
 
@@ -85,7 +85,9 @@ beq=[beq;Q.surplus];
 % generators objective functions
 fmgs=zeros(4*Q.T,1); % cost of startup
 fmge=zeros(4*Q.T,1); % cost of energy generation
-fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice ; -Q.emissionsGridProfile*Q.carbonprice ]; % cost of CO2
+
+% NOTE: does it make sense to have negative co2 price for v2g??
+fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice/1000 ; -Q.emissionsGridProfile*Q.carbonprice/1000 ]; % cost of CO2
 fsoc=[ -ones(Q.T,1) ; ones(Q.T,1) ; zeros(Q.T*2+4*numgenerators,1) ];
 
 % constraints for generators & cost function constructors

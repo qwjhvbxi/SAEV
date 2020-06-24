@@ -41,18 +41,18 @@ P.gridday=311;  % which day of the electricity file
 % P.chargingstations=[4,4;5,6];
 
 % simulation options
-P.mpcpredict=true;
-P.modechoice=false;
-P.e=2;              % time step length in minutes
-P.beta=15;
-P.m=10000;             % number of vehicles
-P.carbonprice=0;
+P.mpcpredict=true;      % perfect prediction?
+P.modechoice=false;     % mode choice?
+P.e=2;                  % time step length in minutes
+P.beta=15;              % frequency of energy layer simulation (in time steps)
+P.m=10000;              % number of vehicles
+P.carbonprice=0;        % per kg
 
 % technical parameters
-Tech.battery=50;
-Tech.chargekw=20;
-Tech.consumption=0.15*30/60;   % consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
-Tech.cyclingcost=20000/2000;   % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
+Tech.battery=50;                % kWh
+Tech.chargekw=20;               % kW
+Tech.consumption=0.15*30/60;    % consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
+Tech.cyclingcost=20000/2000;    % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
 
 % operational parameters
 Operations.initialsoc=0.7;
