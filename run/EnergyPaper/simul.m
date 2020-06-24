@@ -8,7 +8,7 @@
 % use carbon emissions from NYISO 2018, Germany 2019 (more renewables),
 % carbon price... ?
 
-Period=1:30;
+Period=1:4;
 
 % initializations
 P=cpar('NYC2016');
@@ -18,7 +18,15 @@ P.gridfile='Germany_DA_2019';
 P.m=13000;
 P.EnergyLayer.mminsoc=0.35;
 
-[S,R]=multiDaySim(Period,P);
+% no optimization 
+P.enlayeralg='no';
+[S1,R1]=multiDaySim(Period,P);
+
+P.enlayeralg='aggregate';
+[S2,R2]=multiDaySim(Period,P);
+
+P.carbonprice=50; % [$/ton]
+[S3,R3]=multiDaySim(Period,P);
 
 return
 
