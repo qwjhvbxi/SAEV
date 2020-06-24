@@ -13,7 +13,7 @@
 %   einit
 %   etrip
 %   dkav
-%   electricityprice
+%   electricityprice [$/kWh]
 % optional:
 %   socboost
 %   gridimportconstraint
@@ -21,7 +21,7 @@
 %   generators          format: [ min , max , cost/kWh , costOn ]
 %   startupinit
 %   surplus
-%   carbonprice [$/kg]
+%   carbonprice [$/ton]
 %   emissionsGridProfile [g/kWh]
 
 function [Res]=aevopti11(Q)
@@ -86,8 +86,12 @@ beq=[beq;Q.surplus];
 fmgs=zeros(4*Q.T,1); % cost of startup
 fmge=zeros(4*Q.T,1); % cost of energy generation
 
+% cost of CO2
 % NOTE: does it make sense to have negative co2 price for v2g??
-fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice/1000 ; -Q.emissionsGridProfile*Q.carbonprice/1000 ]; % cost of CO2
+% fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice/10^6 ; -Q.emissionsGridProfile*Q.carbonprice/10^6 ]; % cost of CO2
+fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice/10^6 ; zeros(Q.T,1) ]; 
+
+% soc boost
 fsoc=[ -ones(Q.T,1) ; ones(Q.T,1) ; zeros(Q.T*2+4*numgenerators,1) ];
 
 % constraints for generators & cost function constructors

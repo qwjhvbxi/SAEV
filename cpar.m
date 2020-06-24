@@ -35,7 +35,7 @@ switch Scenario
 end
 P.tripday=1;     % which day of the trip file
 
-P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/' (half-hourly, 48x365)
+P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/' ($/MWh; half-hourly, 48x365)
 P.gridday=311;  % which day of the electricity file
 
 % P.chargingstations=[4,4;5,6];
@@ -46,13 +46,13 @@ P.modechoice=false;     % mode choice?
 P.e=2;                  % time step length in minutes
 P.beta=15;              % frequency of energy layer simulation (in time steps)
 P.m=10000;              % number of vehicles
-P.carbonprice=0;        % per kg
+P.carbonprice=0;        % $/ton
 
 % technical parameters
 Tech.battery=50;                % kWh
 Tech.chargekw=20;               % kW
-Tech.consumption=0.15*30/60;    % consumption per minute: 0.15 kwh/km * 30 km/h / 60 min/h
-Tech.cyclingcost=20000/2000;    % batterycost[yen/kWh] / lifelength[cycles] -> 10 yen/kWh
+Tech.consumption=0.15*30/60;    % kWh/min   (0.15 kwh/km * 30 km/h / 60 min/h)
+Tech.cyclingcost=200/2000;      % $/kWh     (batterycost[$/kWh] / lifelength[cycles])
 
 % operational parameters
 Operations.initialsoc=0.7;

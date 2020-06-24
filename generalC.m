@@ -55,6 +55,7 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
+% elep is in $/MWh
 load(['data/eleprices/' P.gridfile '.mat'],'x','y');
 melep=repelem([x(:,P.gridday);x(:,rem(P.gridday,size(x,2))+1)],2/P.e,1); % electricity price profiles
 if exist('y','var') % carbon emissions profiles [g/kWh]
@@ -281,7 +282,7 @@ for i=1:tsim
         lasttimemacro=cputime;
         
         % index of energy layer
-        macroindex=(i-1)/P.beta+1;
+        t=(i-1)/P.beta+1;
         
         
         switch P.enlayeralg
@@ -289,7 +290,7 @@ for i=1:tsim
             case 'no'
                 
                 % charge as much as possible
-                zmacro(1,macroindex)=1;
+                zmacro(1,t)=1;
             
             case 'aggregate'
                 
@@ -298,12 +299,12 @@ for i=1:tsim
                 actualminsoc=min(P.Operations.minsoc+extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
-                dktripnow=Trips.dktrip(macroindex:macroindex+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
+                dktripnow=Trips.dktrip(t:t+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
                 E.einit=sum(q(i,:))*P.Tech.battery;            % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
-                E.electricityprice=melep(macroindex:macroindex+P.EnergyLayer.mthor-1); 
-                E.emissionsGridProfile=mco2(macroindex:macroindex+P.EnergyLayer.mthor-1);
+                E.electricityprice=melep(t:t+P.EnergyLayer.mthor-1)/1000; % convert to [$/kWh]
+                E.emissionsGridProfile=mco2(t:t+P.EnergyLayer.mthor-1);
 
                 ELayerResults=aevopti11(E);
 
@@ -314,7 +315,7 @@ for i=1:tsim
 
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
                 maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
-                zmacro(:,macroindex:macroindex+P.EnergyLayer.mthor-1)=[ ELayerResults.charging./maxc , ...
+                zmacro(:,t:t+P.EnergyLayer.mthor-1)=[ ELayerResults.charging./maxc , ...
                                                                         ELayerResults.discharging./maxc , ...
                                                                         maxc , ...
                                                                         E.etrip]';
@@ -327,7 +328,7 @@ for i=1:tsim
         end
         
         % record time
-        S.enlayerCPUtime(macroindex)=cputime-lasttimemacro;
+        S.enlayerCPUtime(t)=cputime-lasttimemacro;
         S.lasttime=cputime;
         
     end
@@ -348,7 +349,7 @@ for i=1:tsim
             v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,EMaxHorizon);
             
             % create charge vector
-            chargevector=repmat(     reshape(repelem(zmacro(1:2,macroindex:macroindex+EMaxHorizon-1),P.m,1).*v2gallowed,EMaxHorizon*2*P.m,1),P.beta,1);
+            chargevector=repmat(     reshape(repelem(zmacro(1:2,t:t+EMaxHorizon-1),P.m,1).*v2gallowed,EMaxHorizon*2*P.m,1),P.beta,1);
             
             % apply charging constraints
             ub(ubChargingSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
@@ -387,7 +388,7 @@ for i=1:tsim
             %% charging variables
 
             v2gallowed=q(i,:)>P.Operations.v2gminsoc;
-            chargevector=(ones(1,P.m)*zmacro(1,macroindex)-v2gallowed*zmacro(2,macroindex))*ac;
+            chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
 
 
             %% relocation
@@ -411,9 +412,9 @@ for i=1:tsim
                 % expected imbalance at stations
                 b(kt,:)=uv ...
                     -dw ...  number of passengers waiting at each station
-                    +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+P.ts
-                    -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+P.ts+t
-                    +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+P.ts
+                    +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
+                    -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
+                    +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
 
                 % identify feeder and receiver stations
                 F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
@@ -720,8 +721,8 @@ Sim.waitingestimated=sparse(waitingestimated);
 % relocation minutes
 Sim.relodist=relodist*P.e;
 
-% emissions [kg]
-Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/1000;
+% emissions [ton]
+Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6;
 
 
 %% create Res struct and save results
@@ -744,7 +745,7 @@ Res.Sim=Sim;
 Res.Internals=Internals;
 Res.CPUtimes=S;
 Res.cputime=elapsed;
-Res.cost=(sum(Sim.e/60*P.e,2)')*elep(1:tsim)+Sim.emissions*P.carbonprice;
+Res.cost=(sum(Sim.e/60/1000*P.e,2)')*elep(1:tsim)+Sim.emissions*P.carbonprice;
 Res.dropped=sum(dropped)/length(A);
 Res.peakwait=max(waiting);
 Res.avgwait=mean(waiting);
