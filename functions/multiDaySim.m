@@ -1,4 +1,4 @@
-function [Summary,R]=multiDaySim(Period,P)
+function [Summary,R]=multiDaySim(Period,P,gridoffset)
 
 % initial parameters
 SOC=zeros(length(Period)+1,P.m);
@@ -22,7 +22,7 @@ Uinit(1,:)=StartPos;
 for j=1:length(Period)
     k=Period(j);
     P.tripday=k;
-    P.gridday=k;
+    P.gridday=k+gridoffset;
     P.Operations.initialsoc=SOC(j,:);
     P.Operations.uinit=Uinit(j,:);
     R(j)=generalC(P,1,-j);

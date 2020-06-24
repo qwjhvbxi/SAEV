@@ -13,20 +13,63 @@ Period=1:4;
 % initializations
 P=cpar('NYC2016');
 P.Operations.maxwait=20;
-P.tripfolder='NYC2016';
+P.tripfolder='NYC2016'; % trips in 2019
 P.gridfile='Germany_DA_2019';
+gridoffset=3; % 2016/01/01: Fri; 2019/01/01: Tue; 
 P.m=13000;
 P.EnergyLayer.mminsoc=0.35;
 
 % no optimization 
 P.enlayeralg='no';
-[S1,R1]=multiDaySim(Period,P);
+[S1,R1]=multiDaySim(Period,P,gridoffset);
 
 P.enlayeralg='aggregate';
-[S2,R2]=multiDaySim(Period,P);
+[S2,R2]=multiDaySim(Period,P,gridoffset);
 
 P.carbonprice=50; % [$/ton]
-[S3,R3]=multiDaySim(Period,P);
+[S3,R3]=multiDaySim(Period,P,gridoffset);
+
+
+figure
+hold on
+plot(S1.cost+S1.emissions*50,'x-')
+plot(S2.cost+S2.emissions*50,'s-')
+plot(S3.cost,'o-')
+
+sum(S2.cost+S2.emissions*50)
+sum(S3.cost)
+
+sum(S2.emissions)
+sum(S3.emissions)
+
+figure
+hold on
+plot(S1.avgwait)
+plot(S2.avgwait)
+plot(S3.avgwait)
+
+figure
+hold on
+plot(S1.dropped)
+plot(S2.dropped)
+plot(S3.dropped)
+
+figure
+hold on
+plot(S1.emissions)
+plot(S2.emissions)
+plot(S3.emissions)
+
+
+
+figure
+hold on
+plot(sum(R2(2).Sim.e,2))
+plot(sum(R3(2).Sim.e,2))
+yyaxis right
+plot(R3(2).Params.co2)
+
+
 
 return
 
