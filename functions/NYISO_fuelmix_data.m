@@ -75,7 +75,33 @@ plot(CarbonEmissions_TonPerMin)
 figure
 plot(CarbonIntensity_kgPerMWh)
 
-save([DataFolder 'grid/NYISO_fuelmix_' Year '.mat'],'Fuels','CarbonEmissionsByFuel','GenerationByFuel_MW','CarbonEmissions_TonPerMin','CarbonIntensity_kgPerMWh')
+save([DataFolder 'grid/NYISO_fuelmix_' Year '-2.mat'],'Fuels','CarbonEmissionsByFuel','GenerationByFuel_MW','CarbonEmissions_TonPerMin','CarbonIntensity_kgPerMWh')
+
+
+%% load data for prices
+
+f1=[];
+
+for m=1:12
+    m
+    for d=1:MonthDays(m)
+        ThisDay=MonthDaysC(m)+d;
+        Month=sprintf('%02d',m);
+        Day=sprintf('%02d',d);
+        FileName=[DataFolder 'input_files/NewYork/NYISO prices/' Year Month Day 'damlbmp_zone.csv'];
+        g(ThisDay)=importdata(FileName);
+        f1=[f1;g(ThisDay).data];
+    end
+end
+
+f=f1(:,2);
+Zones=g(1).textdata(2:16,2);
+PriceByZone_USDMWh=reshape(f,length(Zones),length(f)/length(Zones))';
+
+% NYC
+% plot(PriceByZone_USDMWh(:,10))
+
+save('data/eleprices/DayaheadPrices2016NY.mat','PriceByZone_USDMWh','Zones');
 
 
 %% generate file with prices and carbon intensity
@@ -84,17 +110,20 @@ save([DataFolder 'grid/NYISO_fuelmix_' Year '.mat'],'Fuels','CarbonEmissionsByFu
 addpath functions utilities
 DataFolder=setDataFolder();
 
-load([DataFolder 'grid/NYISO_fuelmix_2016.mat'],'CarbonIntensity_kgPerMWh');
-load('data/eleprices/DayaheadPrices2016NY.mat','NYDayAheadUSDMWh_2016');
+load([DataFolder 'grid/NYISO_fuelmix_2016-2.mat'],'CarbonIntensity_kgPerMWh');
+load('data/eleprices/DayaheadPrices2016NY.mat','PriceByZone_USDMWh');
+
+DaysInYear=366;
+HoursInYear=DaysInYear*24;
 
 % prices
-x=repelem(reshape(NYDayAheadUSDMWh_2016(1:8760),24,365),2,1); % hourly
+x=repelem(reshape(PriceByZone_USDMWh(1:HoursInYear),24,DaysInYear),2,1); % hourly to 2 per hour
 
 % emissions
-y1=mean(reshape(CarbonIntensity_kgPerMWh(1:(8760*4)),2,8760*2)); % quarter hourly
-y=reshape(y1',48,365); 
+y1=mean(reshape(CarbonIntensity_kgPerMWh(1:HoursInYear*12),12/2,HoursInYear*2)); % 12 per hour to 2 per hour
+y=reshape(y1',48,DaysInYear); 
 
-save('data/eleprices/NY_DA_2019.mat','x','y');
+save('data/eleprices/NY_DA_2016.mat','x','y');
 
 
 
