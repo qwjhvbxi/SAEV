@@ -8,47 +8,92 @@
 % use carbon emissions from NYISO 2018, Germany 2019 (more renewables),
 % carbon price... ?
 
-Period=1:4;
 
-% initializations
+%% initializations
+
+% period
+Period=1:30;
+
+% parameters
 P=cpar('NYC2016');
 P.Operations.maxwait=20;
 P.tripfolder='NYC2016'; % trips in 2019
-P.gridfile='Germany_DA_2019';
-gridoffset=3; % 2016/01/01: Fri; 2019/01/01: Tue; 
 P.m=13000;
 P.EnergyLayer.mminsoc=0.35;
+
+
+%% germany grid
+
+P.gridfile='Germany_DA_2019';
+gridoffset=3; % 2016/01/01: Fri; 2019/01/01: Tue; 
 
 % no optimization 
 P.enlayeralg='no';
 [S1,R1]=multiDaySim(Period,P,gridoffset);
 
+% with optimized charging
 P.enlayeralg='aggregate';
 [S2,R2]=multiDaySim(Period,P,gridoffset);
 
+% with optimized charging and carbon pricing
 P.carbonprice=50; % [$/ton]
 [S3,R3]=multiDaySim(Period,P,gridoffset);
 
 
-figure
+
+%% new york grid
+
+P.gridfile='NY_DA_2016';
+gridoffset=0; % same year
+
+% no optimization 
+P.enlayeralg='no';
+[S1a,R1a]=multiDaySim(Period,P,gridoffset);
+
+% with optimized charging
+P.enlayeralg='aggregate';
+[S2a,R2a]=multiDaySim(Period,P,gridoffset);
+
+% with optimized charging and carbon pricing
+P.carbonprice=50; % [$/ton]
+[S3a,R3a]=multiDaySim(Period,P,gridoffset);
+
+return
+
+%% plots
+
+figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 plot(S1.cost+S1.emissions*50,'x-')
 plot(S2.cost+S2.emissions*50,'s-')
 plot(S3.cost,'o-')
 
-sum(S2.cost+S2.emissions*50)
-sum(S3.cost)
+
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+x=1:3;
+plot(x,[sum(S1.cost) , sum(S2.cost), sum(S3.cost-S3.emissions*50)]/length(Period),'s:','LineWidth',1.5)
+plot(x,[sum(S1.cost+S1.emissions*50) , sum(S2.cost+S2.emissions*50), sum(S3.cost)]/length(Period),'x:','LineWidth',1.5)
+yyaxis right
+plot(x,[sum(S1.emissions) , sum(S2.emissions), sum(S3.emissions)]/length(Period),'o:','LineWidth',1.5)
+xlim([0.5,3.5]);
+xticks(x);
+xticklabels({'B','O','O+CP'})
+legend({''})
+
+
+
 
 sum(S2.emissions)
 sum(S3.emissions)
 
-figure
+figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 plot(S1.avgwait)
 plot(S2.avgwait)
 plot(S3.avgwait)
 
-figure
+figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 plot(S1.dropped)
 plot(S2.dropped)
