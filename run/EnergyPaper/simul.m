@@ -12,32 +12,13 @@
 %% initializations
 
 % period
-Period=1:30;
+Period=4:31;
 
 % parameters
 P=cpar('NYC2016');
 P.Operations.maxwait=20;
 P.tripfolder='NYC2016'; % trips in 2019
 P.m=13000;
-P.EnergyLayer.mminsoc=0.35;
-
-
-%% germany grid
-
-P.gridfile='Germany_DA_2019';
-gridoffset=3; % 2016/01/01: Fri; 2019/01/01: Tue; 
-
-% no optimization 
-P.enlayeralg='no';
-[S1,R1]=multiDaySim(Period,P,gridoffset);
-
-% with optimized charging
-P.enlayeralg='aggregate';
-[S2,R2]=multiDaySim(Period,P,gridoffset);
-
-% with optimized charging and carbon pricing
-P.carbonprice=50; % [$/ton]
-[S3,R3]=multiDaySim(Period,P,gridoffset);
 
 
 
@@ -45,8 +26,9 @@ P.carbonprice=50; % [$/ton]
 
 P.gridfile='NY_DA_2016';
 gridoffset=0; % same year
+P.carbonprice=0;
 
-% no optimization 
+% no optimization
 P.enlayeralg='no';
 [S1a,R1a]=multiDaySim(Period,P,gridoffset);
 
@@ -57,6 +39,49 @@ P.enlayeralg='aggregate';
 % with optimized charging and carbon pricing
 P.carbonprice=50; % [$/ton]
 [S3a,R3a]=multiDaySim(Period,P,gridoffset);
+
+
+
+%% germany grid
+
+P.gridfile='Germany_DA_2019';
+gridoffset=3; % 2016/01/01: Fri; 2019/01/01: Tue; 
+P.carbonprice=0;
+
+% no optimization 
+P.enlayeralg='no';
+[S1b,R1b]=multiDaySim(Period,P,gridoffset);
+
+% with optimized charging
+P.enlayeralg='aggregate';
+[S2b,R2b]=multiDaySim(Period,P,gridoffset);
+
+% with optimized charging and carbon pricing
+P.carbonprice=50; % [$/ton]
+[S3b,R3b]=multiDaySim(Period,P,gridoffset);
+
+
+
+
+%% germany grid (summer)
+
+P.gridfile='Germany_DA_2019';
+gridoffset=3+7*20; % 2016/01/01: Fri; 2019/01/01: Tue; 
+P.carbonprice=0;
+
+% no optimization 
+P.enlayeralg='no';
+[S1c,R1c]=multiDaySim(Period,P,gridoffset);
+
+% with optimized charging
+P.enlayeralg='aggregate';
+[S2c,R2c]=multiDaySim(Period,P,gridoffset);
+
+% with optimized charging and carbon pricing
+P.carbonprice=50; % [$/ton]
+[S3c,R3c]=multiDaySim(Period,P,gridoffset);
+
+
 
 return
 
@@ -113,6 +138,43 @@ plot(sum(R2(2).Sim.e,2))
 plot(sum(R3(2).Sim.e,2))
 yyaxis right
 plot(R3(2).Params.co2)
+
+
+
+%% table
+
+% NY
+
+% no carbon price
+[mean(S1a.cost) mean(S1a.emissions)]
+[mean(S2a.cost) mean(S2a.emissions)]
+
+% $50 carbon tax
+[mean(S1a.cost+S1a.emissions*50) , mean(S1a.emissions)]
+[mean(S3a.cost) , mean(S3a.emissions)]
+
+
+% germany winter
+
+% no carbon price
+[mean(S1b.cost) mean(S1b.emissions)]
+[mean(S2b.cost) mean(S2b.emissions)]
+
+% $50 carbon tax
+[mean(S1b.cost+S1b.emissions*50) , mean(S1b.emissions)]
+[mean(S3b.cost) , mean(S3b.emissions)]
+
+
+
+% germany summer
+
+% no carbon price
+[mean(S1c.cost) mean(S1c.emissions)]
+[mean(S2c.cost) mean(S2c.emissions)]
+
+% $50 carbon tax
+[mean(S1c.cost+S1c.emissions*50) , mean(S1c.emissions)]
+[mean(S3c.cost) , mean(S3c.emissions)]
 
 
 
@@ -182,9 +244,7 @@ print -depsc2 figures/soc.eps
 
 %% load trips only
 
-[A,Atimes,ASortInd,AbuckC, ...
-    ODistToNode,ONodeID,DDistToNode,DNodeID]=...
-    generateGPStrips(P);
+[A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P);
 
 
 
