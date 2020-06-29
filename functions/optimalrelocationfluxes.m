@@ -12,6 +12,9 @@
 
 function X=optimalrelocationfluxes(F,R,T,limite)
 
+% if there are imbalances and available vehicles
+if sum(R)>0 && sum(F)>0
+    
     if nargin<4
         limite=max(max(T)*2);
     end
@@ -44,6 +47,12 @@ function X=optimalrelocationfluxes(F,R,T,limite)
     
     % matrix form
     X=round(reshape(x,N,N));
+    
+else
+    
+    X=[];
+    
+end
     
 end
 

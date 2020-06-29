@@ -383,12 +383,6 @@ for i=1:tsim
             q(i+1,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i+1  ));
             
         case 'simplified'       % simplified relocation 
-        
-            %% charging variables
-
-            v2gallowed=q(i,:)>P.Operations.v2gminsoc;
-            chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
-
 
             %% relocation
 
@@ -408,6 +402,18 @@ for i=1:tsim
                     dw=zeros(1,n);
                 end
 
+                
+                
+                
+                    
+                % note: insert option for relocation pricing
+                % generate matrices of probabilistic arrivals
+                % launch optimization
+                % deal with output: integerization: ceil(round(x,1))
+                % [x,prices]=RelocationPricing(c,v,a_ts,a_to)
+                    
+                
+                
                 % expected imbalance at stations
                 b(kt,:)=uv ...
                     -dw ...  number of passengers waiting at each station
@@ -418,12 +424,15 @@ for i=1:tsim
                 % identify feeder and receiver stations
                 F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
                 R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
-
-                % if there are imbalances and available vehicles
-                if sum(R)>0 && sum(F)>0
-
-                    % identify optimal relocation flux
-                    x=optimalrelocationfluxes(F,R,Tr);
+                
+                % identify optimal relocation flux
+                x=optimalrelocationfluxes(F,R,Tr);
+                
+                
+                
+                
+                    
+                if ~isempty(x)
 
                     % read results
                     [Fs,Rs,Vr]=find(x);
@@ -469,6 +478,12 @@ for i=1:tsim
                     end
                 end
             end
+            
+            
+            %% charging variables
+
+            v2gallowed=q(i,:)>P.Operations.v2gminsoc;
+            chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
             
         
             %% trip assignment
