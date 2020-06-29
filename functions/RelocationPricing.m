@@ -1,14 +1,22 @@
-%% [relocations,prices]=RelocationPricing(c,v,a_ts,a_to)
+%% [X,prices]=RelocationPricing(c,v,a_ts,a_to)
+% c is the distance matrix; v is the vehicles at nodes; a_ts is the latent
+% demand matrix during first ts minutes; a_to is the latent demand matrix
+% during first to minutes, with to>ts. 
 % 
-% 
+% X is the relocation matrix, with X(i,j) the number of vehicles moved from
+% i to j. The variable is an empty vector when there are no relocations.  
+% prices is the price metrix, with prices(i,j) the optimal pricing of a
+% trip from i to j. 
+%
+% see also generalC
 
-function [relocations,prices]=RelocationPricing(c,v,a_ts,a_to)
+function [X,prices]=RelocationPricing(c,v,a_ts,a_to)
 
 % calculations (shift from convention [o,d] to [d,o])
 n=size(c,1);    % nodes
 a_ts_v=reshape(a_ts',n^2,1);
 a_to_v=reshape(a_to',n^2,1);
-c_v=reshape(c',n^2,1)
+c_v=reshape(c',n^2,1);
 
 % constraint on relocation
 a0to=kron(eye(n),ones(1,n));
@@ -29,17 +37,23 @@ H=2*diag([zeros(n^2,1);a_to_v]);
 f=[c_v;-a_to_v];
 
 % optimization
-X=quadprog(H,f,A,b,[],[],lb,ub);
+X0=quadprog(H,f,A,b,[],[],lb,ub);
 
 % results (shift from convention [d,o] to [o,d])
-X1=round(X,5);
-relocations=reshape(X1(1:n^2),n,n)';
+X1=round(X0,3);
+X=reshape(X1(1:n^2),n,n)';
 prices=reshape(X1(n^2+1:end),n,n)';
 
-% a_ts.*(1-prices)
-% a_to.*(1-prices)
+% there are no relocation actions
+if sum(X(:)==0)
+    X=[];
+end
 
 return
+
+
+
+
 
 
 %% testing
@@ -63,5 +77,17 @@ v=rand(n,1)*10;
 
 [relocations,prices]=RelocationPricing(c,v,a_ts,a_to)
 
+
+% from actual trips to probability matrices
+
+Selection=AbuckC(1)+1:AbuckC(20);
+a_ts=sparse(A(Selection,1),A(Selection,2),1,63,63);
+Selection=AbuckC(1)+1:AbuckC(30);
+a_to=sparse(A(Selection,1),A(Selection,2),1,63,63);
+
+[relocations,prices]=RelocationPricing(c,v,a_ts,a_to)
+
+% a_ts.*(1-prices)
+% a_to.*(1-prices)
 
 
