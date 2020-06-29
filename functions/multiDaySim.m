@@ -37,9 +37,21 @@ Summary.dropped=[R(:).dropped]';
 Summary.peakwait=[R(:).peakwait]';
 Summary.avgwait=[R(:).avgwait]';
 Summary.emissions=zeros(length(Period),1);
+% Summary.pricekm=zeros(length(Period),1);
+
+totreq=0;
+totdropped=0;
+totwait=0;
 for j=1:length(Period)
     Summary.emissions(j)=R(j).Sim.emissions;
+%     Summary.pricekm(j)=R(j).cost/
+    totreq=totreq+length(R(j).Sim.waiting);
+    totdropped=totdropped+full(sum(R(j).Sim.dropped));
+    totwait=totwait+full(sum(R(j).Sim.waiting));
 end
+
+Summary.totdropped=totdropped/totreq;
+Summary.totavgwait=totwait/totreq;
 
 end
 
