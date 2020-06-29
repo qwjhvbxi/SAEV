@@ -51,7 +51,7 @@ end
 load(['data/scenarios/' P.scenario '.mat'],'T','C');
 
 % Note: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,ASortInd,AbuckC,~,~,~,~,RawDistance]=generateGPStrips(P);
+[A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P);
 
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
@@ -130,9 +130,9 @@ VOT=15; % value of time
 MaxHor=min(15,ceil(P.Operations.maxwait/P.e)); % maximum horizon for waiting time estimation
 CostMinute=0.2;
 WalkingSpeed=4;
-UtilityWalking=-RawDistance*1.5/WalkingSpeed*VOT;
+UtilityWalking=-Distances.RawDistance*1.5/WalkingSpeed*VOT;
 % PTSpeed=20;
-% UtilityPT=-RawDistance/PTSpeed*VOT;
+% UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
 
 %% setup energy layer
 
@@ -142,7 +142,7 @@ if strcmp(P.enlayeralg,'aggregate')
     if isfield(P,'tripfolder') 
         P2=P;
         P2.tripday=P.tripday+1;
-        [A2,Atimes2,~,~,~,~,~,~,~]=generateGPStrips(P2);
+        [A2,Atimes2,~,~,~]=generateGPStrips(P2);
         [fo2,fd2,Trips2]=generateEMD(A2,Atimes2,T,etsim,TripName,P.tripday+1);
         fo=[fo(1:1440,:) ; fo2(1:1440,:)];
         fd=[fd(1:1440,:) ; fd2(1:1440,:)];

@@ -8,7 +8,7 @@
 %
 % See also generalC
 
-function [A,Atimes,ASortInd,AbuckC,ODistToNode,ONodeID,DDistToNode,DNodeID,RawDistance]=generateGPStrips(P)
+function [A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P)
 
 % set external data folder
 DataFolder=setDataFolder();
@@ -113,3 +113,9 @@ else
     DNodeID=[];
     RawDistance=[];
 end
+
+Distances.ODistToNode=ODistToNode;
+Distances.ONodeID=ONodeID;
+Distances.DDistToNode=DDistToNode;
+Distances.DNodeID=DNodeID;
+Distances.RawDistance=RawDistance;

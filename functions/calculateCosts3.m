@@ -3,7 +3,7 @@
 
 function [Revenue,Costs,OperatingProfits]=calculateCosts3(P,Res,tariff,travelcost)
 
-[A,~,ASortInd,~,~,~,~,~,~]=generateGPStrips(P);
+[A,~,ASortInd,~,~]=generateGPStrips(P);
 
 A=reorderVectors(A,ASortInd);
 
