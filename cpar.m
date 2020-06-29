@@ -83,9 +83,8 @@ end
 
 % energy layer: aggregate
 P.enlayeralg='aggregate';
-Energy.mthor=48;         % macro horizon (macro time step)
-Energy.mminsoc=0.3;  % macro min soc
-Energy.mmaxsoc=1;    % macro max soc
+Energy.mthor=48;      % macro horizon (macro time step)
+Energy.extrasoc=0.25;  % extra soc for energy layer to account for aggregate uncertainty
 
 % append to main struct
 P.Tech=Tech;

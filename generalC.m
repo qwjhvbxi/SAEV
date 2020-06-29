@@ -295,8 +295,7 @@ for i=1:tsim
             case 'aggregate'
                 
                 % dynamic variables
-                extrasoc=0.15; % extra soc for energy layer to account for aggregate uncertainty
-                actualminsoc=min(P.Operations.minsoc+extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+                actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
                 dktripnow=Trips.dktrip(t:t+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
@@ -304,7 +303,7 @@ for i=1:tsim
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
                 E.electricityprice=melep(t:t+P.EnergyLayer.mthor-1)/1000; % convert to [$/kWh]
-                E.emissionsGridProfile=mco2(t:t+P.EnergyLayer.mthor-1);
+                E.emissionsGridProfile=mco2(t:t+P.EnergyLayer.mthor-1); % [g/kWh]
 
                 ELayerResults=aevopti11(E);
 
