@@ -13,7 +13,6 @@ function [Res]=generalC(P,extsave,dispiter)
 
 addpath functions
 addpath utilities
-% addpath('../CarSharingModel/functions'); % optimalrelocationfluxes
 DataFolder=setDataFolder();
 
 
@@ -30,6 +29,12 @@ end
 if strcmp(P.enlayeralg,'opti') && strcmp(P.trlayeralg,'simplified')
     warning('impossible combination!');
     return
+end
+
+if isfield(P,'tripfolder')
+    TripName=P.tripfolder;
+else
+    TripName=P.tripfile;
 end
 
 
@@ -65,19 +70,13 @@ else
 end
 clear x y;
 
-if isfield(P,'tripfolder')
-    TripName=P.tripfolder;
-else
-    TripName=P.tripfile;
-end
-
 
 %% parameters of simulation
 
 % parameters
 n=size(T,1);              % number of nodes
-tsim=1440/P.e;              % number of time steps in transport layer
-etsim=tsim/P.beta;          % number of time steps in energy layer
+tsim=1440/P.e;            % number of time steps in transport layer
+etsim=tsim/P.beta;        % number of time steps in energy layer
 Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
@@ -115,6 +114,14 @@ else
 end
 
 %% trip processing
+
+if isfield(P,'pricing') && P.pricing==false
+
+    [A,I]=tripAcceptance(A,0.5);
+    Atimes=Atimes(I,:);
+    
+    
+end
 
 % generate number of arrivals at each station
 % generate EMD in case of aggregate energy layer
@@ -401,35 +408,41 @@ for i=1:tsim
                 else 
                     dw=zeros(1,n);
                 end
-
                 
                 
                 
+                
+                if isfield(P,'pricing') && P.pricing==true
+                
+                    % note: insert option for relocation pricing
+                    % generate matrices of probabilistic arrivals
+                    % launch optimization
+                    % deal with output: integerization: ceil(round(x,1))
                     
-                % note: insert option for relocation pricing
-                % generate matrices of probabilistic arrivals
-                % launch optimization
-                % deal with output: integerization: ceil(round(x,1))
-                % [x,prices]=RelocationPricing(c,v,a_ts,a_to)
+                    Selection=AbuckC(i)+1:AbuckC(i+P.TransportLayer.ts);
+                    a_ts=sparse(A(Selection,1),A(Selection,2),1,n,n);
+                    Selection=AbuckC(i)+1:AbuckC(i+P.TransportLayer.ts+P.TransportLayer.tr);
+                    a_to=sparse(A(Selection,1),A(Selection,2),1,n,n);
                     
-                
-                
-                % expected imbalance at stations
-                b(kt,:)=uv ...
-                    -dw ...  number of passengers waiting at each station
-                    +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
-                    -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
-                    +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
+                    [x,prices]=RelocationPricing(c,v,a_ts,a_to);
 
-                % identify feeder and receiver stations
-                F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
-                R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
-                
-                % identify optimal relocation flux
-                x=optimalrelocationfluxes(F,R,Tr);
-                
-                
-                
+                else
+
+                    % expected imbalance at stations
+                    b(kt,:)=uv ...
+                        -dw ...  number of passengers waiting at each station
+                        +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
+                        -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
+                        +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
+
+                    % identify feeder and receiver stations
+                    F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
+                    R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
+
+                    % identify optimal relocation flux
+                    x=optimalrelocationfluxes(F,R,Tr);
+
+                end
                 
                     
                 if ~isempty(x)
