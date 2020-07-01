@@ -46,6 +46,7 @@ end
 % cost function
 H=2*diag([zeros(n^2,1);a_to_v.*c_v*m.gamma_p]);
 f=[c_v*m.gamma_r;-a_to_v.*c_v*m.gamma_p];
+% f=[c_v*m.gamma_r;-a_to_v*m.gamma_p];
 
 % optimization
 X0=quadprog(H,f,A,b,[],[],lb,ub);
@@ -56,7 +57,7 @@ X=reshape(X1(1:n^2),n,n)';
 prices=reshape(X1(n^2+1:end),n,n)';
 
 % there are no relocation actions
-if sum(X(:)==0)
+if sum(X(:))==0
     X=[];
 end
 
@@ -80,25 +81,16 @@ N=[   0.65574 , 0.70605
       0.65548 , 0.95022
       0.17119 , 0.03444
       ];
-c=(N(:,1)-N(:,1)').^2+(N(:,2)-N(:,2)').^2;
-n=size(c,1);    % nodes
-a_ts=rand(n,n)*10;
-a_to=a_ts+rand(n,n)*10;
-v=rand(n,1)*10;
+n=length(N);    % nodes
 
-[relocations,prices]=RelocationPricing(c,v,a_ts,a_to)
+m.c=(N(:,1)-N(:,1)').^2+(N(:,2)-N(:,2)').^2;
+m.a_ts=rand(n,n)*10;
+m.a_to=m.a_ts+rand(n,n)*10;
+m.v=rand(n,1)*40;
+m.gamma_r=1;
+m.gamma_p=1;
+m.fixedprice=0.5;
 
-
-% from actual trips to probability matrices
-
-Selection=AbuckC(1)+1:AbuckC(20);
-a_ts=sparse(A(Selection,1),A(Selection,2),1,63,63);
-Selection=AbuckC(1)+1:AbuckC(30);
-a_to=sparse(A(Selection,1),A(Selection,2),1,63,63);
-
-[relocations,prices]=RelocationPricing(c,v,a_ts,a_to)
-
-% a_ts.*(1-prices)
-% a_to.*(1-prices)
+[relocations,prices]=RelocationPricing(m)
 
 

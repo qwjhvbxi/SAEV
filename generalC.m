@@ -426,11 +426,11 @@ for i=1:tsim
                     % launch optimization
                     % deal with output: integerization: ceil(round(x,1))
                     
-                    Selection=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-                    a_ts=sparse(A(Selection,1),A(Selection,2),1,n,n);
+                    Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
+                    a_ts=sparse(A(Selection1,1),A(Selection1,2),1,n,n);
                     
-                    Selection=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-                    a_to=sparse(A(Selection,1),A(Selection,2),1,n,n);
+                    Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
+                    a_to=sparse(A(Selection2,1),A(Selection2,2),1,n,n);
                     
                     % base price per minute: 0.25
                     % base cost per minute: 0.05
@@ -626,10 +626,15 @@ for i=1:tsim
                                 % note: temporary solution
                                 
                                 if isfield(P,'pricing')
+                                
+                                    % avoid changing chosen mode after deciding
+                                    if chosenmode(tripID)==0
                                     
-                                    offeredprices(tripID)=prices(A(tripID,1),A(tripID,2));
-                                    
-                                    chosenmode(tripID)=(rand()>offeredprices(tripID));
+                                        offeredprices(tripID)=prices(A(tripID,1),A(tripID,2));
+
+                                        chosenmode(tripID)=(rand()>offeredprices(tripID));
+                                        
+                                    end
                                     
                                 else
                                 
