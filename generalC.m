@@ -115,13 +115,12 @@ end
 
 %% trip processing
 
-if isfield(P,'pricing') && P.pricing==false
-
-    [A,I]=tripAcceptance(A,0.5);
-    Atimes=Atimes(I,:);
-    
-    
-end
+% if isfield(P,'pricing') && P.pricing==false
+% 
+%     [A,I]=tripAcceptance(A,0.5);
+%     Atimes=Atimes(I,:);
+%     
+% end
 
 % generate number of arrivals at each station
 % generate EMD in case of aggregate energy layer
@@ -412,8 +411,14 @@ for i=1:tsim
                 
                 
                 
-                if isfield(P,'pricing') && P.pricing==true
+                if isfield(P,'pricing')
                 
+                    if P.pricing==true
+                        fixedprice=[];
+                    else
+                        fixedprice=0.5;
+                    end
+                    
                     % note: insert option for relocation pricing
                     % generate matrices of probabilistic arrivals
                     % launch optimization
@@ -424,7 +429,9 @@ for i=1:tsim
                     Selection=AbuckC(i)+1:AbuckC(i+P.TransportLayer.ts+P.TransportLayer.tr);
                     a_to=sparse(A(Selection,1),A(Selection,2),1,n,n);
                     
-                    [x,prices]=RelocationPricing(c,v,a_ts,a_to);
+                    [x0,prices]=RelocationPricing(Tr,uv',a_ts,a_to,fixedprice);
+                    
+                    x=ceil(round(x0,1));
 
                 else
 
@@ -602,7 +609,17 @@ for i=1:tsim
                                 
                             else
                                 
+                                % note: temporary solution
+                                
+                                if isfield(P,'pricing')
+                                    
+                                    chosenmode(tripID)=(rand()>prices(A(tripID,1),A(tripID,2)));
+                                    
+                                else
+                                
                                 chosenmode(tripID)=1;
+                                
+                                end
                                
                             end
                             
