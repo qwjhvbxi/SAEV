@@ -57,6 +57,7 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 
 % Note: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P);
+AbuckC=AbuckC(1:P.e:end);
 
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
@@ -104,6 +105,7 @@ pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
+offeredprices=zeros(length(A),1);  % price offered to each passenger
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
@@ -424,14 +426,15 @@ for i=1:tsim
                     % launch optimization
                     % deal with output: integerization: ceil(round(x,1))
                     
-                    Selection=AbuckC(i)+1:AbuckC(i+P.TransportLayer.ts);
+                    Selection=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
                     a_ts=sparse(A(Selection,1),A(Selection,2),1,n,n);
-                    Selection=AbuckC(i)+1:AbuckC(i+P.TransportLayer.ts+P.TransportLayer.tr);
+                    
+                    Selection=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
                     a_to=sparse(A(Selection,1),A(Selection,2),1,n,n);
                     
                     % base price per minute: 0.25
                     % base cost per minute: 0.05
-                    m.c=Tr;
+                    m.c=Tr*P.e;
                     m.v=uv';
                     m.a_ts=a_ts;
                     m.a_to=a_to;
@@ -519,7 +522,8 @@ for i=1:tsim
             %% trip assignment
 
             % generate trip requests for this time step
-            trips=(AbuckC((i-1)*P.e+1)+1:AbuckC(i*P.e+1))';
+            % trips=(AbuckC((i-1)*P.e+1)+1:AbuckC(i*P.e+1))';
+            trips=(AbuckC(i)+1:AbuckC(i+1))';
 
             % initialize 
             ql=0;
@@ -623,7 +627,9 @@ for i=1:tsim
                                 
                                 if isfield(P,'pricing')
                                     
-                                    chosenmode(tripID)=(rand()>prices(A(tripID,1),A(tripID,2)));
+                                    offeredprices(tripID)=prices(A(tripID,1),A(tripID,2));
+                                    
+                                    chosenmode(tripID)=(rand()>offeredprices(tripID));
                                     
                                 else
                                 
@@ -719,6 +725,18 @@ end
 
 %% final calculations
 
+
+if isfield(P,'pricing')
+    
+    distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)));
+    
+    Sim.revenues=sum(offeredprices.*distances.*chosenmode)*P.e*m.gamma_p;
+    Sim.relocationcosts=sum(relodist)*P.e*m.gamma_r;
+    Sim.offeredprices=reorderVectors(offeredprices,ASortInd);
+    
+end
+
+
 if strcmp(P.trlayeralg,'simplified') 
     
     Internals.b=b;
@@ -777,6 +795,8 @@ Sim.relodist=relodist*P.e;
 
 % emissions [ton]
 Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6;
+
+
 
 
 %% create Res struct and save results

@@ -33,13 +33,13 @@ b=m.v+sum(m.a_ts,2)-sum(m.a_to,1)';
 % bounds
 lb=zeros(n^2*2,1);
 ub=[repelem(m.v,n,1);ones(n^2,1)];
-ub(1:n+1:n^2)=0;
+ub(1:n+1:n^2)=0; % no relocation in same node
 
 if isfield(m,'fixedprice') && ~isempty(m.fixedprice)
 
     % bounds for fixed pricing
-    lb(1:n+1:n^2)=m.fixedprice;
-    ub(1:n+1:n^2)=m.fixedprice;
+    lb(n^2+1:2*n^2)=m.fixedprice;
+    ub(n^2+1:2*n^2)=m.fixedprice;
     
 end
 
