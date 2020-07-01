@@ -1,5 +1,4 @@
-%% [A,Atimes,ASortInd,AbuckC, ...
-% ODistToNode,ONodeID,DDistToNode,DNodeID,RawDistance]=generateGPStrips(P)
+%% [A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P)
 % 
 % load trip files and initialize trip variables.
 % P contains 'tripfile' and 'scenarioid'. In case of GPS coordinates, P
@@ -57,7 +56,7 @@ if size(A,2)==4
     % check P.coords
     if ~isfield(P,'coords') || length(P.coords)<2
         try
-            load(['data/scenarios/' P.scenario '.mat'],'T','C');
+            load(['data/scenarios/' P.scenario '.mat'],'C');
             P.coords=C;
         catch
             error('Must specify P.coords!')
