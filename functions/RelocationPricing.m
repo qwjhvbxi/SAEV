@@ -10,7 +10,7 @@
 %
 % see also generalC
 
-function [X,prices]=RelocationPricing(c,v,a_ts,a_to)
+function [X,prices]=RelocationPricing(c,v,a_ts,a_to,fixedprice)
 
 % calculations (shift from convention [o,d] to [d,o])
 n=size(c,1);    % nodes
@@ -31,6 +31,14 @@ b=v+sum(a_ts,2)-sum(a_to,1)';
 lb=zeros(n^2*2,1);
 ub=[repelem(v,n,1);ones(n^2,1)];
 ub(1:n+1:n^2)=0;
+
+if nargin>4 && ~isempty(fixedprice)
+
+    % bounds for fixed pricing
+    lb(1:n+1:n^2)=fixedprice;
+    ub(1:n+1:n^2)=fixedprice;
+    
+end
 
 % cost function
 H=2*diag([zeros(n^2,1);a_to_v]);
