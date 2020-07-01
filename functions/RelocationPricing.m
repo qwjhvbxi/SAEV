@@ -1,7 +1,10 @@
-%% [X,prices]=RelocationPricing(c,v,a_ts,a_to)
+%% [X,prices]=RelocationPricing(m)
+% m is a struct with variables: c,v,a_ts,a_to,gamma_r,gamma_p,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a_ts is the latent
 % demand matrix during first ts minutes; a_to is the latent demand matrix
-% during first to minutes, with to>ts. 
+% during first to minutes, with to>ts; gamma_r is the cost of relocation
+% per minute; gamma_p is the base tariff per passenger; fixedprice is the
+% fixed price for optimizing relocation only (optional).
 % 
 % X is the relocation matrix, with X(i,j) the number of vehicles moved from
 % i to j. The variable is an empty vector when there are no relocations.  
@@ -10,13 +13,13 @@
 %
 % see also generalC
 
-function [X,prices]=RelocationPricing(c,v,a_ts,a_to,fixedprice)
+function [X,prices]=RelocationPricing(m)
 
 % calculations (shift from convention [o,d] to [d,o])
-n=size(c,1);    % nodes
-a_ts_v=reshape(a_ts',n^2,1);
-a_to_v=reshape(a_to',n^2,1);
-c_v=reshape(c',n^2,1);
+n=size(m.c,1);    % nodes
+a_ts_v=reshape(m.a_ts',n^2,1);
+a_to_v=reshape(m.a_to',n^2,1);
+c_v=reshape(m.c',n^2,1);
 
 % constraint on relocation
 a0to=kron(eye(n),ones(1,n));
@@ -25,24 +28,24 @@ a2=zeros(size(a0to));
 a2(logical(a0to))=-a_to_v;
 a2(logical(a0ts))=a2(logical(a0ts))+a_ts_v;
 A=[kron(eye(n),ones(1,n))-repmat(eye(n),1,n)  ,  a2];
-b=v+sum(a_ts,2)-sum(a_to,1)';
+b=m.v+sum(m.a_ts,2)-sum(m.a_to,1)';
 
 % bounds
 lb=zeros(n^2*2,1);
-ub=[repelem(v,n,1);ones(n^2,1)];
+ub=[repelem(m.v,n,1);ones(n^2,1)];
 ub(1:n+1:n^2)=0;
 
-if nargin>4 && ~isempty(fixedprice)
+if isfield(m,'fixedprice') && ~isempty(m.fixedprice)
 
     % bounds for fixed pricing
-    lb(1:n+1:n^2)=fixedprice;
-    ub(1:n+1:n^2)=fixedprice;
+    lb(1:n+1:n^2)=m.fixedprice;
+    ub(1:n+1:n^2)=m.fixedprice;
     
 end
 
 % cost function
-H=2*diag([zeros(n^2,1);a_to_v]);
-f=[c_v;-a_to_v];
+H=2*diag([zeros(n^2,1);a_to_v.*c_v*m.gamma_p]);
+f=[c_v*m.gamma_r;-a_to_v.*c_v*m.gamma_p];
 
 % optimization
 X0=quadprog(H,f,A,b,[],[],lb,ub);

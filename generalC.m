@@ -429,7 +429,17 @@ for i=1:tsim
                     Selection=AbuckC(i)+1:AbuckC(i+P.TransportLayer.ts+P.TransportLayer.tr);
                     a_to=sparse(A(Selection,1),A(Selection,2),1,n,n);
                     
-                    [x0,prices]=RelocationPricing(Tr,uv',a_ts,a_to,fixedprice);
+                    % base price per minute: 0.25
+                    % base cost per minute: 0.05
+                    m.c=Tr;
+                    m.v=uv';
+                    m.a_ts=a_ts;
+                    m.a_to=a_to;
+                    m.gamma_r=0.05;
+                    m.gamma_p=0.25;
+                    m.fixedprice=fixedprice;
+                    
+                    [x0,prices]=RelocationPricing(m);
                     
                     x=ceil(round(x0,1));
 
