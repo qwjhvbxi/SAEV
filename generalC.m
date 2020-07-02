@@ -421,30 +421,26 @@ for i=1:tsim
                         fixedprice=0.5;
                     end
                     
-                    % note: insert option for relocation pricing
-                    % generate matrices of probabilistic arrivals
-                    % launch optimization
-                    % deal with output: integerization: ceil(round(x,1))
+                    q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
                     
                     Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-                    a_ts=sparse(A(Selection1,1),A(Selection1,2),1,n,n);
+                    a_ts=sparse(A(Selection1,1),A(Selection1,2),1,n,n)+q_t;
                     
                     Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-                    a_to=sparse(A(Selection2,1),A(Selection2,2),1,n,n);
+                    a_to=sparse(A(Selection2,1),A(Selection2,2),1,n,n)+q_t;
                     
-                    % base price per minute: 0.25
-                    % base cost per minute: 0.05
                     m.c=Tr*P.e;
                     m.v=uv';
                     m.a_ts=a_ts;
                     m.a_to=a_to;
-                    m.gamma_r=0.05;
-                    m.gamma_p=0.25;
+                    m.gamma_r=0.10; % relocation cost per minute
+                    m.gamma_p=0.25; % base tariff per minute
                     m.fixedprice=fixedprice;
                     
                     [x0,prices]=RelocationPricing(m);
                     
                     x=ceil(round(x0,1));
+%                     x=round(x0);
 
                 else
 
