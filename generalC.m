@@ -104,6 +104,7 @@ chosenmode=false(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 % traveled=zeros(length(A),1); % trip length (minutes)
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
+tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
 offeredprices=zeros(length(A),1);  % price offered to each passenger
 
@@ -658,6 +659,9 @@ for i=1:tsim
                                     
                                     % keep track of vehicles arriving at stations
                                     s(i+distancetomovesorted(ka),destinations(sortid(ka)))=s(i+distancetomovesorted(ka),destinations(sortid(ka)))+1;
+                                    
+                                    % update travelled distance
+                                    tripdist(i)=tripdist(i)+distancetomovesorted(ka);
 
                                 else
 
@@ -793,6 +797,9 @@ Sim.waitingestimated=sparse(waitingestimated);
 
 % relocation minutes
 Sim.relodist=relodist*P.e;
+
+% trip minutes
+Sim.tripdist=tripdist*P.e;
 
 % emissions [ton]
 Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6;
