@@ -562,11 +562,17 @@ for i=1:tsim
                         % destination station
                         destinations=A(tripsK,2);
 
-                        % distance to move
+                        % distance of each trip
                         distancetomove=Tr(j,destinations);
+                        
+                        % trip priority: highest waiting first, then longest travel time
+                        trippriority=distancetomove+waiting(tripsK)'*max(Tr(:));
 
                         % sort trips by distance (highest first)
-                        [distancetomovesorted,sortid]=sort(distancetomove,'descend');
+                        [~,sortid]=sort(trippriority,'descend');
+                        
+                        % sort trip distances
+                        distancetomovesorted=distancetomove(sortid);
 
                         % for each trip
                         for ka=1:length(distancetomovesorted)
