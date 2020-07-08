@@ -30,7 +30,7 @@ Period=4:31;
 
 % parameters
 P=cpar('NYC2016');
-P.Operations.maxwait=20;
+P.Operations.maxwait=Inf; %20
 P.tripfolder='NYC2016'; % trips in 2019
 P.m=13000;
 
@@ -103,6 +103,8 @@ return
 
 %% plots
 
+DataFolder=setDataFolder();
+
 load(['data/eleprices/' gridfile_a '.mat'],'x','y');
 Ele_a=x;
 Emi_a=y;
@@ -115,15 +117,31 @@ Emi_c=y;
 
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
-plot(reshape(Ele_a(:,Period+gridoffset_a),length(Period)*48,1))
-plot(reshape(Ele_b(:,Period+gridoffset_b),length(Period)*48,1))
-plot(reshape(Ele_b(:,Period+gridoffset_c),length(Period)*48,1))
+box on
+x=linspace(0,4*7,length(Period)*48);
+plot(x,reshape(Ele_a(:,Period+gridoffset_a),length(Period)*48,1))
+plot(x,reshape(Ele_b(:,Period+gridoffset_b),length(Period)*48,1))
+plot(x,reshape(Ele_b(:,Period+gridoffset_c),length(Period)*48,1))
+xlim([0,4*7]);
+xlabel('day')
+ylabel('price ($/MWh)')
+legend({'NYISO','DE-W','DE-S'},'Orientation','horizontal')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/Energy/prices.eps'],'-depsc2');
 
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
-plot(reshape(Emi_a(:,Period+gridoffset_a),length(Period)*48,1))
-plot(reshape(Emi_b(:,Period+gridoffset_b),length(Period)*48,1))
-plot(reshape(Emi_b(:,Period+gridoffset_c),length(Period)*48,1))
+box on
+x=linspace(0,4*7,length(Period)*48);
+plot(x,reshape(Emi_a(:,Period+gridoffset_a),length(Period)*48,1))
+plot(x,reshape(Emi_b(:,Period+gridoffset_b),length(Period)*48,1))
+plot(x,reshape(Emi_b(:,Period+gridoffset_c),length(Period)*48,1))
+xlim([0,4*7]);
+xlabel('day')
+ylabel('carbon intensity (g/kWh)')
+legend({'NYISO','DE-W','DE-S'},'Orientation','horizontal')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/Energy/carbonintensity.eps'],'-depsc2');
 
 % figure('Units','centimeters','Position',[10,7,10,7])
 % hold on
@@ -181,7 +199,7 @@ plot(reshape(Emi_b(:,Period+gridoffset_c),length(Period)*48,1))
 
 %% table
 
-writeLine=@(S,Tax) fprintf('%d & %d & %.0f & %.3f & %.0f & %.2f \n\n',full(S.totwaitprctile(3)) , full(S.totwaitprctile(4)) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
+writeLine=@(S,Tax) fprintf('& %d & %d & %.0f & %.3f & %.0f & %.2f \\\\\n',full(S.totwaitprctile(3)) , full(S.totwaitprctile(4)) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
 
 writeLine(S0a,0)
 
