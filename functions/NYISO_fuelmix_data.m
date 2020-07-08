@@ -64,7 +64,7 @@ GenerationByFuel_MW_old=GenerationByFuel_MW;
 GenerationByFuel_MW=[GenerationByFuel_MW_old(1:ChangeMoment,:);GenerationByFuel_MW_old(ChangeMoment+1:end,[1 7 2 3 4 5 6])];
 
 % dual fuel mapped to natural gas, other renewables to biomass
-CarbonEmissionsByFuel=[490, 490, 12, 700, 230, 11, 24]';
+CarbonEmissionsByFuel=[490, 24, 490, 12, 700, 230, 11]';
 CarbonEmissions_TonPerMin=GenerationByFuel_MW*CarbonEmissionsByFuel/1000/60; % ton/minute
 CarbonIntensity_kgPerMWh=CarbonEmissions_TonPerMin*1000*60./sum(GenerationByFuel_MW,2);
 
