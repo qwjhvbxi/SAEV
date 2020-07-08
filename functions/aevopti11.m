@@ -9,7 +9,7 @@
 %   v2g                 boolean
 %   eta
 %   selling
-%   cyclingcost
+%   cyclingcost [$/kWh]
 %   einit
 %   etrip
 %   dkav
@@ -78,7 +78,7 @@ A=[     -tril(ones(Q.T)) , tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenera
 A=[A;   tril(ones(Q.T)) , -tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % max SOC constraint (e(t))
 
 % main equation (TODO: need to add curtailment variable in case of large surplus)
-%        charge             discharge                   import                  export                              generators        
+%        charge [kWh]            discharge                   import                  export                              generators        
 Aeq=[Aeq; diag(ones(Q.T,1)) , -diag(ones(Q.T,1))      , -diag(ones(Q.T,1))  ,   diag(ones(Q.T,1)), repmat([zeros(Q.T,Q.T*3), -diag(ones(Q.T,1))],1,numgenerators)];
 beq=[beq;Q.surplus];
 
