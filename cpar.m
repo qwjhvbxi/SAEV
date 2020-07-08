@@ -52,7 +52,7 @@ P.carbonprice=0;        % $/ton
 Tech.battery=50;                % kWh
 Tech.chargekw=20;               % kW
 Tech.consumption=0.15*30/60;    % kWh/min   (0.15 kwh/km * 30 km/h / 60 min/h)
-Tech.cyclingcost=200/2000;      % $/kWh     (batterycost[$/kWh] / lifelength[cycles])
+Tech.cyclingcost=100/4000;%200/2000;      % $/kWh     (batterycost[$/kWh] / lifelength[cycles])
 
 % operational parameters
 Operations.initialsoc=0.7;
