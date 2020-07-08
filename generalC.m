@@ -164,7 +164,7 @@ if strcmp(P.enlayeralg,'aggregate')
     E.selling=1;        % 
     E.minfinalsoc=0.9;    % final SOC. This only works for optimization horizon of ~24h
     E.T=P.EnergyLayer.mthor;            % number of time steps in energy layer
-    E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost
+    E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
     E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
     E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
