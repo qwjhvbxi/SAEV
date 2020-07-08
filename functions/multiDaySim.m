@@ -31,27 +31,38 @@ for j=1:length(Period)
         double(R(j).Sim.u(end,:)) + full(sum(R(j).Internals.v(721:end,:))) + full(sum(R(j).Internals.w(721:end,:))) ) );
 end
 
+
+
+
+
 % create Summary
 Summary.cost=[R(:).cost]';
 Summary.dropped=[R(:).dropped]';
 Summary.peakwait=[R(:).peakwait]';
 Summary.avgwait=[R(:).avgwait]';
 Summary.emissions=zeros(length(Period),1);
+Summary.waiting=[];
 % Summary.pricekm=zeros(length(Period),1);
 
 totreq=0;
 totdropped=0;
 totwait=0;
+totminutes=0;
 for j=1:length(Period)
     Summary.emissions(j)=R(j).Sim.emissions;
 %     Summary.pricekm(j)=R(j).cost/
     totreq=totreq+length(R(j).Sim.waiting);
     totdropped=totdropped+full(sum(R(j).Sim.dropped));
     totwait=totwait+full(sum(R(j).Sim.waiting));
+    totminutes=totminutes+sum(R(j).Sim.tripdist);
+    Summary.waiting=[Summary.waiting;R(j).Sim.waiting];
+    
 end
 
 Summary.totdropped=totdropped/totreq;
 Summary.totavgwait=totwait/totreq;
+Summary.totwaitprctile=full(prctile(Summary.waiting,[50 97.5 99 100]));
+Summary.totminutes=totminutes;
 
 end
 
