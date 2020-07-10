@@ -60,28 +60,38 @@ for k=1:varparams(1)
 
         N=N+1;
         
-        Pmat(N)=cpar(mapscenario);
+        Pmat{N}=cpar(mapscenario);
 
         for i=1:floor(length(varargin)/2)
             
             if whichparm(1)==i
                 ThisValue=varargin{(i-1)*2+2}(k);
             elseif whichparm(2)==i
-                ThisValue=varargin{(i-1)*2+2}(j);
+                ThisValue=varargin{(i-1)*2+2}{j};
             else
                 ThisValue=varargin{(i-1)*2+2};
             end
             
-            FieldName=char(varargin{(i-1)*2+1});
-            PointPos=find(FieldName=='.');
+            FieldNameTot=char(varargin{(i-1)*2+1});
+            FieldNames=split(FieldNameTot,',');
             
-            % todo: check if ThisValue is string
-            
-            if isempty(PointPos) 
-                Pmat(N).(FieldName)=ThisValue;
-            else
-                Pmat(N).(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end))=ThisValue;
+            if isstring(ThisValue)
+                ThisValue=char(ThisValue);
             end
+            
+            for VarL=1:length(FieldNames)
+            
+                FieldName=FieldNames{VarL};
+                PointPos=find(FieldName=='.');
+            
+                % todo: check if ThisValue is string
+                if isempty(PointPos) 
+                    Pmat{N}.(FieldName)=ThisValue;
+                else
+                    Pmat{N}.(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end))=ThisValue;
+                end
+            end
+            
             
         end
     end
@@ -94,7 +104,7 @@ if ischar(outfieldname)
 
     for j=1:N
         try
-            Hash=DataHash(Pmat(j));
+            Hash=DataHash(Pmat{j});
             simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
             load(simname,'Res');
             if isempty(PointPos) 
@@ -102,7 +112,7 @@ if ischar(outfieldname)
             else
                 Resmat(j)=Res.(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end));
             end
-            % Resmat(j)=Res.(outfieldname);
+            % Resmat{j}=Res.(outfieldname);
         catch
             Resmat(j)=NaN;
         end
@@ -114,7 +124,7 @@ end
     
 if outfieldname==-2
     for j=1:N
-        Hash=DataHash(Pmat(j));
+        Hash=DataHash(Pmat{j});
         simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
         delete(simname);
     end
@@ -123,7 +133,7 @@ if outfieldname==-2
 end
 
 parfor j=1:N
-    Resmat(j)=generalC(Pmat(j),outfieldname,-j); 
+    Resmat(j)=generalC(Pmat{j},outfieldname,-j); 
 end
 
 Resmat=reshape(Resmat,fliplr(varparams))';
