@@ -55,7 +55,7 @@ end
 
 load(['data/scenarios/' P.scenario '.mat'],'T','C');
 
-% Note: can add secondary trip file (real vs expected/forecasted)
+% NOTE: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
@@ -159,18 +159,18 @@ if strcmp(P.enlayeralg,'aggregate')
     end
 
     % energy layer variable: static values
-    E.v2g=P.Operations.v2g;        % use V2G?
-    E.eta=1;            % 
-    E.selling=1;        % 
-    E.minfinalsoc=0.9;    % final SOC. This only works for optimization horizon of ~24h
-    E.T=P.EnergyLayer.mthor;            % number of time steps in energy layer
-    E.cyclingcost=P.Tech.cyclingcost;   % battery cycling cost [$/kWh]
+    E.v2g=P.Operations.v2g; % use V2G?
+    E.eta=1;                % 
+    E.selling=1;            % can sell to the grid?
+    E.minfinalsoc=0.9;      % final SOC. This only works for optimization horizon of ~24h
+    E.T=P.EnergyLayer.mthor;% number of time steps in energy layer
+    E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
     E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
     E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
 
-    zmacro=zeros(4,etsim+P.EnergyLayer.mthor); % matrix of optimal control variables for energy layer
-
+    % matrix of optimal control variables for energy layer
+    zmacro=zeros(4,etsim+P.EnergyLayer.mthor); 
     
 else 
     
@@ -216,7 +216,8 @@ if strcmp(P.trlayeralg,'opti')
     if P.e>1
         L=floor(size(c1,3)/2);
         c1=permute(squeeze(sum(reshape(permute(c1(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
-%         c2=permute(squeeze(sum(reshape(permute(c2(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
+        % NOTE: implementation for stochastic arrivals needed:
+        % c2=permute(squeeze(sum(reshape(permute(c2(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
     end
     
     % create arrival vectors for optimization (cexpected) and simulation (c)
@@ -364,20 +365,6 @@ for i=1:tsim
             
             Aequ=Aeq;
             beqtu=beqt;
-            
-            
-%         elseif strcmp(P.enlayeralg,'no')
-%             
-%             if scheduled==1
-%                 % add electricity price to objective function
-%                 f=(f1   - fsoc*P.rho3      +P.rho2*(fq).*(repelem(elep(i:i+P.TransportLayer.thor-1),ctrno,1))     )/P.TransportLayer.thor;
-%             else 
-%                 % unscheduled case
-%                 f=(f1-fq*P.rho4)/P.TransportLayer.thor;
-%             end
-%             
-%         end
-        
         
             % transport layer optimization
             zres=intlinprog(f,intcon,Adis,bdist,Aequ,beqtu,lb,ub,options);
@@ -441,7 +428,6 @@ for i=1:tsim
                     [x0,prices]=RelocationPricing(m);
                     
                     x=ceil(round(x0,1));
-%                     x=round(x0);
 
                 else
 
@@ -602,7 +588,6 @@ for i=1:tsim
 
                                     else
 
-    %                                     QueueLength=length(distancetomovesorted);
                                         FirstAvailable=find(DirectedHereSum>=ka,1);
 
                                         % if not in u, v, w, == inf
@@ -626,7 +611,7 @@ for i=1:tsim
                                 
                             else
                                 
-                                % note: temporary solution
+                                % NOTE: temporary solution
                                 
                                 if isfield(P,'pricing')
                                 
@@ -815,7 +800,7 @@ Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6;
 
 %% create Res struct and save results
 
-% Note: need to reorganize results struct
+% NOTE: need to reorganize results struct
 
 % total cpu time
 elapsed=cputime-S.starttime;
