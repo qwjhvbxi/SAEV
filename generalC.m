@@ -263,6 +263,24 @@ if strcmp(P.trlayeralg,'opti')
 end
 
 
+%% pricing (temporary solution)
+
+if isfield(P,'pricing') 
+    
+    m.c=Tr*P.e;
+    m.gamma_r=0.10; % relocation cost per minute
+    m.gamma_p=0.25; % base tariff per minute
+    m.fixedprice=[];
+    
+    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*0.5;
+    
+else
+    
+	prices=zeros(n,n,ceil(tsim/P.TransportLayer.tp)+1);
+    
+end
+
+
 %% variables for progress display and display initializations
 
 S.starttime=cputime;
@@ -380,6 +398,41 @@ for i=1:tsim
             
         case 'simplified'       % simplified relocation 
 
+            % current pricing number
+            kp=ceil(i/P.TransportLayer.tp);
+                
+            %% pricing
+            if isfield(P,'pricing') 
+                
+
+                if P.pricing==true && (i==1 || mod(i-1,P.TransportLayer.tp)==1)
+
+                    % number of vehicles at each station
+                    uv=histc(u(i,:),1:n);
+
+                    % current pricing calculation
+                    kNow=ceil((i-1)/P.TransportLayer.tp)+1;
+                    
+                    % NOTE: waiting trips are not influenced by prices! should be moved outside
+
+                    % expected trips
+                    StartTime=(kNow-1)*P.TransportLayer.tp+1;
+                    %q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
+                    Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+P.TransportLayer.tp));
+                    a_tp=sparse(A(Selection0,1),A(Selection0,2),1,n,n);%+q_t;
+
+                    m.v=uv';
+                    m.a_ts=a_tp;
+                    m.a_to=a_tp;
+
+                    [x0,pricesNow]=RelocationPricing(m);
+
+                    prices(:,:,kNow)=pricesNow';
+                    
+                end
+            end
+            
+            
             %% relocation
 
             % if it's time for a relocation decision
@@ -387,7 +440,7 @@ for i=1:tsim
 
                 % current relocation number
                 kt=(i-1)/P.TransportLayer.tx+1;
-
+                
                 % number of vehicles at each station
                 uv=histc(u(i,:),1:n);
 
@@ -398,57 +451,45 @@ for i=1:tsim
                     dw=zeros(1,n);
                 end
                 
+%                 % expected trips
+%                 Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
+%                 a_ts=round((1-prices(:,:,kp)).*sparse(A(Selection1,1),A(Selection1,2),1,n,n));
+%                 Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
+%                 a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2,1),A(Selection2,2),1,n,n));
+                
                 % expected trips
-                q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
-                Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-                a_ts=sparse(A(Selection1,1),A(Selection1,2),1,n,n)+q_t;
-                Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-                a_to=sparse(A(Selection2,1),A(Selection2,2),1,n,n)+q_t;
+                NextPricing=ceil(i/P.TransportLayer.tp)*P.TransportLayer.tp+1;
                 
-                % pricing
-                if isfield(P,'pricing')
+                Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
+                Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
+                a_ts=round((1-prices(:,:,kp)).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
+                     round((1-prices(:,:,kp+1)).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
                 
-                    if P.pricing==true
-                        fixedprice=[];
-                    else
-                        fixedprice=0.5;
-                    end
-                    
-                    m.c=Tr*P.e;
-                    m.v=uv';
-                    m.a_ts=a_ts;
-                    m.a_to=a_to;
-                    m.gamma_r=0.10; % relocation cost per minute
-                    m.gamma_p=0.25; % base tariff per minute
-                    m.fixedprice=fixedprice;
-                    
-                    [x0,prices]=RelocationPricing(m);
-                    
-                    x=ceil(round(x0,1));
+                Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts+P.TransportLayer.tr)));
+                Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
+                a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
+                     round((1-prices(:,:,kp+1)).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
+                
+                % expected imbalance at stations
+                b(kt,:)=uv ...
+                    -dw ...  number of passengers waiting at each station
+                    +sum(a_ts) ...  expected arrivals between now and now+ts
+                    -sum(a_to,2)' ...     expected requests between now and now+ts+tr
+                    +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
 
-                else
-
-                    % expected imbalance at stations
-                    b(kt,:)=uv ...
-                        -dw ...  number of passengers waiting at each station
-                        +sum(a_ts) ...  expected arrivals between now and now+ts
-                        -sum(a_to,2)' ...     expected requests between now and now+ts+tr
-                        +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
-                    
 %                     b(kt,:)=uv ...
 %                         -dw ...  number of passengers waiting at each station
 %                         +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
 %                         -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
 %                         +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
 
-                    % identify feeder and receiver stations
-                    F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
-                    R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
+                % identify feeder and receiver stations
+                F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
+                R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
 
-                    % identify optimal relocation flux
-                    x=optimalrelocationfluxes(F,R,Tr);
+                % identify optimal relocation flux
+                x=optimalrelocationfluxes(F,R,Tr);
 
-                end
                 
                     
                 if ~isempty(x)
@@ -621,7 +662,7 @@ for i=1:tsim
                                     % avoid changing chosen mode after deciding
                                     if chosenmode(tripID)==0
                                     
-                                        offeredprices(tripID)=prices(A(tripID,1),A(tripID,2));
+                                        offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp);
 
                                         chosenmode(tripID)=(rand()>offeredprices(tripID));
                                         
@@ -727,11 +768,13 @@ end
 
 if isfield(P,'pricing')
     
-    distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)));
+    distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
     
-    Sim.revenues=sum(offeredprices.*distances.*chosenmode)*P.e*m.gamma_p;
+    Sim.revenues=sum(offeredprices.*distances.*chosenmode)*m.gamma_p;
     Sim.relocationcosts=sum(relodist)*P.e*m.gamma_r;
     Sim.offeredprices=reorderVectors(offeredprices,ASortInd);
+
+    Sim.prices=prices;
     
 end
 
