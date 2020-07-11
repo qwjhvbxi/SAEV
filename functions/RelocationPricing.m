@@ -48,8 +48,10 @@ H=2*diag([zeros(n^2,1);a_to_v.*c_v*m.gamma_p]);
 f=[c_v*m.gamma_r;-a_to_v.*c_v*m.gamma_p];
 % f=[c_v*m.gamma_r;-a_to_v*m.gamma_p];
 
+options=optimoptions('quadprog','display','none');
+
 % optimization
-X0=quadprog(H,f,A,b,[],[],lb,ub);
+X0=quadprog(H,f,A,b,[],[],lb,ub,[],options);
 
 % results (shift from convention [d,o] to [o,d])
 X1=round(X0,3);
