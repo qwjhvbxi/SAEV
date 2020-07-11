@@ -398,9 +398,14 @@ for i=1:tsim
                     dw=zeros(1,n);
                 end
                 
+                % expected trips
+                q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
+                Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
+                a_ts=sparse(A(Selection1,1),A(Selection1,2),1,n,n)+q_t;
+                Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
+                a_to=sparse(A(Selection2,1),A(Selection2,2),1,n,n)+q_t;
                 
-                
-                
+                % pricing
                 if isfield(P,'pricing')
                 
                     if P.pricing==true
@@ -408,14 +413,6 @@ for i=1:tsim
                     else
                         fixedprice=0.5;
                     end
-                    
-                    q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
-                    
-                    Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-                    a_ts=sparse(A(Selection1,1),A(Selection1,2),1,n,n)+q_t;
-                    
-                    Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-                    a_to=sparse(A(Selection2,1),A(Selection2,2),1,n,n)+q_t;
                     
                     m.c=Tr*P.e;
                     m.v=uv';
@@ -434,9 +431,15 @@ for i=1:tsim
                     % expected imbalance at stations
                     b(kt,:)=uv ...
                         -dw ...  number of passengers waiting at each station
-                        +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
-                        -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
+                        +sum(a_ts) ...  expected arrivals between now and now+ts
+                        -sum(a_to,2)' ...     expected requests between now and now+ts+tr
                         +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
+                    
+%                     b(kt,:)=uv ...
+%                         -dw ...  number of passengers waiting at each station
+%                         +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
+%                         -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
+%                         +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
 
                     % identify feeder and receiver stations
                     F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
