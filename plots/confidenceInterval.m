@@ -1,3 +1,8 @@
+%% [CI,M]=confidenceInterval(x[,confint])
+% calculate confidence intervals for matrix x by column. 
+% confint is a vector with two values: the minimum and maximum probability
+% interval. Default: 95% confidence interval ([0.05,0.95]). 
+
 function [CI,M]=confidenceInterval(x,confint)
 
 if nargin<2
