@@ -45,7 +45,7 @@ end
 
 % cost function
 H=2*diag([zeros(n^2,1);a_to_v.*c_v*m.gamma_p]);
-f=[c_v*m.gamma_r;-a_to_v.*c_v*m.gamma_p];
+f=[c_v*m.gamma_r;-a_to_v.*c_v*m.gamma_p-a_to_v.*c_v*m.gamma_r];
 % f=[c_v*m.gamma_r;-a_to_v*m.gamma_p];
 
 options=optimoptions('quadprog','display','none');
