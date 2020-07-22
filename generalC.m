@@ -268,11 +268,10 @@ end
 if isfield(P,'pricing') 
     
     m.c=Tr*P.e;
-    m.gamma_r=0.10; % relocation cost per minute
-    m.gamma_p=0.25; % base tariff per minute
-    m.fixedprice=[];
+    m.gamma_r=P.TransportLayer.relocationcost; % relocation cost per minute
+    m.gamma_p=P.TransportLayer.basetariff; % base tariff per minute
     
-    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*0.5;
+    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*(m.gamma_r+m.gamma_p)/(2*m.gamma_p);
     
 else
     
@@ -396,7 +395,7 @@ for i=1:tsim
             % calculate new SOC
             q(i+1,:)=(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i+1  ));
             
-        case 'simplified'       % simplified relocation 
+        case {'simplified' , 'no'}       % simplified relocation 
 
             % current pricing number
             kp=ceil(i/P.TransportLayer.tp);
@@ -436,7 +435,7 @@ for i=1:tsim
             %% relocation
 
             % if it's time for a relocation decision
-            if mod(i-1,P.TransportLayer.tx)==0
+            if mod(i-1,P.TransportLayer.tx)==0 && strcmp(P.trlayeralg,'simplified')
 
                 % current relocation number
                 kt=(i-1)/P.TransportLayer.tx+1;
@@ -489,9 +488,7 @@ for i=1:tsim
 
                 % identify optimal relocation flux
                 x=optimalrelocationfluxes(F,R,Tr);
-
                 
-                    
                 if ~isempty(x)
 
                     % read results
@@ -670,7 +667,7 @@ for i=1:tsim
                                     
                                 else
                                 
-                                chosenmode(tripID)=1;
+                                    chosenmode(tripID)=1;
                                 
                                 end
                                
@@ -770,7 +767,7 @@ if isfield(P,'pricing')
     
     distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
     
-    Sim.revenues=sum(offeredprices.*distances.*chosenmode)*m.gamma_p;
+    Sim.revenues=sum(offeredprices.*distances.*chosenmode.*(1-dropped))*m.gamma_p-sum(distances.*chosenmode.*(1-dropped))*m.gamma_r;
     Sim.relocationcosts=sum(relodist)*P.e*m.gamma_r;
     Sim.offeredprices=reorderVectors(offeredprices,ASortInd);
 
@@ -877,7 +874,7 @@ end
 
 %% end display
 
-if ~strcmp(P.trlayeralg,'simplified') %%P.type<7
+if strcmp(P.trlayeralg,'opti') %%P.type<7
     meanqnow=mean(X(n^2+n*P.m*(maxt+2)+1:n^2+n*P.m*(maxt+2)+P.m,  i  ));
 else
     meanqnow=mean(q(i,:));
