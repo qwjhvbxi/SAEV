@@ -1,12 +1,14 @@
 
 
+% P=cpar('Tokyo189');
 P=cpar('NYC2018');
+% P=cpar('NYC2016');
 P.Operations.maxwait=20;
-P.m=2000;
-P.TransportLayer.tp=15;
+P.m=2500;
+P.TransportLayer.tp=30;
 P.enlayeralg='no';
 P.TransportLayer.relocationcost=0.1;
-P.TransportLayer.basetariff=0.5;
+P.TransportLayer.basetariff=0.25;
 P.tripday=3;
 
 P.pricing=false;
@@ -19,6 +21,11 @@ Res2=generalC(P,2,2)
 Res1.Sim.revenues-Res1.Sim.relocationcosts
 Res2.Sim.revenues-Res2.Sim.relocationcosts
 (Res2.Sim.revenues-Res2.Sim.relocationcosts)/((Res1.Sim.revenues-Res1.Sim.relocationcosts))
+
+sum(Res1.Sim.chosenmode)/length(Res1.Sim.chosenmode)
+sum(Res2.Sim.chosenmode)/length(Res2.Sim.chosenmode)
+
+return
 
 %%
 
