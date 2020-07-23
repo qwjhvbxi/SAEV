@@ -1,7 +1,7 @@
 
 
 
-function prices=NLPricing(m)
+function [prices,k]=NLPricing(m)
 
 f=@(a,s) exp(s)./(exp(s)+a);
 d=@(a,s) a*exp(s)./((a+exp(s)).^2);  % derivative at s
@@ -20,14 +20,14 @@ maxIter=4;
 for k=1:maxIter
 
     % limits to normalized price (corresponding to between 0 and 2*baseprice)
-    m.pmin=(p2*m.c+w+u)./(2*p2*m.c);
-    m.pmax=(p2*m.c+w-u)./(2*p2*m.c);
+    m.pmin=(p2*m.c+m.w+u)./(2*p2*m.c);
+    m.pmax=(p2*m.c+m.w-u)./(2*p2*m.c);
     m.pmax(1:n+1:end)=1;
     m.pmin(1:n+1:end)=0;
 
     % probabilities of trip acceptance at the limits
-    m.amin=1-Points(5+w);
-    m.amax=1-Points(4+w);
+    m.amin=1-Points(5+m.w);
+    m.amax=1-Points(4+m.w);
 
     [~,prices]=RelocationPricing3(m);
 
@@ -43,6 +43,7 @@ for k=1:maxIter
 
 end
 
+
 % fmin=f(a,2*p2*pmin0.*m.c);
 % fmax=f(a,2*p2*pmax0.*m.c);
 % 
@@ -57,4 +58,27 @@ end
 % m.pmax=
 
 
-end
+return
+
+
+%% testing 
+
+N=round([   0.65574 , 0.70605
+      0.03571 , 0.03183
+      0.84913 , 0.27692
+      0.93399 , 0.04617
+      ]*30);
+A=[ 0 3 2 0;
+    1 0 9 8;
+    1 1 0 0;
+    3 0 6 0];
+m.a=A;
+% m.v=[5;18;2;9];
+m.v=[5;0;2;9];
+
+m.c=(N(:,1)-N(:,1)').^2+(N(:,2)-N(:,2)').^2;
+m.gamma_r=0.1;
+m.gamma_p=0.5;
+% m.fixedprice=0.5;
+
+prices=NLPricing(m)

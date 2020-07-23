@@ -46,8 +46,8 @@ A=[A;Av];
 b=[b;m.v];
 
 % bounds
-lb=[zeros(n^2,1);   pmin];
-ub=[repmat(m.v,n,1);pmax];
+lb=[zeros(n^2,1);    min(1,max(0,pmin))];
+ub=[repmat(m.v,n,1); max(0,min(1,pmax))];
 ub(1:n+1:n^2)=0; % no relocation in same node
 
 if isfield(m,'fixedprice') && ~isempty(m.fixedprice)
@@ -83,43 +83,5 @@ return
 
 
 
-
-
-%% testing
-
-% N=[   0.65574 , 0.70605
-%       0.03571 , 0.03183
-%       0.84913 , 0.27692
-%       0.93399 , 0.04617
-%       0.67874 , 0.09713
-%       0.75774 , 0.82346
-%       0.74313 , 0.69483
-%       0.39223 , 0.31710
-%       0.65548 , 0.95022
-%       0.17119 , 0.03444
-%       ];
-% n=length(N);    % nodes
-% m.a_ts=rand(n,n)*10;
-% m.a_to=m.a_ts+rand(n,n)*10;
-% m.v=rand(n,1)*40;
-
-N=round([   0.65574 , 0.70605
-      0.03571 , 0.03183
-      0.84913 , 0.27692
-      0.93399 , 0.04617
-      ]*30);
-A=[ 0 3 2 0;
-    1 0 9 8;
-    1 1 0 0;
-    3 0 6 0];
-m.a=A;
-m.v=[5;18;2;9];
-
-m.c=(N(:,1)-N(:,1)').^2+(N(:,2)-N(:,2)').^2;
-m.gamma_r=0.1;
-m.gamma_p=0.5;
-% m.fixedprice=0.5;
-
-[relocations,prices]=RelocationPricing3(m)
 
 
