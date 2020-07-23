@@ -271,13 +271,15 @@ if isfield(P,'pricing')
     m.gamma_r=P.TransportLayer.relocationcost; % relocation cost per minute
     m.gamma_p=P.TransportLayer.basetariff; % base tariff per minute
     
-    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*(m.gamma_r+m.gamma_p)/(2*m.gamma_p);
+    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*(m.gamma_r+m.gamma_p*2)/(4*m.gamma_p);
     
 else
     
 	prices=zeros(n,n,ceil(tsim/P.TransportLayer.tp)+1);
     
 end
+
+f=@(s) exp(-s*m.c)./(exp(-s*m.c)+exp(-m.gamma_p*m.c));
 
 
 %% variables for progress display and display initializations
@@ -421,12 +423,12 @@ for i=1:tsim
                     a_tp=sparse(A(Selection0,1),A(Selection0,2),1,n,n);%+q_t;
 
                     m.v=uv';
-                    m.a_ts=a_tp;
-                    m.a_to=a_tp;
+                    m.a=a_tp;
 
-                    [x0,pricesNow]=RelocationPricing(m);
+                    % [x0,pricesNow]=RelocationPricing2(m);
+                    [pricesNow,iterations]=NLPricing(m);
 
-                    prices(:,:,kNow)=pricesNow';
+                    prices(:,:,kNow)=pricesNow;
                     
                 end
             end
@@ -461,13 +463,17 @@ for i=1:tsim
                 
                 Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
                 Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-                a_ts=round((1-prices(:,:,kp)).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
-                     round((1-prices(:,:,kp+1)).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
+%                 a_ts=round((1-prices(:,:,kp)).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
+%                      round((1-prices(:,:,kp+1)).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
+                a_ts=round((f(prices(:,:,kp))).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
+                     round((f(prices(:,:,kp+1))).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
                 
                 Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts+P.TransportLayer.tr)));
                 Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-                a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
-                     round((1-prices(:,:,kp+1)).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
+%                 a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
+%                      round((1-prices(:,:,kp+1)).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
+                a_to=round((f(prices(:,:,kp))).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
+                     round((f(prices(:,:,kp+1))).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
                 
                 % expected imbalance at stations
                 b(kt,:)=uv ...
@@ -640,7 +646,6 @@ for i=1:tsim
 
                                     end
 
-
                                     UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
                                     AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
 
@@ -659,9 +664,12 @@ for i=1:tsim
                                     % avoid changing chosen mode after deciding
                                     if chosenmode(tripID)==0
                                     
-                                        offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp);
+                                        offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp)*m.gamma_p*2;
 
-                                        chosenmode(tripID)=(rand()>offeredprices(tripID));
+%                                         chosenmode(tripID)=(rand()>offeredprices(tripID));
+                                        chosenmode(tripID)=(rand() < ...
+                                            exp(-offeredprices(tripID)*distancetomovesorted(ka)) / ...
+                                          ( exp(-offeredprices(tripID)*distancetomovesorted(ka)) + exp(-distancetomovesorted(ka)*m.gamma_p)));
                                         
                                     end
                                     
@@ -767,7 +775,7 @@ if isfield(P,'pricing')
     
     distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
     
-    Sim.revenues=sum(offeredprices.*distances.*chosenmode.*(1-dropped))*m.gamma_p-sum(distances.*chosenmode.*(1-dropped))*m.gamma_r;
+    Sim.revenues=sum((offeredprices-m.gamma_r).*distances.*chosenmode.*(1-dropped));
     Sim.relocationcosts=sum(relodist)*P.e*m.gamma_r;
     Sim.offeredprices=reorderVectors(offeredprices,ASortInd);
 
