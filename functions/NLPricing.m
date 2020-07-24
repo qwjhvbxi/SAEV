@@ -4,9 +4,14 @@
 function [prices,k,m]=NLPricing(m)
 
 % utilities
-f=@(a,s) exp(s)./(exp(s)+a);        % value at s
+g=@(a,s) exp(s)./(exp(s)+a);        % value at s
+f=@(a,s) log(s.*a./(1-s));          % inverse
 d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
-Points=f(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
+Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
+
+% price at certain probability: given a trip distance d, find the price at
+% which the probability of acceptance is x
+q=@(d,x) -(log(x.*exp(-m.gamma_p*d)./(1-x)))./d;
 
 % initializations
 n=size(m.c,1);  % nodes
