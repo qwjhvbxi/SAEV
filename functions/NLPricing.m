@@ -4,6 +4,9 @@
 function [prices,k,m]=NLPricing(m)
 
 % utilities
+c=m.c;
+n=size(c,1);  % nodes
+c(1:n+1:end)=1;
 g=@(a,s) exp(s)./(exp(s)+a);        % value at s
 f=@(a,s) log(s.*a./(1-s));          % inverse
 d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
@@ -14,8 +17,7 @@ Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 int
 q=@(d,x) -(log(x.*exp(-m.gamma_p*d)./(1-x)))./d;
 
 % initializations
-n=size(m.c,1);  % nodes
-% a=exp(bp*m.c); % exp of benefit of alternative modes for each node pair
+% a=exp(bp*c); % exp of benefit of alternative modes for each node pair
 m.w=zeros(n,n);    % position of linearization (between -3 and 3)
 u=0.5;
 maxIter=2;
@@ -24,15 +26,13 @@ for k=1:maxIter
 
     k
     
-    % limits to normalized price (corresponding to between 0 and 2*baseprice)
-    m.pmin=(-m.gamma_p*m.c-m.w+u)./(-m.gamma_p*2*m.c);
-    m.pmax=(-m.gamma_p*m.c-m.w-u)./(-m.gamma_p*2*m.c);
-    m.pmax(1:n+1:end)=1;
-    m.pmin(1:n+1:end)=0;
-
     % probabilities of trip acceptance at the limits
     m.amin=1-Points(5+m.w);
     m.amax=1-Points(4+m.w);
+    
+    % limits to price
+    m.pmin=q(c,m.amax);
+    m.pmax=q(c,m.amin);
 
     [reloc,prices]=RelocationPricing3(m);
 
@@ -50,11 +50,11 @@ end
 
 % reloc
 
-% fmin=f(a,2*p2*pmin0.*m.c);
-% fmax=f(a,2*p2*pmax0.*m.c);
+% fmin=f(a,2*p2*pmin0.*c);
+% fmax=f(a,2*p2*pmax0.*c);
 % 
-% fmin=f(a,p2*m.c+w-u);
-% fmax=f(a,p2*m.c+w+u);
+% fmin=f(a,p2*c+w-u);
+% fmax=f(a,p2*c+w+u);
 % pmax=1-fmin;
 % pmin=1-fmax;
 % pmax(1:n+1:end)=0.5;
