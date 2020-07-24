@@ -14,7 +14,7 @@
 
 function [X,prices]=RelocationPricing3(m)
 
-% calculations 
+% initializations
 n=size(m.c,1);    % nodes
 a=reshape(m.a,n^2,1);
 c=reshape(m.c,n^2,1);
@@ -24,15 +24,15 @@ amin=reshape(m.amin,n^2,1);
 amax=reshape(m.amax,n^2,1);
 
 % demand is in the form d=a*(s-h*p)
-s=m.amax+(m.amax-m.amin)./(m.pmax-m.pmin).*m.pmin; % static term of demand
+s=m.amax+((m.amax-m.amin)./(m.pmax-m.pmin)).*m.pmin; % static term of demand
 s_v=reshape(s,n^2,1);
 h=(amax-amin)./(pmax-pmin); % p multiplier for demand
 
 % constraint on relocation
 Ar=[repmat(eye(n),1,n)-kron(eye(n),ones(1,n))];
+
 a_ji=kron(eye(n),ones(1,n));
 a_ij=repmat(eye(n),1,n);
-
 Ap=zeros(size(a_ji));
 Ap(logical(a_ji))=a.*h;
 Ap(logical(a_ij))=Ap(logical(a_ij))-a.*h;
@@ -59,8 +59,9 @@ if isfield(m,'fixedprice') && ~isempty(m.fixedprice)
 end
 
 % cost function
-H=2*diag([zeros(n^2,1);a.*c.*h*m.gamma_p]);
-f=[c*m.gamma_r;-a.*c.*s_v*m.gamma_p-a.*c.*h*m.gamma_r];
+H=2*diag([zeros(n^2,1);a.*c.*h*m.gamma_p*2]);
+f=[  c*m.gamma_r ; ...
+    -a.*c.*(s_v*m.gamma_p*2+h*m.gamma_r)  ];
 % f=[c_v*m.gamma_r;-a_to_v*m.gamma_p];
 
 options=optimoptions('quadprog','display','none');
