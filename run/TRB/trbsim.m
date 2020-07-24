@@ -4,8 +4,8 @@
 P=cpar('NYC2018');
 % P=cpar('NYC2016');
 P.Operations.maxwait=20;
-P.m=2500;
-P.TransportLayer.tp=30;
+P.m=5000;
+P.TransportLayer.tp=25;
 P.enlayeralg='no';
 P.TransportLayer.relocationcost=0.1;
 P.TransportLayer.basetariff=0.25;
@@ -17,13 +17,20 @@ Res1=generalC(P,2,2)
 P.pricing=true;
 Res2=generalC(P,2,2)
 
+[   Res1.Sim.revenues;
+    Res2.Sim.revenues]
 
-Res1.Sim.revenues-Res1.Sim.relocationcosts
-Res2.Sim.revenues-Res2.Sim.relocationcosts
+[   Res1.Sim.relocationcosts;
+    Res2.Sim.relocationcosts]
+
+[Res1.Sim.revenues-Res1.Sim.relocationcosts; Res2.Sim.revenues-Res2.Sim.relocationcosts]
 (Res2.Sim.revenues-Res2.Sim.relocationcosts)/((Res1.Sim.revenues-Res1.Sim.relocationcosts))
 
-sum(Res1.Sim.chosenmode)/length(Res1.Sim.chosenmode)
-sum(Res2.Sim.chosenmode)/length(Res2.Sim.chosenmode)
+[sum(Res1.Sim.chosenmode)/length(Res1.Sim.chosenmode);
+sum(Res2.Sim.chosenmode)/length(Res2.Sim.chosenmode)]
+
+figure
+plot(0:0.01:0.5,histc(Res2.Sim.offeredprices,0:0.01:0.5))
 
 return
 
