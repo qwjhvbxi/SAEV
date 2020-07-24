@@ -24,7 +24,8 @@ switch Scenario
         % P.tripfile='NYC2016_Jan13-Mar16_10days';
         P.tripfolder='NYC2016';
     case 'NYC2018'
-        P.tripfile='NY_trips_10wed_0103-0307_minutes';
+        P.tripfolder='NYC2018_10wed';
+        %P.tripfile='NY_trips_10wed_0103-0307_minutes';
     case 'NYC2016-small'
         P.tripfile='NYC2016-small_13Jan';
     case 'NYC2016-small2'

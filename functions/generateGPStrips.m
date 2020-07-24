@@ -7,7 +7,7 @@
 %
 % See also generalC
 
-function [A,Atimes,ASortInd,AbuckC,Distances]=generateGPStrips(P)
+function [A,Atimes,AbuckC,Distances]=generateGPStrips(P)
 
 % set external data folder
 DataFolder=setDataFolder();
@@ -23,29 +23,21 @@ end
 
 % load files
 if exist(tripFileLocation,'file')
-    load(tripFileLocation,'A','Atimes');
+    load(tripFileLocation,'A','Atimes','Cleaned');
 else
     %error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
     error('File ''%s'' does not exist.',tripFileLocation);
 end
 
-% file with multiple scenarios?
-if iscell(A) && P.tripday>0 && ~isfield(P,'tripfolder')
-    A1=double(A{P.tripday});
-    Atimes1=double(Atimes{P.tripday});
-else
-    A1=double(A);
-    Atimes1=double(Atimes);
+A1=double(A);
+Atimes1=double(Atimes);
+
+if exist('Cleaned','var')
+    % clean up data
+    [A,Atimes,~]=cleanData(A1,Atimes1);
+    Cleaned=true;
+    save(tripFileLocation,'A','Atimes','Cleaned');
 end
-
-% remove 0s
-Atimes1(Atimes1(:,1)==0)=1440;
-
-% fast method for trip generation
-[Atimes,ASortInd]=sortrows(Atimes1,1); % trips sorted by departure time
-A=A1(ASortInd,:); % trips sorted by departure time
-Abuck=histc(Atimes(:,1),1:1441); % number of trips in each minute
-AbuckC=[0;cumsum(Abuck)]; % total number of trips up to each minute
 
 % GPS coordinates mode
 if size(A,2)==4 
@@ -113,6 +105,16 @@ else
     RawDistance=[];
 end
 
+% remove trips inside same node
+SameNode=logical(A(:,1)==A(:,2));
+A(SameNode,:)=[];
+Atimes(SameNode,:)=[];
+
+% fast method for trip generation
+Abuck=histc(Atimes(:,1),1:1441); % number of trips in each minute
+AbuckC=[0;cumsum(Abuck)]; % total number of trips up to each minute
+
+% NOTE: need to fix this problem with trips in same node
 Distances.ODistToNode=ODistToNode;
 Distances.ONodeID=ONodeID;
 Distances.DDistToNode=DDistToNode;
