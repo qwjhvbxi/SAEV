@@ -8,25 +8,32 @@
 % use carbon emissions from NYISO 2018, Germany 2019 (more renewables),
 % carbon price... ?
 
-
-%% prova
-Period=4:8;
-P=cpar('NYC2016');
-P.tripfolder='NYC2016'; % trips in 2019
-P.m=13000;
-P.gridfile='NY_DA_2016';
-gridoffset=0; % same year
-P.carbonprice=0;
-P.Operations.maxwait=Inf;
-% with optimized charging
-P.enlayeralg='aggregate';
-[S0a,R0a]=multiDaySim(Period,P,gridoffset);
-
+if 0
+    %% prova
+    Period=4:8;
+    P=cpar('NYC2016');
+    P.tripfolder='NYC2016'; % trips in 2019
+    P.m=13000;
+    P.gridfile='NY_DA_2016';
+    gridoffset=0; % same year
+    P.carbonprice=0;
+    P.Operations.maxwait=Inf;
+    % with optimized charging
+    P.enlayeralg='aggregate';
+    [S0a,R0a]=multiDaySim(Period,P,gridoffset);
+end
 
 %% initializations
 
 % period
-Period=4:31;
+% Period=4:31;
+Period=18:31+14;
+gridfile_a='NY_DA_2016';
+gridoffset_a=0; % same year
+gridfile_b='Germany_DA_2019';
+gridoffset_b=-11;%3; % 2016/01/01: Fri; 2019/01/01: Tue; 
+gridfile_c='Germany_DA_2019';
+gridoffset_c=-11+7*20;%3+7*20; % 2016/01/01: Fri; 2019/01/01: Tue; 
 
 % parameters
 P=cpar('NYC2016');
@@ -37,8 +44,6 @@ P.m=13000;
 
 %% new york grid
 
-gridfile_a='NY_DA_2016';
-gridoffset_a=0; % same year
 P.gridfile=gridfile_a;
 P.carbonprice=0;
 
@@ -58,8 +63,6 @@ P.carbonprice=50; % [$/ton]
 
 %% germany grid
 
-gridfile_b='Germany_DA_2019';
-gridoffset_b=3; % 2016/01/01: Fri; 2019/01/01: Tue; 
 P.gridfile=gridfile_b;
 P.carbonprice=0;
 
@@ -80,8 +83,6 @@ P.carbonprice=50; % [$/ton]
 
 %% germany grid (summer)
 
-gridfile_c='Germany_DA_2019';
-gridoffset_c=3+7*20; % 2016/01/01: Fri; 2019/01/01: Tue; 
 P.gridfile=gridfile_c;
 P.carbonprice=0;
 
