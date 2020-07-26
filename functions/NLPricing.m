@@ -18,9 +18,9 @@ q=@(d,x) -(log(x.*exp(-m.gamma_p*d)./(1-x)))./d;
 
 % initializations
 % a=exp(bp*c); % exp of benefit of alternative modes for each node pair
-m.w=zeros(n,n);    % position of linearization (between -3 and 3)
+m.w=zeros(n,n);    % position of price linearization (between -3 and 3)
 u=0.5;
-maxIter=2;
+maxIter=4;
 
 for k=1:maxIter
 
@@ -34,14 +34,22 @@ for k=1:maxIter
     m.pmin=q(c,m.amax);
     m.pmax=q(c,m.amin);
 
+    if 0
+        % check inputs
+        j=3;
+        figure
+        hold on
+        line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
+        p=0:0.01:1;
+        plot(p,g(exp(-m.gamma_p*m.c(j)),-p*m.c(j)),'k:')
+    end
+    
     [reloc,prices]=RelocationPricing3(m);
 
-    movedown=(round(prices,2)==round(m.pmin,2));
-    moveup=(round(prices,2)==round(m.pmax,2));
+    moves=(round(prices,4)==round(m.pmax,4))-(round(prices,4)==round(m.pmin,4));
 
-    if sum(movedown(:))+sum(moveup(:))>0
-        m.w=m.w-movedown;
-        m.w=m.w+moveup;
+    if sum(moves(:))>0
+        m.w=m.w+moves;
     else
         break;
     end
