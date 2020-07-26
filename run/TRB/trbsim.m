@@ -5,7 +5,7 @@ P=cpar('NYC2018');
 % P=cpar('NYC2016');
 P.Operations.maxwait=20;
 P.m=5000;
-P.TransportLayer.tp=25;
+P.TransportLayer.tp=30;
 P.enlayeralg='no';
 P.TransportLayer.relocationcost=0.1;
 P.TransportLayer.basetariff=0.25;
@@ -38,8 +38,8 @@ return
 
 addpath plots
 
-[P1,R1]=generateplotline3('NYC2018',[],'tripday',1:3,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.5);
-[P2,R2]=generateplotline3('NYC2018',[],'tripday',1:3,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.5);
+[P1,R1]=generateplotline3('NYC2018',[],'tripday',1:3,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P2,R2]=generateplotline3('NYC2018',[],'tripday',1:3,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
 
 S1=[R1.Sim];
 S2=[R2.Sim];
@@ -49,6 +49,72 @@ U2=sum([S2.revenues])-sum([S2.relocationcosts])
 
 U2/U1
 
+
+%% probabilities
+
+DataFolder=setDataFolder();
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+p=0:0.01:0.5;
+D=[5 10 20];
+cc=lines(3);
+for k=1:3
+    d=D(k);
+    yyaxis right
+    J1(k)=plot(p,f2(p,d),'--','Color',cc(k,:),'LineWidth',1);
+    yyaxis left
+    J2(k)=plot(p,f2(p,d).*p,':','Color',cc(k,:),'LineWidth',1);
+    J3(k)=plot(p,f2(p,d).*p-f2(p,d)*0.1,'-','LineWidth',1.5,'Color',cc(k,:));
+end
+xlabel('price per minute')
+ylabel('$ per minute')
+yyaxis right
+ylabel('probability of acceptance')
+text(0.4,0.82,'c=5')
+text(0.43,0.62,'c=10')
+text(0.4,0.4,'c=20')
+legend([J1(1),J2(1),J3(1)],{'probability','revenue','profits'})
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/TRB/revenue'],'-depsc2');
+
+
+%% linearization intervals
+
+g=@(a,s) exp(s)./(exp(s)+a);        % value at s
+f2=@(s,d) exp(-s.*d)./(exp(-s.*d)+exp(-m.gamma_p*d)); % demand acceptance probability as a function of price and distance
+q=@(d,x) -(log(x.*exp(-m.gamma_p*d)./(1-x)))./d;
+Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
+D=[5 10 20];
+p=0:0.01:0.5;
+cc=lines(3);
+
+DataFolder=setDataFolder();
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+for k=1:length(D)
+    plot(p,f2(p,D(k)),'k--')
+    w=0; % limits for p
+    u=0.5;
+    for w=-3:3        
+        % probabilities of trip acceptance at the limits
+        fmin=1-Points(5+w);
+        fmax=1-Points(4+w);
+        % limits to price
+        pmin=q(D(k),fmax);
+        pmax=q(D(k),fmin);
+        
+        line([pmin,pmax],[fmax,fmin],'LineWidth',1,'Color',cc(k,:));
+        scatter([pmin,pmax],[fmax,fmin],'ko');%,'MarkerColor',cc(k,:));
+    end
+end
+xlim([0,0.5])
+xlabel('price per minute')
+ylabel('probability of acceptance')
+text(0.025,0.7,'c=5')
+text(0.05,0.85,'c=10')
+text(0.2,0.82,'c=20')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/TRB/linearization'],'-depsc2');
 
 
 
