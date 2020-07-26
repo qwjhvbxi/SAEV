@@ -15,19 +15,20 @@
 
 function [X,prices]=RelocationPricing(m)
 
-% calculations (shift from convention [o,d] to [d,o])
+% calculations 
 n=size(m.c,1);    % nodes
-a_ts_v=reshape(m.a_ts',n^2,1);
-a_to_v=reshape(m.a_to',n^2,1);
-c_v=reshape(m.c',n^2,1);
+a_ts_v=reshape(m.a_ts,n^2,1);
+a_to_v=reshape(m.a_to,n^2,1);
+c_v=reshape(m.c,n^2,1);
 
 % constraint on relocation
+Ar=[repmat(eye(n),1,n)-kron(eye(n),ones(1,n))];
 a0to=kron(eye(n),ones(1,n));
 a0ts=repmat(eye(n),1,n);
-a2=zeros(size(a0to));
-a2(logical(a0to))=-a_to_v;
-a2(logical(a0ts))=a2(logical(a0ts))+a_ts_v;
-A=[kron(eye(n),ones(1,n))-repmat(eye(n),1,n)  ,  a2];
+Ap=zeros(size(a0to));
+Ap(logical(a0to))=-a_to_v;
+Ap(logical(a0ts))=Ap(logical(a0ts))+a_ts_v;
+A=[Ar , Ap];
 b=m.v+sum(m.a_ts,2)-sum(m.a_to,1)';
 
 % bounds
@@ -51,7 +52,7 @@ f=[c_v*m.gamma_r;-a_to_v.*c_v*m.gamma_p-a_to_v.*c_v*m.gamma_r];
 options=optimoptions('quadprog','display','none');
 
 % optimization
-X0=quadprog(H,f,A,b,[],[],lb,ub,[],options);
+[X0,fval]=quadprog(H,f,A,b,[],[],lb,ub,[],options);
 
 % results (shift from convention [d,o] to [o,d])
 X1=round(X0,3);
@@ -71,27 +72,40 @@ return
 
 
 %% testing
- 
+
+% N=[   0.65574 , 0.70605
+%       0.03571 , 0.03183
+%       0.84913 , 0.27692
+%       0.93399 , 0.04617
+%       0.67874 , 0.09713
+%       0.75774 , 0.82346
+%       0.74313 , 0.69483
+%       0.39223 , 0.31710
+%       0.65548 , 0.95022
+%       0.17119 , 0.03444
+%       ];
+% n=length(N);    % nodes
+% m.a_ts=rand(n,n)*10;
+% m.a_to=m.a_ts+rand(n,n)*10;
+% m.v=rand(n,1)*40;
+
 N=[   0.65574 , 0.70605
       0.03571 , 0.03183
       0.84913 , 0.27692
       0.93399 , 0.04617
-      0.67874 , 0.09713
-      0.75774 , 0.82346
-      0.74313 , 0.69483
-      0.39223 , 0.31710
-      0.65548 , 0.95022
-      0.17119 , 0.03444
       ];
-n=length(N);    % nodes
+A=[ 0 3 2 0;
+    1 0 9 8;
+    1 1 0 0;
+    3 0 6 0];
+m.a_ts=A;
+m.a_to=m.a_ts;
+m.v=[5;18;2;9];
 
 m.c=(N(:,1)-N(:,1)').^2+(N(:,2)-N(:,2)').^2;
-m.a_ts=rand(n,n)*10;
-m.a_to=m.a_ts+rand(n,n)*10;
-m.v=rand(n,1)*40;
-m.gamma_r=1;
-m.gamma_p=1;
-m.fixedprice=0.5;
+m.gamma_r=0.1;
+m.gamma_p=0.5;
+% m.fixedprice=0.5;
 
 [relocations,prices]=RelocationPricing(m)
 
