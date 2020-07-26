@@ -412,7 +412,8 @@ for i=1:tsim
                 if P.pricing==true && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),P.TransportLayer.tp)==0)
 
                     % number of vehicles at each station (including vehicles directed there)
-                    uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
+%                     uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
+                    uv=histc(u(i,:),1:n);
                     
                     % current pricing calculation
                     PricingStep=ceil((i-1)/P.TransportLayer.tp)+1;
