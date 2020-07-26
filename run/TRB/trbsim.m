@@ -3,7 +3,7 @@
 % P=cpar('Tokyo189');
 P=cpar('NYC2018');
 % P=cpar('NYC2016');
-P.Operations.maxwait=20;
+P.Operations.maxwait=Inf;
 P.m=5000;
 P.TransportLayer.tp=30;
 P.enlayeralg='no';
@@ -38,8 +38,8 @@ return
 
 addpath plots
 
-[P1,R1]=generateplotline3('NYC2018',[],'tripday',1:3,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
-[P2,R2]=generateplotline3('NYC2018',[],'tripday',1:3,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P1,R1]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P2,R2]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
 
 S1=[R1.Sim];
 S2=[R2.Sim];
@@ -49,6 +49,56 @@ U2=sum([S2.revenues])-sum([S2.relocationcosts])
 
 U2/U1
 
+mean([S1.revenues])
+mean([S2.revenues])
+mean([S1.relocationcosts])
+mean([S2.relocationcosts])
+mean([S1.revenues]-[S1.relocationcosts])
+mean([S2.revenues]-[S2.relocationcosts])
+
+mean([R1.cputime])
+mean([R2.cputime])
+(mean([R2.cputime])-mean([R1.cputime]))/24
+
+
+
+boxplot([[S1.revenues];[S1.relocationcosts];[S2.revenues];[S2.relocationcosts]]')
+boxplot([[S1.revenues];[S1.revenues]-[S1.relocationcosts];[S2.revenues];[S2.revenues]-[S2.relocationcosts]]')
+
+%%
+
+DataFolder=setDataFolder();
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+
+h1=subplot(1,3,1)
+boxplot([[S1.revenues];[S2.revenues]]')
+% ylabel('$');
+xticklabels({'C','D'})
+title('               a')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+
+h2=subplot(1,3,2)
+boxplot([[S1.relocationcosts];[S2.relocationcosts]]')
+xticklabels({'C','D'})
+title('               b')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+
+h3=subplot(1,3,3)
+boxplot([[S1.revenues]-[S1.relocationcosts];[S2.revenues]-[S2.relocationcosts]]')
+xticklabels({'C','D'})
+title('               c')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+
+p1=get(h1,'position');
+p2=get(h2,'position');
+p3=get(h3,'position');
+height=p1(2)+p1(4)-p3(2);
+h3=axes('position',[p1(1) p1(2) p2(3) height],'visible','off');
+h_label=ylabel('$','visible','on');
+
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/TRB/results'],'-depsc2');
 
 %% probabilities
 
