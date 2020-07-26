@@ -273,10 +273,7 @@ if isfield(P,'pricing')
     
     % real prices offered
 %     normalizedprices=(m.gamma_r+m.gamma_p*2)/(4*m.gamma_p);
-    normalizedprices=0.5;
-    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*...
-        normalizedprices*...
-        2*m.gamma_p;
+    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*m.gamma_p;
     
 else
     
@@ -432,9 +429,9 @@ for i=1:tsim
                     m.a=a_tp;
 
                     % [x0,pricesNow]=RelocationPricing2(m);
-                    [normalizedprices,~,~]=NLPricing(m);
+                    [pricesNow,~,~]=NLPricing(m);
 
-                    prices(:,:,PricingStep)=normalizedprices*2*m.gamma_p;
+                    prices(:,:,PricingStep)=pricesNow;
                     
                     % plot(0:0.01:0.5,histc(normalizedprices(:)*2*m.gamma_p,0:0.01:0.5))
                     
