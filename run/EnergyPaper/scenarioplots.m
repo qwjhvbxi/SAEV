@@ -9,7 +9,8 @@ load('data/scenarios/NYC2016.mat','C');
 load([DataFolder 'scenarios/NewYork/NYC2016/ManhattanMainBoundaries.mat'],'ManhattanMainBoundariesSimplified');
 % load([DataFolder 'trips/NYC2016_Jan13-Mar16_10days.mat'])
 Boundaries=convertToCartesian(ManhattanMainBoundariesSimplified,ManhattanMainBoundariesSimplified,40);
-figure
+
+figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 plot(Boundaries(:,1),Boundaries(:,2))
 scatter(C(:,1),C(:,2),'.')
