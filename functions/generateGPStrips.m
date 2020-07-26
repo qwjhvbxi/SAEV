@@ -29,15 +29,18 @@ else
     error('File ''%s'' does not exist.',tripFileLocation);
 end
 
-A1=double(A);
-Atimes1=double(Atimes);
-
 if exist('Cleaned','var')
+    
     % clean up data
-    [A,Atimes,~]=cleanData(A1,Atimes1);
+    [A,Atimes,~]=cleanData(A,Atimes);
     Cleaned=true;
     save(tripFileLocation,'A','Atimes','Cleaned');
-end
+    
+end 
+
+A=double(A);
+Atimes=double(Atimes);
+
 
 % GPS coordinates mode
 if size(A,2)==4 
