@@ -4,7 +4,7 @@
 P=cpar('NYC2018');
 % P=cpar('NYC2016');
 P.Operations.maxwait=Inf;
-P.m=5000;
+P.m=2500;
 P.TransportLayer.tp=30;
 P.enlayeralg='no';
 P.TransportLayer.relocationcost=0.1;
@@ -12,10 +12,10 @@ P.TransportLayer.basetariff=0.25;
 P.tripday=3;
 
 P.pricing=false;
-Res1=generalC(P,2,2)
+Res1=generalC(P,1,2)
 
 P.pricing=true;
-Res2=generalC(P,2,2)
+Res2=generalC(P,1,2)
 
 [   Res1.Sim.revenues;
     Res2.Sim.revenues]
@@ -37,9 +37,10 @@ return
 %%
 
 addpath plots
-
-[P1,R1]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
-[P2,R2]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P1,R1]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P2,R2]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P1,R1]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+[P2,R2]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
 
 S1=[R1.Sim];
 S2=[R2.Sim];
@@ -49,21 +50,27 @@ U2=sum([S2.revenues])-sum([S2.relocationcosts])
 
 U2/U1
 
-mean([S1.revenues])
-mean([S2.revenues])
-mean([S1.relocationcosts])
-mean([S2.relocationcosts])
-mean([S1.revenues]-[S1.relocationcosts])
-mean([S2.revenues]-[S2.relocationcosts])
+[mean([S1.revenues]) mean([S2.revenues])
+mean([S1.relocationcosts]) mean([S2.relocationcosts])
+mean([S1.revenues]-[S1.relocationcosts]) mean([S2.revenues]-[S2.relocationcosts])]
 
 mean([R1.cputime])
 mean([R2.cputime])
 (mean([R2.cputime])-mean([R1.cputime]))/24
 
-
+% share of people waiting more than 1 minute
+sum(vertcat(S1.waiting)>60)/length(vertcat(S1.waiting))
+sum(vertcat(S2.waiting)>60)/length(vertcat(S1.waiting))
 
 boxplot([[S1.revenues];[S1.relocationcosts];[S2.revenues];[S2.relocationcosts]]')
 boxplot([[S1.revenues];[S1.revenues]-[S1.relocationcosts];[S2.revenues];[S2.revenues]-[S2.relocationcosts]]')
+
+%%
+
+k=1;
+[A,Atimes,AbuckC,Distances]=generateGPStrips(P1{k});
+prova=accumarray(Atimes(:,1),full(R1(k).Sim.waiting))./histc(Atimes(:,1),1:1440)
+
 
 %%
 
