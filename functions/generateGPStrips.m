@@ -29,7 +29,7 @@ else
     error('File ''%s'' does not exist.',tripFileLocation);
 end
 
-if exist('Cleaned','var')
+if ~exist('Cleaned','var')
     
     % clean up data
     [A,Atimes,~]=cleanData(A,Atimes);
