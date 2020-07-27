@@ -32,8 +32,6 @@ sum(Res2.Sim.chosenmode)/length(Res2.Sim.chosenmode)]
 figure
 plot(0:0.01:0.5,histc(Res2.Sim.offeredprices,0:0.01:0.5))
 
-return
-
 %%
 
 addpath plots
@@ -67,10 +65,26 @@ boxplot([[S1.revenues];[S1.revenues]-[S1.relocationcosts];[S2.revenues];[S2.reve
 
 %%
 
+DataFolder=setDataFolder();
 k=1;
 [A,Atimes,AbuckC,Distances]=generateGPStrips(P1{k});
-prova=accumarray(Atimes(:,1),full(R1(k).Sim.waiting))./histc(Atimes(:,1),1:1440)
 
+
+wait1=accumarray(Atimes(:,1),full(R1(k).Sim.waiting))./histc(Atimes(logical(R1(k).Sim.chosenmode),1),1:max(Atimes(logical(R1(k).Sim.chosenmode),1)));
+wait2=accumarray(Atimes(:,1),full(R2(k).Sim.waiting))./histc(Atimes(logical(R2(k).Sim.chosenmode),1),1:max(Atimes(logical(R2(k).Sim.chosenmode),1)));
+
+x=linspace(0,24,length(wait1));
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+plot(x,wait1)
+plot(x,wait2)
+xlim([0,24])
+xlabel('hour')
+ylabel('average wait time (minutes)')
+legend({'constant';'dynamic'},'Location','NorthWest')
+
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/TRB/waittimes'],'-depsc2');
 
 %%
 
