@@ -1,4 +1,21 @@
+%%
 
+% create smaller scenarios
+tripfolderOld='NYC2018_10wed';
+tripfolderNew='NYC2018_10wed_small';
+
+for i=1:10
+    
+    load([DataFolder 'trips/' tripfolderOld '/d' int2str(i)]);
+    n=length(A);
+    Selection=sort(randperm(n,round(n/10)));
+    A=A(Selection,:);
+    Atimes=Atimes(Selection,:);
+    save([DataFolder 'trips/' tripfolderNew '/d' int2str(i)],'A','Atimes');
+    
+end
+
+%%
 
 % P=cpar('Tokyo189');
 P=cpar('NYC2018');
@@ -34,11 +51,19 @@ plot(0:0.01:0.5,histc(Res2.Sim.offeredprices,0:0.01:0.5))
 
 %%
 
-addpath plots
-[P1,R1]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
-[P2,R2]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
-[P1,R1]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
-[P2,R2]=generateplotline3('NYC2018',2,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+addpath plots functions utilities
+% [P1,R1]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P2,R2]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25,'TransportLayer.alternative',0.25);
+% [P1,R1]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P2,R2]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P1,R1]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'pricingwaiting',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P2,R2]=generateplotline3('NYC2018',1,'tripday',1:10,'Operations.maxwait',Inf,'m',2500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'pricingwaiting',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P1,R1]=generateplotline3('NYC2018',1,'tripfolder',"NYC2018_10wed_small",'tripday',1:10,'Operations.maxwait',Inf,'m',500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P2,R2]=generateplotline3('NYC2018',1,'tripfolder',"NYC2018_10wed_small",'tripday',1:10,'Operations.maxwait',Inf,'m',500,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P1,R1]=generateplotline3('NYC2018',1,'tripfolder',"NYC2018_10wed_small",'tripday',1:10,'Operations.maxwait',Inf,'m',250,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P2,R2]=generateplotline3('NYC2018',1,'tripfolder',"NYC2018_10wed_small",'tripday',1:10,'Operations.maxwait',Inf,'m',250,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P1,R1]=generateplotline3('NYC2018',1,'tripfolder',"NYC2018_10wed_small",'tripday',1:10,'Operations.maxwait',Inf,'m',250,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'pricingwaiting',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
+% [P2,R2]=generateplotline3('NYC2018',1,'tripfolder',"NYC2018_10wed_small",'tripday',1:10,'Operations.maxwait',Inf,'m',250,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'pricingwaiting',true,'TransportLayer.relocationcost',0.1,'TransportLayer.basetariff',0.25);
 
 S1=[R1.Sim];
 S2=[R2.Sim];
@@ -52,16 +77,26 @@ U2/U1
 mean([S1.relocationcosts]) mean([S2.relocationcosts])
 mean([S1.revenues]-[S1.relocationcosts]) mean([S2.revenues]-[S2.relocationcosts])]
 
-mean([R1.cputime])
-mean([R2.cputime])
+[mean(vertcat(S1.waiting)) mean(vertcat(S2.waiting))]
+
+mean([S2.relocationcosts])/mean([S1.relocationcosts])
+
+CPUt=[mean([R1.cputime]) mean([R2.cputime])]
 (mean([R2.cputime])-mean([R1.cputime]))/24
 
-% share of people waiting more than 1 minute
-sum(vertcat(S1.waiting)>60)/length(vertcat(S1.waiting))
-sum(vertcat(S2.waiting)>60)/length(vertcat(S1.waiting))
+% % share of people waiting more than 1 hour
+% sum(vertcat(S1.waiting)>60)/length(vertcat(S1.waiting))
+% sum(vertcat(S2.waiting)>60)/length(vertcat(S1.waiting))
 
 boxplot([[S1.revenues];[S1.relocationcosts];[S2.revenues];[S2.relocationcosts]]')
 boxplot([[S1.revenues];[S1.revenues]-[S1.relocationcosts];[S2.revenues];[S2.revenues]-[S2.relocationcosts]]')
+
+%%
+
+addpath plots functions utilities
+[P1,R1]=generateplotline3('NYC2018',1,'tripday',1,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',1,'TransportLayer.basetariff',2.3,'TransportLayer.alternative',2.5);
+[P2,R2]=generateplotline3('NYC2018',2,'tripday',1,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',1,'TransportLayer.basetariff',2.5,'TransportLayer.alternative',2.5);
+
 
 %%
 
@@ -121,6 +156,7 @@ h_label=ylabel('$','visible','on');
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 print([DataFolder 'figures/TRB/results'],'-depsc2');
 
+
 %% probabilities
 
 DataFolder=setDataFolder();
@@ -141,9 +177,9 @@ xlabel('price per minute')
 ylabel('$ per minute')
 yyaxis right
 ylabel('probability of acceptance')
-text(0.4,0.82,'c=5')
-text(0.43,0.62,'c=10')
-text(0.4,0.4,'c=20')
+text(0.4,0.82,'d=5')
+text(0.43,0.62,'d=10')
+text(0.4,0.4,'d=20')
 legend([J1(1),J2(1),J3(1)],{'probability','revenue','profits'})
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 print([DataFolder 'figures/TRB/revenue'],'-depsc2');
@@ -181,13 +217,63 @@ end
 xlim([0,0.5])
 xlabel('price per minute')
 ylabel('probability of acceptance')
-text(0.025,0.7,'c=5')
-text(0.05,0.85,'c=10')
-text(0.2,0.82,'c=20')
+text(0.025,0.7,'d=5')
+text(0.05,0.85,'d=10')
+text(0.2,0.82,'d=20')
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 print([DataFolder 'figures/TRB/linearization'],'-depsc2');
 
 
+%% prices
+
+k=1;
+load(['data/scenarios/' P2{k}.scenario],'T')
+g=@(a,s) exp(s)./(exp(s)+a);        % value at s
+d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
+R=@(p,c) (exp(-p.*c)./(exp(-p.*c)+exp(-0.25*c))).*(p-0.1).*c; % net revenues at certain price and distance
+
+%%
+
+DataFolder=setDataFolder();
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+
+
+h=8;
+Prices=R2(k).Sim.prices(:,:,h);
+changedprices=(Prices(:)~=0.25);
+scatter(T(changedprices),Prices(changedprices),'.')
+
+h=3;
+Prices=R2(k).Sim.prices(:,:,h);
+changedprices=(Prices(:)~=0.25);
+scatter(T(changedprices),Prices(changedprices),'.')
+
+% theoretical optimal price points
+for i=1:50
+    optiprices(i)=bestp(i);
+end
+x=4:50;
+plot(x,optiprices(x),'k-');
+
+xlim([0,50])
+ylabel('price per minute ($)')
+xlabel('OD pair distance (min)')
+text(0.025,0.7,'d=5')
+text(0.05,0.85,'d=10')
+text(0.2,0.82,'d=20')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+legend({'7:00-8:00 am';'2:00-3:00 am';'theoretical best price'})
+% print([DataFolder 'figures/TRB/pricevariation2'],'-depsc2');
+
+
+
+function p=bestp(c)
+    P=0:0.001:0.5;
+    R=@(p,c) (exp(-p.*c)./(exp(-p.*c)+exp(-0.25*c))).*(p-0.1).*c; % net revenues at certain price and distance
+    [~,pind]=max(R(P,c));
+    p=P(pind);
+end
 
 
 
