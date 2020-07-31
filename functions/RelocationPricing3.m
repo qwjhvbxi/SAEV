@@ -1,8 +1,7 @@
 %% [X,prices]=RelocationPricing3(m)
-% m is a struct with variables: c,v,a,gamma_r,gamma_p,fixedprice
+% m is a struct with variables: c,v,a,gamma_r,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
-% demand matrix; gamma_r is the cost of relocation
-% per minute; gamma_p is the base tariff per passenger; fixedprice is the
+% demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 % 
 % X is the relocation matrix, with X(i,j) the number of vehicles moved from
@@ -84,7 +83,6 @@ end
 % cost function
 H=2*diag([zeros(n^2,1);a.*c.*h]);
 f=[  c*m.gamma_r ;   -a.*c.*(  s(:) + h*m.gamma_r  )  ];
-% f=[c_v*m.gamma_r;-a_to_v*m.gamma_p];
 
 options=optimoptions('quadprog','display','none');
 
