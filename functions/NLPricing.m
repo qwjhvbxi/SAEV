@@ -8,18 +8,17 @@ c=m.c;
 n=size(c,1);  % nodes
 c(1:n+1:end)=1;
 g=@(a,s) exp(s)./(exp(s)+a);        % value at s
-f=@(a,s) log(s.*a./(1-s));          % inverse
-d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
+% f=@(a,s) log(s.*a./(1-s));          % inverse
+% d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
 Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
 
 % price at certain probability: given a trip distance d, find the price at
 % which the probability of acceptance is x
-q=@(d,x) -(log(x.*exp(-m.gamma_p*d)./(1-x)))./d;
+q=@(d,x) -(log(  (  x.*exp(-m.gamma_alt*d)  )./(1-x)  ))./d;
 
 % initializations
 % a=exp(bp*c); % exp of benefit of alternative modes for each node pair
 m.w=zeros(n,n);    % position of price linearization (between -3 and 3)
-u=0.5;
 maxIter=4;
 
 for k=1:maxIter
@@ -41,14 +40,14 @@ for k=1:maxIter
         hold on
         line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
         p=0:0.01:1;
-        plot(p,g(exp(-m.gamma_p*m.c(j)),-p*m.c(j)),'k:')
+        plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
     end
     
     [reloc,prices]=RelocationPricing3(m);
 
-    moves=(round(prices,4)==round(m.pmax,4))-(round(prices,4)==round(m.pmin,4));
+    moves=(round(prices,3)==round(m.pmax,3))-(round(prices,3)==round(m.pmin,3));
 
-    if sum(moves(:))>0
+    if sum(moves(:)~=0)>0
         m.w=m.w+moves;
     else
         break;
