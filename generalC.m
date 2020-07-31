@@ -117,14 +117,6 @@ else
 end
 
 %% trip processing
-
-% if isfield(P,'pricing') && P.pricing==false
-% 
-%     [A,I]=tripAcceptance(A,0.5);
-%     Atimes=Atimes(I,:);
-%     
-% end
-
 % generate number of arrivals at each station
 % generate EMD in case of aggregate energy layer
 % calculate from expected arrivals
@@ -270,9 +262,13 @@ if isfield(P,'pricing')
     m.c=Tr*P.e;
     m.gamma_r=P.TransportLayer.relocationcost; % relocation cost per minute
     m.gamma_p=P.TransportLayer.basetariff; % base tariff per minute
+    if isfield(P.TransportLayer,'alternative')
+        m.gamma_alt=P.TransportLayer.alternative;
+    else
+        m.gamma_alt=m.gamma_p;
+    end
     
     % real prices offered
-%     normalizedprices=(m.gamma_r+m.gamma_p*2)/(4*m.gamma_p);
     prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*m.gamma_p;
     
 else
@@ -282,7 +278,7 @@ else
 end
 
 % calculates probability of acceptance given a certain price for each OD pair
-g=@(s) exp(-s.*m.c)./(exp(-s.*m.c)+exp(-m.gamma_p*m.c));
+g=@(s) exp(-s.*m.c)./(exp(-s.*m.c)+exp(-m.gamma_alt*m.c));
 
 
 %% variables for progress display and display initializations
@@ -409,7 +405,7 @@ for i=1:tsim
             if isfield(P,'pricing') 
                 
 
-                if P.pricing==true && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),P.TransportLayer.tp)==0)
+                if P.pricing~=0 && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),P.TransportLayer.tp)==0)
 
                     % number of vehicles at each station (including vehicles directed there)
 %                     uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
@@ -585,12 +581,12 @@ for i=1:tsim
                         % vehicles at this station
                         uid=find(u(i,:)==j);
                         
-                        if P.modechoice
+%                         if P.modechoice
                             % how many vehicles have destination this station in next 20 minutes
                             % DirectedHere=sum(v(i:i+MaxHor,:)==j,2)+sum(w(i:i+MaxHor,:)==j,2);
                             % DirectedHereSum=cumsum(DirectedHere);
                             DirectedHereSum=cumsum(s(i:i+MaxHor,j));
-                        end
+%                         end
                         
                         % soc of vehicles at this station (sorted by high soc)
                         [qj,usortid]=sort(q(i,uid),'descend');
@@ -669,14 +665,36 @@ for i=1:tsim
                                 
                                     % avoid changing chosen mode after deciding
                                     if chosenmode(tripID)==0
-                                    
+                                        
+                                        % mode choice
+                                        if VehicleAvailable || ~isfield(P,'pricingwaiting')
+
+                                            WaitingTime=0;
+
+                                        else
+
+                                            FirstAvailable=find(DirectedHereSum>=ka,1);
+
+                                            % if not in u, v, w, == inf
+                                            if isempty(FirstAvailable)
+                                                WaitingTime=Inf;
+                                            else
+                                                WaitingTime=FirstAvailable*P.e;
+                                            end
+
+                                        end
+                                            
                                         offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp);
 
+                                        UtilitySAEV=-offeredprices(tripID)*distancetomovesorted(ka)*P.e-WaitingTime*VOT/60;
+                                        
 %                                         chosenmode(tripID)=(rand()>offeredprices(tripID));
                                         chosenmode(tripID)=(rand() < ...
-                                            exp(-offeredprices(tripID)*distancetomovesorted(ka)*P.e) / ...
-                                          ( exp(-offeredprices(tripID)*distancetomovesorted(ka)*P.e) + exp(-distancetomovesorted(ka)*P.e*m.gamma_p)));
+                                            exp(UtilitySAEV) / ...
+                                          ( exp(UtilitySAEV) + exp(-distancetomovesorted(ka)*P.e*m.gamma_alt)));
                                         
+                                        waitingestimated(tripID)=WaitingTime;
+                                      
                                     end
                                     
                                 else
