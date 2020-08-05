@@ -187,6 +187,9 @@ print([DataFolder 'figures/TRB/revenue'],'-depsc2');
 
 %% linearization intervals
 
+m.gamma_p=0.25;
+m.gamma_r=0.1;
+
 g=@(a,s) exp(s)./(exp(s)+a);        % value at s
 f2=@(s,d) exp(-s.*d)./(exp(-s.*d)+exp(-m.gamma_p*d)); % demand acceptance probability as a function of price and distance
 q=@(d,x) -(log(x.*exp(-m.gamma_p*d)./(1-x)))./d;
@@ -201,7 +204,6 @@ hold on
 for k=1:length(D)
     plot(p,f2(p,D(k)),'k--')
     w=0; % limits for p
-    u=0.5;
     for w=-3:3        
         % probabilities of trip acceptance at the limits
         fmin=1-Points(5+w);
@@ -217,11 +219,24 @@ end
 xlim([0,0.5])
 xlabel('price per minute')
 ylabel('probability of acceptance')
-text(0.025,0.7,'d=5')
-text(0.05,0.85,'d=10')
-text(0.2,0.82,'d=20')
+text(0.025,0.7,'\it d=5','FontName','Times')
+text(0.05,0.85,'\it d=10','FontName','Times')
+text(0.2,0.82,'\it d=20','FontName','Times')
+
+w=1;
+fmin=1-Points(5+w);
+fmax=1-Points(4+w);
+pmin=q(D(k),fmax);
+pmax=q(D(k),fmin);
+line([[0;pmin],[0;pmax]],[[fmax;fmax],[fmin;fmin]],'LineStyle',':','Color','k')
+line([[pmin;pmin],[pmax;pmax]],[[0;fmax],[0;fmin]],'LineStyle',':','Color','k')
+text(0.01,fmin,'{\it p^{min}}','FontName','Times')
+text(0.01,fmax,'{\it p^{max}}','FontName','Times')
+text(pmin-0.03,0.05,'{\it z^{min}}','FontName','Times')
+text(pmax-0.01,0.05,'{\it z^{max}}','FontName','Times')
+
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
-print([DataFolder 'figures/TRB/linearization'],'-depsc2');
+print([DataFolder 'figures/TRB/linearization2'],'-depsc2');
 
 
 %% prices
