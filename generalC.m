@@ -287,6 +287,12 @@ if isfield(P,'pricing')
     % calculates probability of acceptance given a certain price for each OD pair
     g=@(s) exp(-s.*m.c)./(exp(-s.*m.c)+exp(-m.gamma_alt*m.c));
     
+    if isfield(P,'pricingwaiting')
+        WaitingCostToggle=1;
+    else
+        WaitingCostToggle=0;
+    end
+    
 else
     
 	prices=zeros(1,1,ceil(tsim/tp)+1);
@@ -606,82 +612,51 @@ for i=1:tsim
                             % is there a vehicle available?
                             VehicleAvailable=(sum(candidates)>0);
                             
-                            if P.modechoice
                             
-                                % avoid changing chosen mode after deciding
-                                if chosenmode(tripID)==0
+                            % avoid changing chosen mode after deciding
+                            if chosenmode(tripID)==0
 
-                                    if VehicleAvailable
+                                if VehicleAvailable
 
-                                        WaitingTime=0;
+                                    WaitingTime=0;
 
-                                    else
-
-                                        FirstAvailable=find(DirectedHereSum>=ka,1);
-
-                                        % if not in u, v, w, == inf
-                                        if isempty(FirstAvailable)
-                                            WaitingTime=Inf;
-                                        else
-                                            WaitingTime=FirstAvailable*P.e;
-                                        end
-
-                                    end
-
-                                    UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
-                                    AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
-
-                                    chosenmode(tripID)=(rand()<AcceptProbability);
-
-                                    waitingestimated(tripID)=WaitingTime;
-                                    
-                                end
-                                
-                            else
-                                
-                                % NOTE: temporary solution
-                                
-                                if isfield(P,'pricing')
-                                
-                                    % avoid changing chosen mode after deciding
-                                    if chosenmode(tripID)==0
-                                        
-                                        % mode choice
-                                        if VehicleAvailable || ~isfield(P,'pricingwaiting')
-
-                                            WaitingTime=0;
-
-                                        else
-
-                                            FirstAvailable=find(DirectedHereSum>=ka,1);
-
-                                            % if not in u, v, w, == inf
-                                            if isempty(FirstAvailable)
-                                                WaitingTime=Inf;
-                                            else
-                                                WaitingTime=FirstAvailable*P.e;
-                                            end
-
-                                        end
-                                            
-                                        offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp);
-
-                                        UtilitySAEV=-offeredprices(tripID)*distancetomovesorted(ka)*P.e-WaitingTime*VOT/60;
-                                        
-                                        AcceptProbability=exp(UtilitySAEV) / ( exp(UtilitySAEV) + exp(-distancetomovesorted(ka)*P.e*m.gamma_alt));
-                                        
-                                        chosenmode(tripID)=(rand()<AcceptProbability);
-                                        
-                                        waitingestimated(tripID)=WaitingTime;
-                                      
-                                    end
-                                    
                                 else
-                                
-                                    chosenmode(tripID)=1;
-                                
+
+                                    FirstAvailable=find(DirectedHereSum>=ka,1);
+
+                                    % if not in u, v, w, == inf
+                                    if isempty(FirstAvailable)
+                                        WaitingTime=Inf;
+                                    else
+                                        WaitingTime=FirstAvailable*P.e;
+                                    end
+
                                 end
-                               
+
+                                if P.modechoice
+                                    
+                                    UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
+                                    
+                                    AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
+                                    
+                                elseif isfield(P,'pricing')
+
+                                    offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp);
+
+                                    UtilitySAEV=-offeredprices(tripID)*distancetomovesorted(ka)*P.e-WaitingTime*VOT/60*WaitingCostToggle;
+
+                                    AcceptProbability=exp(UtilitySAEV)/( exp(UtilitySAEV) + exp(-distancetomovesorted(ka)*P.e*m.gamma_alt));
+
+                                else
+                                    
+                                    AcceptProbability=1;
+                                    
+                                end
+                            
+                                chosenmode(tripID)=(rand()<AcceptProbability);
+
+                                waitingestimated(tripID)=WaitingTime;
+                                    
                             end
                             
                             if chosenmode(tripID)==1
