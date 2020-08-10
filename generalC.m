@@ -425,7 +425,6 @@ for i=1:tsim
                     m.v=uv';
                     m.a=a_tp;
 
-                    % [x0,pricesNow]=RelocationPricing2(m);
                     [pricesNow,~,~]=NLPricing(m);
 
                     prices(:,:,PricingStep)=pricesNow;
