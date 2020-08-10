@@ -33,6 +33,15 @@ end
 
 T=round(Tmeters/1000/30*60);
 
+[A,Atimes,~]=cleanData(A,Atimes);
+
+% remove trips inside same node
+SameNode=logical(A(:,1)==A(:,2));
+A(SameNode,:)=[];
+Atimes(SameNode,:)=[];
+
+save([DataFolder 'trips/Munich.mat'],'A','Atimes')
+save('data/scenarios/Munich.mat','T');
 
 
-save([DataFolder 'trips/Munich.mat'],'A','Atimes','T')
+
