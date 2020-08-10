@@ -70,16 +70,8 @@ if nargin<5
 
     %% reconstruct missing coordinates
 
-    addpath('../CarSharingModel/utilities/dijkstra_alg');
-    N=size(T,1);
-    for i=1:N
-        for j=1:N
-            if T(i,j)==0
-                T(i,j)=dijkstra(T,i,j);
-            end
-        end
-    end
-
+    T=populateT(T);
+    
 else 
     
     T=[];
