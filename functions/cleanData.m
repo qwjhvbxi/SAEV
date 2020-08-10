@@ -3,8 +3,12 @@
 
 function [A,Atimes,ASortInd]=cleanData(AIN,AtimesIN)
 
-% impossible trips
-Rmv1=AtimesIN(:,1)>=AtimesIN(:,2);
+if sum(AtimesIN(:,1)~=AtimesIN(:,2))>0
+    % impossible trips
+    Rmv1=AtimesIN(:,1)>=AtimesIN(:,2);
+else
+    Rmv1=0;
+end
 
 % 0s
 Rmv=logical(Rmv1+(AtimesIN(:,1)==0));
