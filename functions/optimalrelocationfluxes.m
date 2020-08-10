@@ -10,10 +10,14 @@
 %
 % See also FractionalRelocation2 stackablerelocation2
 
-function X=optimalrelocationfluxes(F,R,T,limite)
+function X=optimalrelocationfluxes(F,R,T,limite,approx)
 
 % if there are imbalances and available vehicles
 if sum(R)>0 && sum(F)>0
+    
+    if nargin<5
+        approx=false;
+    end
     
     N=length(F); % stations
     
@@ -24,22 +28,22 @@ if sum(R)>0 && sum(F)>0
         F2=F(Used);
         R2=R(Used);
         
-        if nargin<4
+        if nargin<4 || isempty(limite)
             limite=max(T2(:))*2;
         end
     
-        X2=calculateflux(F2,R2,T2,limite);
+        X2=calculateflux(F2,R2,T2,limite,approx);
         
         X=sparse(N,N);
         X(Used,Used)=X2;
     
     else
     
-        if nargin<4
+        if nargin<4 || isempty(limite)
             limite=max(T(:))*2;
         end
         
-        X=calculateflux(F,R,T,limite);
+        X=calculateflux(F,R,T,limite,approx);
         
     end
     
@@ -52,7 +56,7 @@ end
 end
 
 
-function X=calculateflux(F,R,T,limite)
+function X=calculateflux(F,R,T,limite,approx)
     
     N=length(F); % stations
     
@@ -63,8 +67,14 @@ function X=calculateflux(F,R,T,limite)
     A1=[repmat(speye(N),1,N); kron(speye(N),ones(1,N))];
     b1=[F';R'];
     
-    % integer variables (all)
-    intcon=1:N*N;
+    if approx
+        intcon=[];
+        N
+        limite
+    else
+        % integer variables (all)
+        intcon=1:N*N;
+    end
     
     % all variables non-negative
     lb=zeros(N*N,1);
