@@ -114,6 +114,7 @@ else
     u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
 end
 
+
 %% trip processing
 % generate number of arrivals at each station
 % generate EMD in case of aggregate energy layer
@@ -311,7 +312,7 @@ comptime=[cputime;zeros(tsim,1)];
 for i=1:tsim
     
     
-	% display progress    
+	% display progress
     
     displayState(i,tsim,dispiter,comptime(i)-comptime(1),40)
     
@@ -394,12 +395,9 @@ for i=1:tsim
             
             % apply charging constraints
             ub(ubChargingSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
-            
-            Aequ=Aeq;
-            beqtu=beqt;
         
             % transport layer optimization
-            zres=intlinprog(f,intcon,Adis,bdist,Aequ,beqtu,lb,ub,options);
+            zres=intlinprog(f,intcon,Adis,bdist,Aeq,beqt,lb,ub,options);
             
             % optimal control variables in this time step (round binary values)
             z(:,i)=[round(zres(1:P.m*n^2*2));zres(P.m*n^2*2+1:ctrno)];
@@ -412,27 +410,25 @@ for i=1:tsim
             
         case {'simplified' , 'no'}       % simplified relocation 
 
-            % current pricing number
-            kp=ceil(i/tp);
                 
             %% pricing
-            if isfield(P,'pricing') 
+            
+            % current pricing number
+            kp=ceil(i/tp);
+            
+            if isfield(P,'pricing')  % NOTE: waiting trips are not influenced by prices! should be included outside
                 
-
                 if P.pricing~=0 && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),tp)==0)
 
                     % number of vehicles at each station (including vehicles directed there)
-%                     uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
+                    % uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
                     uv=histc(u(i,:),1:n);
                     
                     % current pricing calculation
                     PricingStep=ceil((i-1)/tp)+1;
                     
-                    % NOTE: waiting trips are not influenced by prices! should be moved outside
-
                     % expected trips
                     StartTime=(PricingStep-1)*tp+1;
-                    %q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
                     Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
                     a_tp=sparse(A(Selection0,1),A(Selection0,2),1,n,n);%+q_t;
 
@@ -551,7 +547,6 @@ for i=1:tsim
             %% trip assignment
 
             % generate trip requests for this time step
-            % trips=(AbuckC((i-1)*P.e+1)+1:AbuckC(i*P.e+1))';
             trips=(AbuckC(i)+1:AbuckC(i+1))';
 
             % initialize 
@@ -576,16 +571,13 @@ for i=1:tsim
                     if ~isempty(tripsK)
 
                         % vehicles at this station
-                        uid=find(u(i,:)==j);
+                        uid=find(u(i,:)==j);  
                         
                         % how many vehicles have destination this station in next 20 minutes
                         DirectedHereSum=cumsum(s(i:i+MaxHor,j));
                             
                         % soc of vehicles at this station (sorted by high soc)
-                        [qj,usortid]=sort(q(i,uid),'descend');
-
-                        % vehicle ID:
-                        % uid(usortid)
+                        [qj,usortid]=sort(q(i,uid),'descend');  % vehicle ID: uid(usortid)
 
                         % destination station
                         destinations=A(tripsK,2);
@@ -608,7 +600,7 @@ for i=1:tsim
                             % trip ID
                             tripID=tripsK(sortid(ka));
                             
-                            % candidates
+                            % candidate vehicles
                             candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
 
                             % is there a vehicle available?
@@ -618,11 +610,6 @@ for i=1:tsim
                             
                                 % avoid changing chosen mode after deciding
                                 if chosenmode(tripID)==0
-
-                                    % NOTE: implement choice model here
-                                    % 1. estimate waiting time
-                                    % 2. estimate cost
-                                    % 3. decide 
 
                                     if VehicleAvailable
 
@@ -681,10 +668,9 @@ for i=1:tsim
 
                                         UtilitySAEV=-offeredprices(tripID)*distancetomovesorted(ka)*P.e-WaitingTime*VOT/60;
                                         
-%                                         chosenmode(tripID)=(rand()>offeredprices(tripID));
-                                        chosenmode(tripID)=(rand() < ...
-                                            exp(UtilitySAEV) / ...
-                                          ( exp(UtilitySAEV) + exp(-distancetomovesorted(ka)*P.e*m.gamma_alt)));
+                                        AcceptProbability=exp(UtilitySAEV) / ( exp(UtilitySAEV) + exp(-distancetomovesorted(ka)*P.e*m.gamma_alt));
+                                        
+                                        chosenmode(tripID)=(rand()<AcceptProbability);
                                         
                                         waitingestimated(tripID)=WaitingTime;
                                       
@@ -856,7 +842,6 @@ if isfield(P,'pricing')
     Sim.prices=prices;
     
 end
-
 
 
 %% create Res struct and save results
