@@ -95,14 +95,12 @@ s=zeros(tsim+100,n,'double');          % auxiliary variable to keep track of veh
 
 % working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
-% poolid=0;                    % index of pool
 
 % results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
 dropped=zeros(length(A),1);  % request is dropped?
 chosenmode=false(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
-% traveled=zeros(length(A),1); % trip length (minutes)
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
@@ -126,18 +124,6 @@ end
 % energy layer time step. fk
 [fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,P.tripday);
 
-% calculate benefit of alternative trip
-VOT=15; % value of time
-MaxHor=min(15,ceil(P.Operations.maxwait/P.e)); % maximum horizon for waiting time estimation
-CostMinute=0.2;
-WalkingSpeed=4;
-if ~isempty(Distances)
-    UtilityWalking=-Distances.RawDistance*1.5/WalkingSpeed*VOT;
-else
-    UtilityWalking=0;
-end
-% PTSpeed=20;
-% UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
 
 %% setup energy layer
 
@@ -259,6 +245,22 @@ if strcmp(P.trlayeralg,'opti')
 end
 
 
+%% mode choice
+
+% calculate benefit of alternative trip
+VOT=15; % value of time
+MaxHor=min(15,ceil(P.Operations.maxwait/P.e)); % maximum horizon for waiting time estimation
+CostMinute=0.2;
+WalkingSpeed=4;
+if ~isempty(Distances)
+    UtilityWalking=-Distances.RawDistance*1.5/WalkingSpeed*VOT;
+else
+    UtilityWalking=0;
+end
+% PTSpeed=20;
+% UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
+
+
 %% pricing 
 
 if isfield(P.TransportLayer,'tp')
@@ -286,12 +288,11 @@ if isfield(P,'pricing')
     
 else
     
-	prices=zeros(n,n,ceil(tsim/tp)+1);
+	prices=zeros(1,1,ceil(tsim/tp)+1);
     
     g=@(s) 1;
     
 end
-
 
 
 %% variables for progress display and display initializations
@@ -466,26 +467,16 @@ for i=1:tsim
                     dw=zeros(1,n);
                 end
                 
-%                 % expected trips
-%                 Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-%                 a_ts=round((1-prices(:,:,kp)).*sparse(A(Selection1,1),A(Selection1,2),1,n,n));
-%                 Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-%                 a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2,1),A(Selection2,2),1,n,n));
-                
                 % expected trips
                 NextPricing=min(ceil(i/tp)*tp+1,length(AbuckC));
                 
                 Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
                 Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-%                 a_ts=round((1-prices(:,:,kp)).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
-%                      round((1-prices(:,:,kp+1)).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
                 a_ts=((g(prices(:,:,kp))).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
                      ((g(prices(:,:,kp+1))).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
                 
                 Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts+P.TransportLayer.tr)));
                 Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-%                 a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
-%                      round((1-prices(:,:,kp+1)).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
                 a_to=((g(prices(:,:,kp))).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
                      ((g(prices(:,:,kp+1))).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
                 
@@ -495,12 +486,6 @@ for i=1:tsim
                     +round(sum(a_ts)) ...  expected arrivals between now and now+ts
                     -round(sum(a_to,2))' ...     expected requests between now and now+ts+tr
                     +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
-
-%                     b(kt,:)=uv ...
-%                         -dw ...  number of passengers waiting at each station
-%                         +sum(fd((i-1)*P.e+1:(i+P.TransportLayer.ts)*P.e,:)) ...  expected arrivals between now and now+ts
-%                         -sum(fo((i-1)*P.e+1:(i+P.TransportLayer.ts+P.TransportLayer.tr)*P.e,:)) ...     expected requests between now and now+ts+tr
-%                         +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:n)';% vehicles relocating here between now and now+ts
 
                 % identify feeder and receiver stations
                 F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
@@ -593,13 +578,9 @@ for i=1:tsim
                         % vehicles at this station
                         uid=find(u(i,:)==j);
                         
-%                         if P.modechoice
-                            % how many vehicles have destination this station in next 20 minutes
-                            % DirectedHere=sum(v(i:i+MaxHor,:)==j,2)+sum(w(i:i+MaxHor,:)==j,2);
-                            % DirectedHereSum=cumsum(DirectedHere);
-                            DirectedHereSum=cumsum(s(i:i+MaxHor,j));
-%                         end
-                        
+                        % how many vehicles have destination this station in next 20 minutes
+                        DirectedHereSum=cumsum(s(i:i+MaxHor,j));
+                            
                         % soc of vehicles at this station (sorted by high soc)
                         [qj,usortid]=sort(q(i,uid),'descend');
 
