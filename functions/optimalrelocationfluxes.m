@@ -15,9 +15,44 @@ function X=optimalrelocationfluxes(F,R,T,limite)
 % if there are imbalances and available vehicles
 if sum(R)>0 && sum(F)>0
     
-    if nargin<4
-        limite=max(max(T)*2);
+    N=length(F); % stations
+    
+    if N>500
+        
+        Used=logical(F+R>0);
+        T2=T(Used,Used);    
+        F2=F(Used);
+        R2=R(Used);
+        
+        if nargin<4
+            limite=max(T2(:))*2;
+        end
+    
+        X2=calculateflux(F2,R2,T2,limite);
+        
+        X=sparse(N,N);
+        X(Used,Used)=X2;
+    
+    else
+    
+        if nargin<4
+            limite=max(T(:))*2;
+        end
+        
+        X=calculateflux(F,R,T,limite);
+        
     end
+    
+else
+    
+    X=[];
+    
+end
+    
+end
+
+
+function X=calculateflux(F,R,T,limite)
     
     N=length(F); % stations
     
@@ -47,14 +82,5 @@ if sum(R)>0 && sum(F)>0
     
     % matrix form
     X=round(reshape(x,N,N));
-    
-else
-    
-    X=[];
-    
+
 end
-    
-end
-
-
-
