@@ -56,7 +56,7 @@ end
 load(['data/scenarios/' P.scenario '.mat'],'T','C');
 
 % NOTE: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,AbuckC,Distances]=generateGPStrips(P);
+[A,Atimes,AbuckC,Distances]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
 % NOTE: should generalize vector length for cases with different beta, e,
@@ -131,7 +131,11 @@ VOT=15; % value of time
 MaxHor=min(15,ceil(P.Operations.maxwait/P.e)); % maximum horizon for waiting time estimation
 CostMinute=0.2;
 WalkingSpeed=4;
-UtilityWalking=-Distances.RawDistance*1.5/WalkingSpeed*VOT;
+if ~isempty(Distances)
+    UtilityWalking=-Distances.RawDistance*1.5/WalkingSpeed*VOT;
+else
+    UtilityWalking=0;
+end
 % PTSpeed=20;
 % UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
 
@@ -257,6 +261,12 @@ end
 
 %% pricing 
 
+if isfield(P.TransportLayer,'tp')
+    tp=P.TransportLayer.tp;
+else 
+    tp=1;
+end
+
 if isfield(P,'pricing') 
     
     m.c=Tr*P.e;
@@ -269,16 +279,19 @@ if isfield(P,'pricing')
     end
     
     % real prices offered
-    prices=ones(n,n,ceil(tsim/P.TransportLayer.tp)+1)*m.gamma_p;
+    prices=ones(n,n,ceil(tsim/tp)+1)*m.gamma_p;
+    
+    % calculates probability of acceptance given a certain price for each OD pair
+    g=@(s) exp(-s.*m.c)./(exp(-s.*m.c)+exp(-m.gamma_alt*m.c));
     
 else
     
-	prices=zeros(n,n,ceil(tsim/P.TransportLayer.tp)+1);
+	prices=zeros(n,n,ceil(tsim/tp)+1);
+    
+    g=@(s) 1;
     
 end
 
-% calculates probability of acceptance given a certain price for each OD pair
-g=@(s) exp(-s.*m.c)./(exp(-s.*m.c)+exp(-m.gamma_alt*m.c));
 
 
 %% variables for progress display and display initializations
@@ -399,27 +412,27 @@ for i=1:tsim
         case {'simplified' , 'no'}       % simplified relocation 
 
             % current pricing number
-            kp=ceil(i/P.TransportLayer.tp);
+            kp=ceil(i/tp);
                 
             %% pricing
             if isfield(P,'pricing') 
                 
 
-                if P.pricing~=0 && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),P.TransportLayer.tp)==0)
+                if P.pricing~=0 && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),tp)==0)
 
                     % number of vehicles at each station (including vehicles directed there)
 %                     uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
                     uv=histc(u(i,:),1:n);
                     
                     % current pricing calculation
-                    PricingStep=ceil((i-1)/P.TransportLayer.tp)+1;
+                    PricingStep=ceil((i-1)/tp)+1;
                     
                     % NOTE: waiting trips are not influenced by prices! should be moved outside
 
                     % expected trips
-                    StartTime=(PricingStep-1)*P.TransportLayer.tp+1;
+                    StartTime=(PricingStep-1)*tp+1;
                     %q_t=sparse(A(queue(queue>0),1),A(queue(queue>0),2),1,n,n);
-                    Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+P.TransportLayer.tp-1));
+                    Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
                     a_tp=sparse(A(Selection0,1),A(Selection0,2),1,n,n);%+q_t;
 
                     m.v=uv';
@@ -460,7 +473,7 @@ for i=1:tsim
 %                 a_to=round((1-prices(:,:,kp)).*sparse(A(Selection2,1),A(Selection2,2),1,n,n));
                 
                 % expected trips
-                NextPricing=min(ceil(i/P.TransportLayer.tp)*P.TransportLayer.tp+1,length(AbuckC));
+                NextPricing=min(ceil(i/tp)*tp+1,length(AbuckC));
                 
                 Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
                 Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
