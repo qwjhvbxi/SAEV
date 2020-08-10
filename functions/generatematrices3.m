@@ -1,4 +1,4 @@
-% [nomefile]=GENERATEMATRICES2(n,m,Tr,maxt,ac,ad,thor,maxsoc,minsoc)
+% [nomefile]=GENERATEMATRICES3(n,m,Tr,maxt,ac,ad,thor,maxsoc,minsoc)
 % generate optimization matrices 
 % 
 % see also GENERAL11

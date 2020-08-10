@@ -937,7 +937,6 @@ function [fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,tripday)
             % calculate from known distribution
             error('not implemented');
         else
-            % [dkemd,dkod,dktrip,fk]=generatetripdata3(fo,fd,dk,T,etsim);
             [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
         end
         save(emdname,'dkemd','dkod','dktrip','fk');
