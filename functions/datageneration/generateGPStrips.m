@@ -3,7 +3,7 @@
 %
 % See also generalC
 
-function generateGPStrips(FileIn,FileOut,C,stationradius,WalkingSpeed)
+function generateGPStrips(FileIn,FileOut,C,StationRadius,WalkingSpeed)
 
 if nargin<5    
     % walking speed
@@ -11,11 +11,8 @@ if nargin<5
 end
 
 if nargin<4
-    stationradius=[];
+    StationRadius=[];
 end
-
-% set external data folder
-DataFolder=setDataFolder();
 
 % load coordinate file
 load(FileIn,'A','Atimes');
@@ -37,11 +34,11 @@ if size(A,2)==4
     % equivalent station matrix (closest station to each request GPS origin)
     A=[ONodeID(:,1),DNodeID(:,1)];
 
-    if ~isempty(stationradius) 
+    if ~isempty(StationRadius) 
         
         % only select stations within a radius from each request
-        ONodeID(ODistToNode>stationradius)=NaN;
-        DNodeID(DDistToNode>stationradius)=NaN;
+        ONodeID(ODistToNode>StationRadius)=NaN;
+        DNodeID(DDistToNode>StationRadius)=NaN;
 
         % trim matrices to maximum number of stations within the radius
         Nmax=max(max(sum(~isnan(ONodeID),2)),max(sum(~isnan(DNodeID),2)));
