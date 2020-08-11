@@ -59,6 +59,10 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 [A,Atimes,AbuckC,Distances]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
+% arrivals at clusters
+As=A;
+Ts=T;
+
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
 % elep is in $/MWh
@@ -76,9 +80,11 @@ clear x y;
 
 % parameters
 n=size(T,1);              % number of nodes
+s=size(Ts,1);             % number of clusters
 tsim=1440/P.e;            % number of time steps in transport layer
 etsim=tsim/P.beta;        % number of time steps in energy layer
 Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
+Trs=max(1,round(Ts/P.e)); % distance matrix in transport layer steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
@@ -297,7 +303,8 @@ else
     
 	prices=zeros(1,1,ceil(tsim/tp)+1);
     
-    g=@(p) 1;
+    Multiplier1=1;
+    Multiplier2=1;
     
 end
 
@@ -448,6 +455,9 @@ for i=1:tsim
                     % plot(0:0.01:0.5,histc(normalizedprices(:)*2*m.gamma_p,0:0.01:0.5))
                     
                 end
+                
+                Multiplier1=(g(prices(:,:,kp)));
+                Multiplier2=(g(prices(:,:,kp+1)));
             end
             
             
@@ -474,13 +484,13 @@ for i=1:tsim
                 
                 Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
                 Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-                a_ts=((g(prices(:,:,kp))).*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
-                     ((g(prices(:,:,kp+1))).*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
+                a_ts=(Multiplier1.*sparse(A(Selection1a,1),A(Selection1a,2),1,n,n))+...
+                     (Multiplier2.*sparse(A(Selection1b,1),A(Selection1b,2),1,n,n));
                 
                 Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts+P.TransportLayer.tr)));
                 Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-                a_to=((g(prices(:,:,kp))).*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
-                     ((g(prices(:,:,kp+1))).*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
+                a_to=(Multiplier1.*sparse(A(Selection2a,1),A(Selection2a,2),1,n,n))+...
+                     (Multiplier2.*sparse(A(Selection2b,1),A(Selection2b,2),1,n,n));
                 
                 % expected imbalance at stations
                 b(kt,:)=uv ...
