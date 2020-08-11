@@ -91,7 +91,7 @@ u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
 w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
 b=zeros(etsim,n,'double');             % imbalance
-s=zeros(tsim+100,n,'double');          % auxiliary variable to keep track of vehicles arriving at stations
+h=zeros(tsim+100,n,'double');          % auxiliary variable to keep track of vehicles arriving at stations
 
 % working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
@@ -285,7 +285,7 @@ if isfield(P,'pricing')
     prices=ones(n,n,ceil(tsim/tp)+1)*m.gamma_p;
     
     % calculates probability of acceptance given a certain price for each OD pair
-    g=@(s) exp(-s.*m.c)./(exp(-s.*m.c)+exp(-m.gamma_alt*m.c));
+    g=@(p) exp(-p.*m.c)./(exp(-p.*m.c)+exp(-m.gamma_alt*m.c));
     
     if isfield(P,'pricingwaiting')
         WaitingCostToggle=1;
@@ -297,7 +297,7 @@ else
     
 	prices=zeros(1,1,ceil(tsim/tp)+1);
     
-    g=@(s) 1;
+    g=@(p) 1;
     
 end
 
@@ -470,7 +470,7 @@ for i=1:tsim
                 end
                 
                 % expected trips
-                NextPricing=min(ceil(i/tp)*tp+1,length(AbuckC));
+                NextPricing=min(kp*tp+1,length(AbuckC));
                 
                 Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
                 Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
@@ -533,7 +533,7 @@ for i=1:tsim
                             w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
 
                             % keep track of vehicles arriving at stations
-                            s(i+arris(ka),Rs(dstnid(ka)))=s(i+arris(ka),Rs(dstnid(ka)))+1;
+                            h(i+arris(ka),Rs(dstnid(ka)))=h(i+arris(ka),Rs(dstnid(ka)))+1;
                             
                             % save length of relocation
                             relodist(i)=relodist(i)+arris(ka);
@@ -580,7 +580,7 @@ for i=1:tsim
                         uid=find(u(i,:)==j);  
                         
                         % how many vehicles have destination this station in next 20 minutes
-                        DirectedHereSum=cumsum(s(i:i+MaxHor,j));
+                        DirectedHereSum=cumsum(h(i:i+MaxHor,j));
                             
                         % soc of vehicles at this station (sorted by high soc)
                         [qj,usortid]=sort(q(i,uid),'descend');  % vehicle ID: uid(usortid)
@@ -622,6 +622,7 @@ for i=1:tsim
 
                                 else
 
+                                    % first available vehicle
                                     FirstAvailable=find(DirectedHereSum>=ka,1);
 
                                     % if not in u, v, w, == inf
@@ -676,7 +677,7 @@ for i=1:tsim
                                     v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
                                     
                                     % keep track of vehicles arriving at stations
-                                    s(i+distancetomovesorted(ka),destinations(sortid(ka)))=s(i+distancetomovesorted(ka),destinations(sortid(ka)))+1;
+                                    h(i+distancetomovesorted(ka),destinations(sortid(ka)))=h(i+distancetomovesorted(ka),destinations(sortid(ka)))+1;
                                     
                                     % update travelled distance
                                     tripdist(i)=tripdist(i)+distancetomovesorted(ka);
