@@ -2,14 +2,34 @@
  
 Shared Autonomous Electric Vehicles simulation and optimization model.
 
+
+Setup
+-----
+
+The model tends to create large savefiles. For this reason, it is better to move the folder with savefiles in a location with enough space separated from the code.
+The folder with savefiles is called `extdata`.
+To change the location of `extdata`, simply move it somewhere else and update its positioning in the file `functions/setDataFolder.m`.
+For example, change from:
+
+`DataFolder='extdata/';`
+
+to:
+
+`DataFolder='C:\Users\example\Documents\extdata\';`
+
+
+Using the model
+---------------
+
 How to launch a simulation:
 
 `Result=generalC(P,extsave,info)`
 
+The first input variable `P` is a struct-type with the parameters of the simulation, the second variable `extsave` indicates wheter to save/load the results, the third variable `info` indicates what level of information to show during a simulation run. See below for more information.
+A typical call would be:
 
 `Result=generalC(P,1,2)`
 
-The first input variable `P` is a struct-type with the parameters of the simulation, the second variable `extsave` indicates wheter to save/load the results, the third variable `info` indicates what level of information to show during a simulation run. See below for more information.
 `P` can be constructed from scratch, but default values of `P` are available with the function `cpar`. For example, this function creates a `P` for simulations with the `NYC2016` dataset:
 
 `P=cpar('NYC2016')`
