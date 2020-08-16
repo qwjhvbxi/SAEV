@@ -73,11 +73,11 @@ clear x y;
 
 % parameters
 n=size(T,1);              % number of nodes
-s=size(Ts,1);             % number of clusters
-tsim=1440/P.e;            % number of time steps in transport layer
-etsim=tsim/P.beta;        % number of time steps in energy layer
-Tr=max(1,round(T/P.e));   % distance matrix in transport layer steps
-Trs=max(1,round(Ts/P.e)); % distance matrix in transport layer steps
+nc=size(Ts,1);             % number of clusters
+tsim=1440/P.e;            % number of time steps
+etsim=tsim/P.beta;        % number of charging decisions
+Tr=max(1,round(T/P.e));   % distance matrix in steps
+Trs=max(1,round(Ts/P.e)); % distance matrix in steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
@@ -87,12 +87,9 @@ co2=repelem(mco2,P.beta);                 % carbon intensity in each transport l
 q=zeros(tsim,P.m,'double');            % SOC
 e=zeros(tsim,P.m,'double');            % charging
 u=zeros(tsim,P.m,'double');            % vehicles in charging stations
-v=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for trips with passengers
-w=zeros(tsim+100,P.m,'double');        % auxiliary variable to assign vehicles to future for relocation
+d=zeros(tsim,P.m,'double'); % delay
+s=zeros(tsim,P.m,'double'); % status
 b=zeros(etsim,n,'double');             % imbalance
-h=zeros(tsim+100,n,'double');          % auxiliary variable to keep track of vehicles arriving at stations
-
-% working variables
 queue=zeros(100,1);          % temporary variable to store queued arrivals
 
 % results variables
@@ -104,6 +101,9 @@ relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
 offeredprices=ones(length(A),1);  % price offered to each passenger
+
+% parameters for trip assignment
+Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',logical(P.modechoice+isfield(P,'pricing')),'maxwait',P.Operations.maxwait);
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
@@ -165,13 +165,13 @@ end
 %% mode choice
 
 VOT=15; % value of time
-MaxHor=min(15,ceil(P.Operations.maxwait/P.e)); % maximum horizon for waiting time estimation
-CostMinute=0.2;
+beta=1.5; % tortuosity of walking
+% CostMinute=P.TransportLayer.basetariff;
 
 % calculate benefit of alternative trip
 WalkingSpeed=4; % km/h
 if ~isempty(Distances)
-    UtilityWalking=-Distances.RawDistance*1.5/WalkingSpeed*VOT;
+    UtilityWalking=-Distances.RawDistance*beta/WalkingSpeed*VOT;
 else
     UtilityWalking=0;
 end
@@ -236,7 +236,7 @@ comptime=[cputime;zeros(tsim,1)];
 for i=1:tsim
     
     
-	% display progress
+	%% display progress
     
     displayState(i,tsim,dispiter,comptime(i)-comptime(1),40)
     
@@ -344,15 +344,18 @@ for i=1:tsim
 
         % current relocation number
         kt=(i-1)/P.TransportLayer.tx+1;
-
+        
         % number of vehicles at each station
-        uv=histc(u(i,:),1:n);
+        uv=histc(u(i,:).*(d(i,:)==0),1:n);
+        
+        % vehicles relocating here between now and now+ts 
+        uvr=histc(u(i,:).*(s(i,:)==1),1:n);
 
         % number of waiting passenger at station
         if sum(queue)>0
-            dw=histc(As(queue(queue>0),1)',1:s);
+            dw=histc(As(queue(queue>0),1)',1:nc);
         else 
-            dw=zeros(1,s);
+            dw=zeros(1,nc);
         end
 
         % expected trips
@@ -360,20 +363,20 @@ for i=1:tsim
 
         Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
         Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
-        a_ts=(Multiplier1.*sparse(As(Selection1a,1),As(Selection1a,2),1,s,s))+...
-             (Multiplier2.*sparse(As(Selection1b,1),As(Selection1b,2),1,s,s));
+        a_ts=(Multiplier1.*sparse(As(Selection1a,1),As(Selection1a,2),1,nc,nc))+...
+             (Multiplier2.*sparse(As(Selection1b,1),As(Selection1b,2),1,nc,nc));
 
         Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts+P.TransportLayer.tr)));
         Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
-        a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,s,s))+...
-             (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,s,s));
+        a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
+             (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
 
         % expected imbalance at stations
         b(kt,:)=uv ...
             -dw ...  number of passengers waiting at each station
             +round(sum(a_ts)) ...  expected arrivals between now and now+ts
             -round(sum(a_to,2))' ...     expected requests between now and now+ts+tr
-            +histc(reshape(w(i:i+P.TransportLayer.ts,:),P.m*(P.TransportLayer.ts+1),1),1:s)';% vehicles relocating here between now and now+ts
+            +uvr;% vehicles relocating here between now and now+ts
 
         % identify feeder and receiver stations
         F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
@@ -413,13 +416,15 @@ for i=1:tsim
                 if ~isnan(ur)
 
                     % update destination station
-                    u(i,ui)=0;
+                    u(i,ui)=Rs(dstnid(ka));
+                    
+                    % update delay
+                    d(i,ui)=arris(ka);
+                    
+                    % update action
 
                     % send relocation instruction
-                    w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
-
-                    % keep track of vehicles arriving at stations
-                    h(i+arris(ka),Rs(dstnid(ka)))=h(i+arris(ka),Rs(dstnid(ka)))+1;
+                    % w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
 
                     % save length of relocation
                     relodist(i)=relodist(i)+arris(ka);
@@ -441,181 +446,62 @@ for i=1:tsim
     % generate trip requests for this time step
     trips=(AbuckC(i)+1:AbuckC(i+1))';
 
-    % initialize 
-    ql=0;
-
-    % add queued requests
+    % add previously queued requests and reset queue
     if sum(queue)>0
         trips=[queue(queue>0);trips];
         queue(:)=0;
     end
-
-    % if there are trips
-    if ~isempty(trips)
-
-        % for each station
-        for j=1:n
-
-            % trips starting at station k
-            tripsK=trips((A(trips,1)==j));
-
-            % if there are passengers waiting at station
-            if ~isempty(tripsK)
-
-                % vehicles at this station
-                uid=find(u(i,:)==j);  
-
-                % how many vehicles have destination this station in next 20 minutes
-                DirectedHereSum=cumsum(h(i:i+MaxHor,j));
-
-                % soc of vehicles at this station (sorted by high soc)
-                [qj,usortid]=sort(q(i,uid),'descend');  % vehicle ID: uid(usortid)
-
-                % destination station
-                destinations=A(tripsK,2);
-
-                % distance of each trip
-                distancetomove=Tr(j,destinations);
-
-                % trip priority: highest waiting first, then longest travel time
-                trippriority=distancetomove+waiting(tripsK)'*max(Tr(:));
-
-                % sort trips by distance (highest first)
-                [~,sortid]=sort(trippriority,'descend');
-
-                % sort trip distances
-                distancetomovesorted=distancetomove(sortid);
-
-                % for each trip
-                for ka=1:length(distancetomovesorted)
-
-                    % trip ID
-                    tripID=tripsK(sortid(ka));
-
-                    % candidate vehicles
-                    candidates=(qj>=distancetomovesorted(ka)*ad+P.Operations.minsoc);
-
-                    % is there a vehicle available?
-                    VehicleAvailable=(sum(candidates)>0);
-
-
-                    % avoid changing chosen mode after deciding
-                    if chosenmode(tripID)==0
-
-                        if VehicleAvailable
-
-                            WaitingTime=0;
-
-                        else
-
-                            % first available vehicle
-                            FirstAvailable=find(DirectedHereSum>=ka,1);
-
-                            % if not in u, v, w, == inf
-                            if isempty(FirstAvailable)
-                                WaitingTime=Inf;
-                            else
-                                WaitingTime=FirstAvailable*P.e;
-                            end
-
-                        end
-
-                        if P.modechoice
-
-                            UtilitySAEV=-distancetomovesorted(ka)*P.e*(VOT/60+CostMinute)-WaitingTime*VOT/60;
-
-                            AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+exp(UtilityWalking(tripID)));
-
-                        elseif isfield(P,'pricing')
-
-                            offeredprices(tripID)=prices(A(tripID,1),A(tripID,2),kp);
-
-                            UtilitySAEV=-offeredprices(tripID)*distancetomovesorted(ka)*P.e-WaitingTime*VOT/60*WaitingCostToggle;
-
-                            AcceptProbability=exp(UtilitySAEV)/( exp(UtilitySAEV) + exp(-distancetomovesorted(ka)*P.e*m.gamma_alt));
-
-                        else
-
-                            AcceptProbability=1;
-
-                        end
-
-                        chosenmode(tripID)=(rand()<AcceptProbability);
-
-                        waitingestimated(tripID)=WaitingTime;
-
-                    end
-
-                    if chosenmode(tripID)==1
-
-                        % if there are vehicles with enough soc
-                        if VehicleAvailable
-
-                            % vehicle with highest soc goes
-                            usortedi=find(candidates,1);
-
-                            % vehicle id
-                            ui=uid(usortid(usortedi));
-
-                            % accept request and update vehicle position
-                            u(i,ui)=0;
-                            qj(usortedi)=0;
-                            v(i+distancetomovesorted(ka),ui)=destinations(sortid(ka));
-
-                            % keep track of vehicles arriving at stations
-                            h(i+distancetomovesorted(ka),destinations(sortid(ka)))=h(i+distancetomovesorted(ka),destinations(sortid(ka)))+1;
-
-                            % update travelled distance
-                            tripdist(i)=tripdist(i)+distancetomovesorted(ka);
-
-                        else
-
-                            % check if wait time of this request is less than max. wait time (minutes)
-                            if waiting(tripID)<P.Operations.maxwait
-
-                                % increase waiting time (minutes) for this trip
-                                waiting(tripID)=waiting(tripID)+P.e;
-
-                                % add this trip to the queue
-                                ql=ql+1;  % current trip
-                                queue(ql)=tripID;
-
-                            else
-
-                                % if max waiting exceeded, request dropped
-                                if pooling(tripID)>0
-                                    tripsdropped=find(pooling==pooling(tripID));
-                                else
-                                    tripsdropped=tripID;
-                                end
-
-                                % register this as a dropped request
-                                dropped(tripsdropped)=1;
-
-                            end
-
-                        end
-                    else
-
-                        % walking
-
-                    end
-                end
-            end
+    
+    if ~isempty(trips) 
+    
+        % TODO: fix the case for mode choice without pricing, harmonize code
+        % TODO: fix pooling option 
+        Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
+        if isfield(P,'pricing')
+            pp=prices(Selector,kp);
+            alte=exp(-Tr(Selector)*P.e*m.gamma_alt);
+        else
+            pp=ones(length(trips),1)*prices(1,1,kp);
+            alte=zeros(length(trips),1);
+%             Cost=(VOT/60+CostMinute);
+%             UtilityAlternative=exp(UtilityWalking(tripID));
         end
-    end
+        
+        % Vin: vehicles information in the form: [station delay soc]
+        Vin=[u(i,:)' , d(i,:)' , q(i,:)'];
+        
+        % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
+        Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
+        [Vout,Bout,tripdisti,queuei]=tripAssignment(Vin,Bin,Par);
+
+        u(i,:)=Vout(:,1)';
+        d(i,:)=Vout(:,2)';
+        tripdist(i)=tripdisti;
+
+        chosenmode(trips)=Bout(:,1);
+        waiting(trips)=Bout(:,2);
+        dropped(trips)=Bout(:,3);
+        waitingestimated(trips)=waitingestimated(trips)+Bout(:,4);
+        
+        queue=trips(queuei(queuei>0));
+        
+    end
+    
 
     %% simulation variables update
 
     % update SOC for vehicles charging
-    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(u(i,:)>0).*chargevector))-q(i,:);
+    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(d(i,:)==0).*chargevector))-q(i,:);
 
     % update SOC 
-    q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(u(i,:)==0).*ad));
+    q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
 
-    % update idle vehicle positions
-    u(i+1,:)=u(i,:)+v(i,:)+w(i,:);
+    % update position
+    u(i+1,:)=u(i,:);
+    
+    % update delay
+    d(i+1,:)=max(0,d(i,:)-1);
     
     % record time
     S.trlayerCPUtime(i)=cputime-S.lasttime;
@@ -630,8 +516,9 @@ end
 %% final calculations
 
 Internals.b=b;
-Internals.v=sparse(v);
-Internals.w=sparse(w);
+Internals.d=d;
+% Internals.v=sparse(v);
+% Internals.w=sparse(w);
 Internals.zmacro=zmacro;
 
 Sim.u=uint8(u); % final destination of vehicles (station) [tsim x m]
