@@ -421,7 +421,8 @@ for i=1:tsim
                     % update delay
                     d(i,ui)=arris(ka);
                     
-                    % update action
+                    % update status
+                    s(i,ui)=1;
 
                     % send relocation instruction
                     % w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
@@ -499,6 +500,9 @@ for i=1:tsim
 
     % update position
     u(i+1,:)=u(i,:);
+    
+    % update status
+    s(i+1,:)=s(i,:);
     
     % update delay
     d(i+1,:)=max(0,d(i,:)-1);
