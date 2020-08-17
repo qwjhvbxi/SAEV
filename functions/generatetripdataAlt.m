@@ -11,9 +11,9 @@ dkemd=zeros(mtsim,1);
 
 b=zeros(mtsim,n);
 
+approx=(n>200);
+
 for kt=1:mtsim
-    
-    kt
     
     ThisInterval=(kt-1)*tlen+1:kt*tlen;
  
@@ -34,7 +34,7 @@ for kt=1:mtsim
     R=sum(fo(ThisInterval,:));
 
     % identify optimal relocation flux
-    x=optimalrelocationfluxes(F,R,T,60,true);
+    x=optimalrelocationfluxes(F,R,T,60,approx);
 
     % read results
     [Fs,Rs,Vr]=find(x);
