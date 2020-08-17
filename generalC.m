@@ -487,7 +487,8 @@ for i=1:tsim
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
-        [Vout,Bout,tripdisti,queuei]=tripAssignment(Vin,Bin,Par);
+        % tripAssignment (no clustering) or tripAssignment2 (clustering)
+        [Vout,Bout,tripdisti,queuei]=tripAssignment2(Vin,Bin,Par);
 
         u(i,:)=Vout(:,1)';
         d(i,:)=Vout(:,2)';
