@@ -613,7 +613,10 @@ end
 %% end display
 
 meanqnow=mean(q(i,:));
-fprintf('sim #%d successfully completed - avg soc: %0.2f - total time: %d:%0.2d - \n',dispiter,meanqnow,floor(elapsed/60),round(rem(elapsed,60)));
+if dispiter<0
+    fprintf('sim #%d ',-dispiter)
+end
+fprintf('successfully completed - avg soc: %0.2f - total time: %d:%0.2d - \n',meanqnow,floor(elapsed/60),round(rem(elapsed,60)));
 
 end
 
