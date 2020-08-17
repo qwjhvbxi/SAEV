@@ -52,10 +52,6 @@ load(['data/scenarios/' P.scenario '.mat'],'T','C');
 [A,Atimes,AbuckC,Distances]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
-% arrivals at clusters
-As=A;
-Ts=T;
-
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
 % elep is in $/MWh
@@ -73,11 +69,9 @@ clear x y;
 
 % parameters
 n=size(T,1);              % number of nodes
-nc=size(Ts,1);             % number of clusters
 tsim=1440/P.e;            % number of time steps
 etsim=tsim/P.beta;        % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
-Trs=max(1,round(Ts/P.e)); % distance matrix in steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
@@ -89,7 +83,6 @@ e=zeros(tsim,P.m,'double');            % charging
 u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 d=zeros(tsim,P.m,'double'); % delay
 s=zeros(tsim,P.m,'double'); % status
-b=zeros(etsim,n,'double');             % imbalance
 queue=zeros(100,1);          % temporary variable to store queued arrivals
 
 % results variables
@@ -97,10 +90,10 @@ waiting=zeros(length(A),1);  % minutes waited for each request
 dropped=zeros(length(A),1);  % request is dropped?
 chosenmode=false(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
-relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
-tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
 offeredprices=ones(length(A),1);  % price offered to each passenger
+relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
+tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 
 % parameters for trip assignment
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',logical(P.modechoice+isfield(P,'pricing')),'maxwait',P.Operations.maxwait);
@@ -112,6 +105,24 @@ if isfield(P.Operations,'uinit')
 else
     u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
 end
+
+
+%% clustering
+
+if isfield(P,'clusters')
+    chargingStations=P.chargingStations;
+    Clusters=P.clusters;
+    As=Clusters(A);
+    Trs=Tr(chargingStations,chargingStations);
+    nc=length(chargingStations);             % number of clusters
+else
+    chargingStations=(1:n)';
+    Clusters=(1:n)';
+    As=A;
+    Trs=Tr;
+    nc=n;
+end
+b=zeros(etsim,nc,'double');             % imbalance
 
 
 %% trip processing
@@ -341,15 +352,20 @@ for i=1:tsim
 
     % if it's time for a relocation decision
     if mod(i-1,P.TransportLayer.tx)==0
+        
+        % vehicles at clusters
+        uc=Clusters(u(i,:));
+        uci=uc'.*(d(i,:)==0); % idle
+        ucr=uc'.*(s(i,:)==1); % relocating
 
         % current relocation number
         kt=(i-1)/P.TransportLayer.tx+1;
         
         % number of vehicles at each station
-        uv=histc(u(i,:).*(d(i,:)==0),1:n);
+        uv=histc(uci,1:nc);
         
         % vehicles relocating here between now and now+ts 
-        uvr=histc(u(i,:).*(s(i,:)==1),1:n);
+        uvr=histc(ucr,1:nc);
 
         % number of waiting passenger at station
         if sum(queue)>0
@@ -383,7 +399,7 @@ for i=1:tsim
         R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
 
         % identify optimal relocation flux
-        x=optimalrelocationfluxes(F,R,Tr);
+        x=optimalrelocationfluxes(F,R,Trs);
 
         if ~isempty(x)
 
@@ -391,7 +407,7 @@ for i=1:tsim
             [Fs,Rs,Vr]=find(x);
 
             % distance of relocation
-            arri=Tr(sub2ind(size(Tr),Fs,Rs)); 
+            arri=Trs(sub2ind(size(Trs),Fs,Rs)); 
 
             % duplicate fluxes with multiple vehicles
             Fs=repelem(Fs,Vr);
@@ -416,16 +432,13 @@ for i=1:tsim
                 if ~isnan(ur)
 
                     % update destination station
-                    u(i,ui)=Rs(dstnid(ka));
+                    u(i,ui)=chargingStations(Rs(dstnid(ka)));
                     
                     % update delay
                     d(i,ui)=arris(ka);
                     
                     % update status
                     s(i,ui)=1;
-
-                    % send relocation instruction
-                    % w(i+arris(ka),ui)=Rs(dstnid(ka)); % should be -1? depends if I assume that it starts at beginning of time period or not. Need to be explicit
 
                     % save length of relocation
                     relodist(i)=relodist(i)+arris(ka);
@@ -520,7 +533,8 @@ end
 %% final calculations
 
 Internals.b=b;
-Internals.d=d;
+Internals.d=sparse(d);
+Internals.s=sparse(logical(s));
 % Internals.v=sparse(v);
 % Internals.w=sparse(w);
 Internals.zmacro=zmacro;
