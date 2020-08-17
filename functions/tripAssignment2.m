@@ -20,14 +20,17 @@ if ~isempty(Bin)
     waitingestimated=zeros(m,1);
     dropped=zeros(m,1);
     
+    distancetomove=Par.Tr(sub2ind(size(Par.Tr),Bin(:,1),Bin(:,2)));
+    
+    EnergyReq=distancetomove*Par.ad+Par.minsoc;
+    
     % create matrix X
-    X=Par.Tr(Bin(:,1),ui)+ones(m,1)*di'; % add charging penalty (<1)
+    X=(Par.Tr(Bin(:,1),ui)+ones(m,1)*(di'+Vin(:,4)'*0.5+0.5-Vin(:,3)'*0.5)).*(EnergyReq<Vin(:,3)');
     
     for tripID=1:m
         
         % best vehicle
         [Delay,uids]=min(X(tripID,:));
-        
         
         WaitingTime=floor(Delay)*Par.e;
 
@@ -58,16 +61,14 @@ if ~isempty(Bin)
             % if the best vehicle is at the station
             if WaitingTime<Par.maxwait
 
-                distancetomove=Par.Tr(Bin(tripID,1),Bin(tripID,2));
-                
                 waiting(tripID)=WaitingTime;
                 
                 % accept request and update vehicle position
                 ui(uids)=Bin(tripID,2); % position
-                di(uids)=WaitingTime+distancetomove; % delay
+                di(uids)=WaitingTime+distancetomove(tripID); % delay
 
                 % update travelled distance
-                tripdist=tripdist+distancetomove;
+                tripdist=tripdist+distancetomove(tripID);
                 
                 % update X
                 X(:,uids)=Par.Tr(Bin(:,1),ui(uids))+di(uids);
