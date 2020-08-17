@@ -76,12 +76,14 @@ ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time ste
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
 elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
 co2=repelem(mco2,P.beta);                 % carbon intensity in each transport layer time step
+MaxIdle=5;
 
 % main variables
 q=zeros(tsim,P.m,'double'); % SOC
 e=zeros(tsim,P.m,'double'); % charging
 u=zeros(tsim,P.m,'double'); % vehicles in charging stations
 d=zeros(tsim,P.m,'double'); % delay
+g=zeros(tsim,P.m,'double'); % idle time
 s1=false(tsim,P.m); % relocating status
 s2=false(tsim,P.m); % charging  status
 s3=false(tsim,P.m); % moving to charging station status
@@ -352,6 +354,8 @@ for i=1:tsim
 
 
     %% relocation
+    
+    % TODO: reformat relocation into separate function
 
     % if it's time for a relocation decision
     if mod(i-1,P.TransportLayer.tx)==0
@@ -359,7 +363,7 @@ for i=1:tsim
         % vehicles at clusters
         uc=Clusters(u(i,:));
         uci=uc'.*(d(i,:)==0); % idle
-        ucr=uc'.*(s1(i,:)); % relocating
+        ucr=uc'.*logical(s1(i,:)+s3(i,:)); % relocating
 
         % current relocation number
         kt=(i-1)/P.TransportLayer.tx+1;
@@ -422,8 +426,8 @@ for i=1:tsim
 
             for ka=1:length(arris)
 
-                % find candidate vehicles for the task with enough soc
-                candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)); 
+                % find candidate vehicles for the task with enough soc and idle
+                candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)).*(s1(i,:)==0).*(s3(i,:)==0); 
 
                 % remove unavailable vehicles
                 candidates(candidates==0)=NaN;
@@ -473,6 +477,8 @@ for i=1:tsim
     
         % TODO: fix the case for mode choice without pricing, harmonize code
         % TODO: fix pooling option 
+        % TODO: fix relocation status: if vehicles relocating are assigned to
+        %       passenger, need to change status
         Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
         if isfield(P,'pricing')
             pp=prices(Selector,kp);
@@ -508,9 +514,11 @@ for i=1:tsim
     
 
     %% simulation variables update
-
+    
+    AtChargingStation=sum(u(i,:)==chargingStations);
+    
     % update SOC for vehicles charging
-    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(d(i,:)==0).*sum(u(i,:)==chargingStations).*chargevector))-q(i,:);
+    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(d(i,:)==0).*AtChargingStation.*chargevector))-q(i,:);
 
     % update SOC 
     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
@@ -518,13 +526,24 @@ for i=1:tsim
     % update position
     u(i+1,:)=u(i,:);
     
-    % update statuses
-    s1(i+1,:)=s1(i,:);
-    s2(i+1,:)=logical(s2(i,:)+abs(e(i,:)));
-    s3(i+1,:)=s3(i,:);
-    
     % update delay
     d(i+1,:)=max(0,d(i,:)-1);
+    
+    % update idle time
+    g(i+1,:)=(d(i,:)==0).*(g(i,:)+1);
+    
+    % update statuses
+    s1(i+1,:)=(d(i+1,:)>0).*s1(i,:);
+    s2(i+1,:)=logical(e(i,:));
+    s3(i+1,:)=(d(i+1,:)>0).*s3(i,:);
+    
+    if isfield(P,'clusters')
+        % move idle vehicles back to charging stations
+        IdleReached=(g(i+1,:).*(1-AtChargingStation)>=MaxIdle);
+        u(i+1,IdleReached)=chargingStations(Clusters(u(i+1,IdleReached)));
+        d(i+1,IdleReached)=Tr(sub2ind(size(Tr),u(i,IdleReached),u(i+1,IdleReached)));
+        s3(i+1,IdleReached)=true;
+    end
     
     % record time
     S.trlayerCPUtime(i)=cputime-S.lasttime;
@@ -540,6 +559,7 @@ end
 
 Internals.b=b;
 Internals.d=sparse(d);
+Internals.g=sparse(g);
 Internals.s1=sparse(logical(s1));
 Internals.s2=sparse(logical(s2));
 Internals.s3=sparse(logical(s3));
