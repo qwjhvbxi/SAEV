@@ -56,9 +56,14 @@ AbuckC=AbuckC(1:P.e:end);
 % etc. Also: change names of variables
 % elep is in $/MWh
 load(['data/eleprices/' P.gridfile '.mat'],'x','y');
-melep=repelem([x(:,P.gridday);x(:,rem(P.gridday,size(x,2))+1)],2/P.e,1); % electricity price profiles
+% melep=generateProfile(x);
+% mco2=generateProfile(y);
+d1=P.gridday;
+d2=rem(P.gridday,size(x,2))+1;
+ReshapeFactor=1440/size(x,1)/P.beta;
+melep=repelem( [ x(:,d1);x(:,d2) ] , ReshapeFactor ,1); % electricity price profiles
 if exist('y','var') % carbon emissions profiles [g/kWh]
-    mco2=repelem([y(:,P.gridday);y(:,rem(P.gridday,size(y,2))+1)],2/P.e,1);
+    mco2=repelem( [ y(:,d1);y(:,d2) ] , ReshapeFactor ,1);
 else
     mco2=zeros(24*2*2,1);
 end
@@ -70,12 +75,16 @@ clear x y;
 % parameters
 n=size(T,1);              % number of nodes
 tsim=1440/P.e;            % number of time steps
-etsim=tsim/P.beta;        % number of charging decisions
+etsim=floor(1440/P.beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
-elep=repelem(melep,P.beta);                 % electricity price in each transport layer time step
-co2=repelem(mco2,P.beta);                 % carbon intensity in each transport layer time step
+elep=repelem(melep,P.beta/P.e);                 % electricity price in each transport layer time step
+co2=repelem(mco2,P.beta/P.e);                 % carbon intensity in each transport layer time step
+ts=round(P.TransportLayer.ts/P.e);
+tr=round(P.TransportLayer.tr/P.e);
+tx=round(P.TransportLayer.tx/P.e);
+mthor=round(P.EnergyLayer.mthor/P.beta);
 MaxIdle=5;
 
 % main variables
@@ -127,7 +136,7 @@ else
     Trs=Tr;
     nc=n;
 end
-b=zeros(etsim,nc,'double');             % imbalance
+b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
 
 
 %% trip processing
@@ -161,7 +170,7 @@ if strcmp(P.enlayeralg,'aggregate')
     E.eta=1;                % 
     E.selling=1;            % can sell to the grid?
     E.minfinalsoc=0.9;      % final SOC. This only works for optimization horizon of ~24h
-    E.T=P.EnergyLayer.mthor;% number of time steps in energy layer
+    E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
     E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
@@ -281,12 +290,12 @@ for i=1:tsim
                 actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
-                dktripnow=Trips.dktrip(t:t+P.EnergyLayer.mthor-1); % time steps spent traveling during this horizon
+                dktripnow=Trips.dktrip(t:t+mthor-1); % time steps spent traveling during this horizon
                 E.einit=sum(q(i,:))*P.Tech.battery;            % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
                 E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
-                E.electricityprice=melep(t:t+P.EnergyLayer.mthor-1)/1000; % convert to [$/kWh]
-                E.emissionsGridProfile=mco2(t:t+P.EnergyLayer.mthor-1); % [g/kWh]
+                E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
+                E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
 
                 ELayerResults=aevopti11(E);
 
@@ -297,7 +306,7 @@ for i=1:tsim
 
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
                 maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
-                zmacro(:,t:t+P.EnergyLayer.mthor-1)=[ ELayerResults.charging./maxc , ...
+                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging./maxc , ...
                                                                         ELayerResults.discharging./maxc , ...
                                                                         maxc , ...
                                                                         E.etrip]';
@@ -323,7 +332,7 @@ for i=1:tsim
 
     if isfield(P,'pricing')  % NOTE: waiting trips are not influenced by prices! should be included outside
 
-        if P.pricing~=0 && (i==1 || mod(i-(P.TransportLayer.ts+P.TransportLayer.tr+1),tp)==0)
+        if P.pricing~=0 && (i==1 || mod(i-(ts+tr+1),tp)==0)
 
             % number of vehicles at each station (including vehicles directed there)
             % uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
@@ -358,7 +367,7 @@ for i=1:tsim
     % TODO: reformat relocation into separate function
 
     % if it's time for a relocation decision
-    if mod(i-1,P.TransportLayer.tx)==0
+    if mod(i-1,tx)==0
         
         % vehicles at clusters
         uc=Clusters(u(i,:));
@@ -366,7 +375,7 @@ for i=1:tsim
         ucr=uc'.*logical(s1(i,:)+s3(i,:)); % relocating
 
         % current relocation number
-        kt=(i-1)/P.TransportLayer.tx+1;
+        kt=(i-1)/tx+1;
         
         % number of vehicles at each station
         uv=histc(uci,1:nc);
@@ -384,13 +393,13 @@ for i=1:tsim
         % expected trips
         NextPricing=min(kp*tp+1,length(AbuckC));
 
-        Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts)));
-        Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts));
+        Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts)));
+        Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts));
         a_ts=(Multiplier1.*sparse(As(Selection1a,1),As(Selection1a,2),1,nc,nc))+...
              (Multiplier2.*sparse(As(Selection1b,1),As(Selection1b,2),1,nc,nc));
 
-        Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+P.TransportLayer.ts+P.TransportLayer.tr)));
-        Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+P.TransportLayer.ts+P.TransportLayer.tr));
+        Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts+tr)));
+        Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts+tr));
         a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
 
@@ -442,7 +451,7 @@ for i=1:tsim
                     u(i,ui)=chargingStations(Rs(dstnid(ka)));
                     
                     % update delay
-                    d(i,ui)=arris(ka);
+                    d(i,ui)=d(i,ui)+arris(ka);
                     
                     % update status
                     s1(i,ui)=true;
@@ -491,7 +500,7 @@ for i=1:tsim
         end
         
         % Vin: vehicles information in the form: [station delay soc charging]
-        Vin=[u(i,:)' , d(i,:)' , q(i,:)' , s2(i,:)'];
+        Vin=[u(i,:)' , d(i,:)' , q(i,:)' , s2(i,:)' ];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
@@ -501,6 +510,7 @@ for i=1:tsim
 
         u(i,:)=Vout(:,1)';
         d(i,:)=Vout(:,2)';
+        s1(i,:)=max(0,s1(i,:)-Vout(:,3)');
         tripdist(i)=tripdisti;
 
         chosenmode(trips)=Bout(:,1);

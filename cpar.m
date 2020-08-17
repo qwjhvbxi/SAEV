@@ -49,7 +49,7 @@ P.gridday=311;  % which day of the electricity file
 P.mpcpredict=true;      % perfect prediction?
 P.modechoice=false;     % mode choice?
 P.e=2;                  % time step length in minutes
-P.beta=15;              % frequency of energy layer simulation (in time steps)
+P.beta=30;              % frequency of energy layer simulation (in minutes)
 P.m=10000;              % number of vehicles
 P.carbonprice=0;        % $/ton
 
@@ -65,30 +65,30 @@ Operations.minsoc=0.2;
 Operations.maxsoc=1;
 Operations.v2g=true;
 Operations.v2gminsoc=0.5;
-Operations.maxwait=10;
+Operations.maxwait=10; % minutes
 
 P.trlayeralg=trlayer;
 
-% % transport layer: opti
-if strcmp(P.trlayeralg,'opti')
-    Transport.thor=8;          % horizon (time steps)
-    Transport.rho1=0.01;        % weight of secondary objective
-    Transport.rho2=0.01;        % weight of charging objective for electricity price
-    Transport.rho3=0.01;        % weight of charging objective for SOC
-    Transport.rho4=0.000001;    % weight for fixed charge
-end
+% % % transport layer: opti
+% if strcmp(P.trlayeralg,'opti')
+%     Transport.thor=8;           % horizon (time steps)
+%     Transport.rho1=0.01;        % weight of secondary objective
+%     Transport.rho2=0.01;        % weight of charging objective for electricity price
+%     Transport.rho3=0.01;        % weight of charging objective for SOC
+%     Transport.rho4=0.000001;    % weight for fixed charge
+% end
 
 % transport layer: simplified
 if strcmp(P.trlayeralg,'simplified')
-    Transport.tx=5;  % time steps
-    Transport.ts=12; % time steps
-    Transport.tr=10; % time steps
+    Transport.tx=10;  % minutes
+    Transport.ts=24; 
+    Transport.tr=20; 
     Transport.bmin=0;
 end
 
 % energy layer: aggregate
 P.enlayeralg='aggregate';
-Energy.mthor=48;      % macro horizon (macro time step)
+Energy.mthor=1440;      % macro horizon (minutes)
 Energy.extrasoc=0.25;  % extra soc for energy layer to account for aggregate uncertainty
 
 % append to main struct
