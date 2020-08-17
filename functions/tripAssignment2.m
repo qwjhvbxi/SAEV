@@ -25,7 +25,11 @@ if ~isempty(Bin)
     EnergyReq=distancetomove*Par.ad+Par.minsoc;
     
     % create matrix X
-    X=(Par.Tr(Bin(:,1),ui)+ones(m,1)*(di'+Vin(:,4)'*0.5+0.5-Vin(:,3)'*0.5)).*(EnergyReq<Vin(:,3)');
+    X=(Par.Tr(Bin(:,1),ui) + ... distance from passenger
+        ones(m,1)*( di' + ... current delay
+        Vin(:,4)'*0.5 + ... penalty for currently charging vehicles
+        (1-Vin(:,3)')*0.5) ... penalty for low soc vehicles
+       ).*(EnergyReq<Vin(:,3)'); % requirement for enough SOC
     
     for tripID=1:m
         
@@ -59,7 +63,7 @@ if ~isempty(Bin)
         if chosenmode(tripID)==1
             
             % if the best vehicle is at the station
-            if WaitingTime<Par.maxwait
+            if WaitingTime<=Par.maxwait
 
                 waiting(tripID)=WaitingTime;
                 
