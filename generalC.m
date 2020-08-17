@@ -78,12 +78,14 @@ elep=repelem(melep,P.beta);                 % electricity price in each transpor
 co2=repelem(mco2,P.beta);                 % carbon intensity in each transport layer time step
 
 % main variables
-q=zeros(tsim,P.m,'double');            % SOC
-e=zeros(tsim,P.m,'double');            % charging
-u=zeros(tsim,P.m,'double');            % vehicles in charging stations
+q=zeros(tsim,P.m,'double'); % SOC
+e=zeros(tsim,P.m,'double'); % charging
+u=zeros(tsim,P.m,'double'); % vehicles in charging stations
 d=zeros(tsim,P.m,'double'); % delay
-s=zeros(tsim,P.m,'double'); % status
-queue=zeros(100,1);          % temporary variable to store queued arrivals
+s1=false(tsim,P.m); % relocating status
+s2=false(tsim,P.m); % charging  status
+s3=false(tsim,P.m); % moving to charging station status
+queue=zeros(100,1);         % temporary variable to store queued arrivals
 
 % results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
@@ -117,6 +119,7 @@ if isfield(P,'clusters')
     nc=length(chargingStations);             % number of clusters
 else
     chargingStations=(1:n)';
+%     chargingStID=true(n,1);
     Clusters=(1:n)';
     As=A;
     Trs=Tr;
@@ -356,7 +359,7 @@ for i=1:tsim
         % vehicles at clusters
         uc=Clusters(u(i,:));
         uci=uc'.*(d(i,:)==0); % idle
-        ucr=uc'.*(s(i,:)==1); % relocating
+        ucr=uc'.*(s1(i,:)); % relocating
 
         % current relocation number
         kt=(i-1)/P.TransportLayer.tx+1;
@@ -438,7 +441,7 @@ for i=1:tsim
                     d(i,ui)=arris(ka);
                     
                     % update status
-                    s(i,ui)=1;
+                    s1(i,ui)=true;
 
                     % save length of relocation
                     relodist(i)=relodist(i)+arris(ka);
@@ -481,8 +484,8 @@ for i=1:tsim
 %             UtilityAlternative=exp(UtilityWalking(tripID));
         end
         
-        % Vin: vehicles information in the form: [station delay soc]
-        Vin=[u(i,:)' , d(i,:)' , q(i,:)'];
+        % Vin: vehicles information in the form: [station delay soc charging]
+        Vin=[u(i,:)' , d(i,:)' , q(i,:)' , s2(i,:)'];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
@@ -507,7 +510,7 @@ for i=1:tsim
     %% simulation variables update
 
     % update SOC for vehicles charging
-    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(d(i,:)==0).*chargevector))-q(i,:);
+    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(d(i,:)==0).*sum(u(i,:)==chargingStations).*chargevector))-q(i,:);
 
     % update SOC 
     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
@@ -515,8 +518,10 @@ for i=1:tsim
     % update position
     u(i+1,:)=u(i,:);
     
-    % update status
-    s(i+1,:)=s(i,:);
+    % update statuses
+    s1(i+1,:)=s1(i,:);
+    s2(i+1,:)=logical(s2(i,:)+abs(e(i,:)));
+    s3(i+1,:)=s3(i,:);
     
     % update delay
     d(i+1,:)=max(0,d(i,:)-1);
@@ -535,9 +540,9 @@ end
 
 Internals.b=b;
 Internals.d=sparse(d);
-Internals.s=sparse(logical(s));
-% Internals.v=sparse(v);
-% Internals.w=sparse(w);
+Internals.s1=sparse(logical(s1));
+Internals.s2=sparse(logical(s2));
+Internals.s3=sparse(logical(s3));
 Internals.zmacro=zmacro;
 
 Sim.u=uint8(u); % final destination of vehicles (station) [tsim x m]
