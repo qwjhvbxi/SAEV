@@ -14,6 +14,7 @@ if ~isempty(Bin)
     
     ui=Vin(:,1);
     di=Vin(:,2);
+    Used=zeros(length(ui),1);
     
     waiting=Bin(:,3);
     chosenmode=(waiting>0);
@@ -76,6 +77,8 @@ if ~isempty(Bin)
                 
                 % update X
                 X(:,uids)=Par.Tr(Bin(:,1),ui(uids))+di(uids);
+                
+                Used(uids)=1;
 
             else
 
@@ -108,7 +111,7 @@ if ~isempty(Bin)
     
     
 
-    V=[ui , di];
+    V=[ui , di , Used];
     B=[chosenmode , waiting , dropped , waitingestimated ];
     
 else

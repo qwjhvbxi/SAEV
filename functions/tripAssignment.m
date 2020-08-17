@@ -30,12 +30,15 @@ if ~isempty(Bin)
     ql=0;
     n=size(Par.Tr,1);
     m=size(Bin,1);
+    
+    ui=Vin(:,1);
+    di=Vin(:,2);
+    Used=zeros(length(ui),1);
+    
     waiting=Bin(:,3);
     chosenmode=(waiting>0);
     waitingestimated=zeros(m,1);
     dropped=zeros(m,1);
-    ui=Vin(:,1);
-    di=Vin(:,2);
     
     % for each station
     for j=1:n
@@ -123,6 +126,8 @@ if ~isempty(Bin)
                         di(uids)=distancetomovesorted(ka); % delay
                         qj(usortedi)=0;
                         
+                        Used(uids)=1;
+                        
                         % update travelled distance
                         tripdist=tripdist+distancetomovesorted(ka);
 
@@ -164,7 +169,7 @@ if ~isempty(Bin)
         end
     end
     
-    V=[ui , di];
+    V=[ui , di , Used];
     B=[chosenmode , waiting , dropped , waitingestimated ];
     
 else
