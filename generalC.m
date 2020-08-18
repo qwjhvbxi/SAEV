@@ -6,7 +6,6 @@
 % physical meanings
 % TODO: add relocation distance to trips in clusters to pickup
 % 
-% 
 % see also CPAR
 
 function [Res]=generalC(P,extsave,dispiter)
@@ -86,7 +85,7 @@ u=zeros(tsim,P.m,'double'); % vehicles in charging stations
 d=zeros(tsim,P.m,'double'); % delay
 g=zeros(tsim,P.m,'double'); % idle time
 s1=false(tsim,P.m); % relocating status
-s2=false(tsim,P.m); % charging  status
+s2=false(tsim,P.m); % connection status
 s3=false(tsim,P.m); % moving to charging station status
 queue=zeros(100,1);         % temporary variable to store queued arrivals
 
@@ -126,7 +125,7 @@ mco2=average2(co2,P.beta/P.e);
 clear d1 d2 ReshapeFactor x y;
 
 
-%% clustering
+%% setup clustering
 
 if isfield(P,'clusters')
     chargingStations=P.chargingStations;
@@ -182,7 +181,7 @@ else
 end
 
 
-%% mode choice
+%% setup mode choice
 
 % TODO: harmonize and generalize
 VOT=15; % value of time
@@ -200,7 +199,7 @@ end
 % UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
 
 
-%% pricing module 
+%% setup pricing module 
 
 if isfield(P.TransportLayer,'tp')
     tp=P.TransportLayer.tp;
@@ -368,7 +367,7 @@ for i=1:tsim
 
         % number of waiting passenger at station
         if sum(queue)>0
-            dw=histc(As(queue(queue>0),1),1:nc);
+            dw=histcounts(As(queue(queue>0),1),1:nc+1)';
         else 
             dw=zeros(nc,1);
         end
@@ -386,7 +385,7 @@ for i=1:tsim
         a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
         
-        % Vin: vehicles information in the form: [station delay soc charging relocating]
+        % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[Clusters(u(i,:)) , d(i,:)' , q(i,:)' , s2(i,:)' , logical(s1(i,:)+s3(i,:))' ];
         Par.dw=dw; % number of passengers waiting at each station
         Par.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
@@ -396,11 +395,18 @@ for i=1:tsim
         
         [Vout,bkt,relodisti]=Relocation(Vin,Par);
         
+        % update vehicles position
         used=logical(Vout(:,3));
         u(i,used)=chargingStations(Vout(used,1)); 
         d(i,:)=Vout(:,2)';
+        
+        % update vehicles status (relocating vehicles cannot be relocated)
         s1(i,used)=1;
-        b(kt)=bkt;
+        s2(i,used)=0;
+        s3(i,used)=0;
+        
+        % update results
+        b(kt,:)=bkt;
         relodist(i)=relodisti;
         
     end
@@ -430,12 +436,12 @@ for i=1:tsim
         else
             pp=ones(length(trips),1)*prices(1,1,kp);
             alte=zeros(length(trips),1);
-%             Cost=(VOT/60+CostMinute);
-%             UtilityAlternative=exp(UtilityWalking(tripID));
+            %             Cost=(VOT/60+CostMinute);
+            %             UtilityAlternative=exp(UtilityWalking(tripID));
         end
         offeredprices(trips)=pp;
         
-        % Vin: vehicles information in the form: [station delay soc charging]
+        % Vin: vehicles information in the form: [station delay soc connected]
         Vin=[u(i,:)' , d(i,:)' , q(i,:)' , s2(i,:)' ];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
@@ -448,11 +454,18 @@ for i=1:tsim
             [Vout,Bout,tripdisti,queuei]=tripAssignment(Vin,Bin,Par);
         end
         
+        % update vehicles positions
         u(i,:)=Vout(:,1)';
         d(i,:)=Vout(:,2)';
-        s1(i,:)=max(0,s1(i,:)-Vout(:,3)');
+        
+        % update vehicles status
+        used=logical(Vout(:,3));
+        s1(i,used)=0;
+        s2(i,used)=0;
+        s3(i,used)=0;
+        
+        % update results
         tripdist(i)=tripdisti;
-
         chosenmode(trips)=Bout(:,1);
         waiting(trips)=Bout(:,2);
         dropped(trips)=Bout(:,3);
@@ -465,10 +478,8 @@ for i=1:tsim
 
     %% simulation variables update
     
-    AtChargingStation=sum(u(i,:)==chargingStations);
-    
-    % update SOC for vehicles charging
-    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+(d(i,:)==0).*AtChargingStation.*chargevector))-q(i,:);
+    % power exchanged for vehicles charging
+    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+s2(i,:).*chargevector))-q(i,:);
 
     % update SOC 
     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
@@ -482,9 +493,11 @@ for i=1:tsim
     % update idle time
     g(i+1,:)=(d(i,:)==0).*(g(i,:)+1);
     
+    AtChargingStation=sum(u(i+1,:)==chargingStations);
+    
     % update statuses
     s1(i+1,:)=(d(i+1,:)>0).*s1(i,:);
-    s2(i+1,:)=logical(e(i,:));
+    s2(i+1,:)=AtChargingStation.*(d(i+1,:)==0);
     s3(i+1,:)=(d(i+1,:)>0).*s3(i,:);
     
     if isfield(P,'clusters')
