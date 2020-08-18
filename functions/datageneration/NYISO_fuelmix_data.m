@@ -101,7 +101,7 @@ PriceByZone_USDMWh=reshape(f,length(Zones),length(f)/length(Zones))';
 % NYC
 % plot(PriceByZone_USDMWh(:,10))
 
-save('data/eleprices/DayaheadPrices2016NY.mat','PriceByZone_USDMWh','Zones');
+save([DataFolder 'eleprices/DayaheadPrices2016NY.mat'],'PriceByZone_USDMWh','Zones');
 
 
 %% generate file with prices and carbon intensity
@@ -111,7 +111,7 @@ addpath functions utilities
 DataFolder=setDataFolder();
 
 load([DataFolder 'grid/NYISO_fuelmix_2016-2.mat'],'CarbonIntensity_kgPerMWh');
-load('data/eleprices/DayaheadPrices2016NY.mat','PriceByZone_USDMWh');
+load([DataFolder 'eleprices/DayaheadPrices2016NY.mat'],'PriceByZone_USDMWh');
 
 DaysInYear=366;
 HoursInYear=DaysInYear*24;
@@ -123,7 +123,7 @@ x=repelem(reshape(PriceByZone_USDMWh(1:HoursInYear),24,DaysInYear),2,1); % hourl
 y1=mean(reshape(CarbonIntensity_kgPerMWh(1:HoursInYear*12),12/2,HoursInYear*2)); % 12 per hour to 2 per hour
 y=reshape(y1',48,DaysInYear); 
 
-save('data/eleprices/NY_DA_2016.mat','x','y');
+save([DataFolder 'eleprices/NY_DA_2016.mat'],'x','y');
 
 
 

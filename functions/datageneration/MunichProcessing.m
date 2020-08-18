@@ -41,7 +41,7 @@ A(SameNode,:)=[];
 Atimes(SameNode,:)=[];
 
 save([DataFolder 'trips/Munich.mat'],'A','Atimes')
-save('data/scenarios/Munich.mat','T');
+save([DataFolder 'scenarios/Munich.mat'],'T');
 
 
 

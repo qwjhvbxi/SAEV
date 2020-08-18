@@ -1,6 +1,6 @@
 
 DataFolder=setDataFolder();
-load('data/scenarios/NYC2016','C')
+load([DataFolder 'scenarios/NYC2016'],'C')
 
 for i=1:2
     FileIn=[DataFolder 'trips/NYC2016/d' num2str(i)];

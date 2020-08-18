@@ -51,17 +51,17 @@ end
 %% load external files: scenario, trips and energy
 
 % load distance matrix
-load(['data/scenarios/' P.scenario '.mat'],'T');
+load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
 
 % load trips
-% NOTE: can add secondary trip file (real vs expected/forecasted)
+% TODO: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,AbuckC,Distances]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
 % load electricity prices and carbon emissions
 % x and y are electricity prices and carbon emissions, respectively. They
 % are in matrix of shape N x days, with N the number of data points in a day
-load(['data/eleprices/' P.gridfile '.mat'],'x','y');
+load([DataFolder 'eleprices/' P.gridfile '.mat'],'x','y');
 
 
 %% parameters of simulation
@@ -326,7 +326,7 @@ for i=1:tsim
     % current pricing number
     kp=ceil(i/tp);
 
-    if isfield(P,'pricing')  % NOTE: waiting trips are not influenced by prices! should be included outside
+    if isfield(P,'pricing')  % TODO: waiting trips are not influenced by prices! should be included outside
 
         if P.pricing~=0 && (i==1 || mod(i-(ts+tr+1),tp)==0)
 
@@ -594,8 +594,10 @@ function [Trips,fo,fd]=generateEMD(A,Atimes,T,etsim,TripName,tripday)
 % relocation, serving trips, and total, respectively, for each
 % energy layer time step. fk
 
+DataFolder=setDataFolder();
 n=size(T,1);
-statsname=['data/temp/tripstats-' TripName '-' num2str(tripday) '-N' num2str(n) '.mat'];
+
+statsname=[DataFolder 'temp/tripstats-' TripName '-' num2str(tripday) '-N' num2str(n) '.mat'];
 if exist(statsname,'file')
     load(statsname,'fo','fd','dk');
 else
@@ -604,7 +606,7 @@ else
 end
 
 
-emdname=['data/temp/emd-' TripName '-' num2str(tripday) '-' num2str(etsim) '.mat'];
+emdname=[DataFolder 'temp/emd-' TripName '-' num2str(tripday) '-' num2str(etsim) '.mat'];
 if exist(emdname,'file')
     load(emdname,'dkemd','dkod','dktrip','fk');
 else

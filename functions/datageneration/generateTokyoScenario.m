@@ -8,7 +8,7 @@ function [OD,TPH,T]=generateTokyoScenario(scenarioname,limits,n,speedkmh,plots)
 
 %% check for existing data
 
-nomemap=['data/scenarios/' scenarioname '.mat'];
+nomemap=[DataFolder 'scenarios/' scenarioname '.mat'];
 if exist(nomemap,'file')
     
     load(nomemap,'OD','TPH','T','gridcoord','pos','idx','clusters');
@@ -18,8 +18,8 @@ else
     
     %% load raw data
     
-    load('data/sources/tripsCell.mat','Trips')
-    load('data/sources/aev18data.mat','gridcoord','tph');
+    load([DataFolder 'sources/tripsCell.mat'],'Trips')
+    load([DataFolder 'sources/aev18data.mat'],'gridcoord','tph');
 
     
     %% resize map

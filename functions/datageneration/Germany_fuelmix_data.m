@@ -3,8 +3,8 @@
 addpath functions utilities
 DataFolder=setDataFolder();
 
-% load('data/eleprices/Generation2018Germany.mat','GermanyGeneration2018');
-load('data/eleprices/Generation2019Germany.mat','GermanyGeneration2019');
+% load([DataFolder 'eleprices/Generation2018Germany.mat'],'GermanyGeneration2018');
+load([DataFolder 'eleprices/Generation2019Germany.mat'],'GermanyGeneration2019');
 Generation=GermanyGeneration2019;
 
 Fuels=Generation(:,2:end).Properties.VariableNames';
@@ -30,7 +30,7 @@ addpath functions utilities
 DataFolder=setDataFolder();
 
 load([DataFolder 'grid/Germany_fuelmix_2019.mat'],'CarbonIntensity_kgPerMWh');
-load('data/eleprices/DayaheadPrices2018-2019Germany.mat','GermanyDayAheadEURMWh_2019');
+load([DataFolder 'eleprices/DayaheadPrices2018-2019Germany.mat'],'GermanyDayAheadEURMWh_2019');
 
 % prices
 x=repelem(reshape(GermanyDayAheadEURMWh_2019(1:8760),24,365),2,1); % hourly
@@ -39,4 +39,4 @@ x=repelem(reshape(GermanyDayAheadEURMWh_2019(1:8760),24,365),2,1); % hourly
 y1=mean(reshape(CarbonIntensity_kgPerMWh(1:(8760*4)),2,8760*2)); % quarter hourly
 y=reshape(y1',48,365); 
 
-save('data/eleprices/Germany_DA_2019.mat','x','y');
+save([DataFolder 'eleprices/Germany_DA_2019.mat'],'x','y');

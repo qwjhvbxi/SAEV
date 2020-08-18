@@ -34,7 +34,7 @@ if 0
     axis equal
 
     % save C and T
-    save('data/scenarios/NYC2016-small.mat','C','T');
+    save([DataFolder 'scenarios/NYC2016-small.mat'],'C','T');
 
 end
 
@@ -43,7 +43,7 @@ end
 
 addpath functions
 DataFolder=setDataFolder();
-load('data/scenarios/NYC2016-small.mat','C','T');
+load([DataFolder 'scenarios/NYC2016-small.mat'],'C','T');
 
 setlimits=[0,5;0,5];
 

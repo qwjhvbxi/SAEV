@@ -1,13 +1,15 @@
 function [Summary,R]=multiDaySim(Period,P,gridoffset)
 
+DataFolder=setDataFolder();
+
 % initial parameters
 SOC=zeros(length(Period)+1,P.m);
 Uinit=zeros(length(Period)+1,P.m);
-load(['data/scenarios/' P.scenario '.mat'],'T');
+load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
 n=size(T,1);
 
 % load or create start variables
-StartFile=['data/temp/StartFile_' num2str(n) '-' num2str(P.m) '.mat'];
+StartFile=[DataFolder 'temp/StartFile_' num2str(n) '-' num2str(P.m) '.mat'];
 if exist(StartFile,'file')
     load(StartFile,'StartSoc','StartPos');
 else

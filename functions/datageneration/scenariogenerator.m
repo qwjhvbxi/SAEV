@@ -14,7 +14,7 @@ speedkmh=30;
 % each seed is associated with two distributions. The first one is used by
 % the optimization. In case of perfect knowledge it is also used in the
 % simulation, otherwise the second is used in the simulation.
-namearrivals=['data/scenarios/trips/' scenarioname '-' num2str(tripsperday) '-' num2str(1) '.mat'];
+namearrivals=[DataFolder 'scenarios/trips/' scenarioname '-' num2str(tripsperday) '-' num2str(1) '.mat'];
 if exist(namearrivals,'file')
     load(namearrivals,'c1','c2')
 else

@@ -11,7 +11,6 @@
 
 function P=cpar(Scenario,trlayer)
 
-% scenario name (corresponding to associated file in 'data/scenarios/')
 P.scenario=Scenario;
 
 if nargin<2
@@ -40,7 +39,7 @@ switch Scenario
 end
 P.tripday=1;     % which day of the trip file
 
-P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'data/eleprices/' ($/MWh; half-hourly, 48x365)
+P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'eleprices/' ($/MWh; half-hourly, 48x365)
 P.gridday=311;  % which day of the electricity file
 
 % P.chargingstations=[4,4;5,6];
