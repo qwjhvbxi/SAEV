@@ -1,9 +1,12 @@
 % [Res]=GENERALC(P[,extsave,dispiter])
 % Run SAEV simulation and relocation/charge oprimization.
 % Vehicles start at beginning of time step, arrive at end of time step.
+% 
 % TODO: explicitly define and document all statuses and corresponding
 % physical meanings
 % TODO: add relocation distance to trips in clusters to pickup
+% 
+% 
 % see also CPAR
 
 function [Res]=generalC(P,extsave,dispiter)
@@ -197,7 +200,7 @@ end
 % UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
 
 
-%% pricing 
+%% pricing module 
 
 if isfield(P.TransportLayer,'tp')
     tp=P.TransportLayer.tp;
@@ -244,9 +247,7 @@ S.starttime=cputime;
 S.lasttime=S.starttime;
 S.trlayerCPUtime=zeros(tsim,1);
 S.enlayerCPUtime=zeros(etsim,1);
-
-% set up time variables for cputime calculation
-comptime=[cputime;zeros(tsim,1)];
+S.comptime=[cputime;zeros(tsim,1)];
 
 
 %% start of iterations
@@ -256,7 +257,7 @@ for i=1:tsim
     
 	%% display progress
     
-    displayState(i,tsim,dispiter,comptime(i)-comptime(1),40)
+    displayState(i,tsim,dispiter,S.comptime(i)-S.comptime(1),40)
     
     
     %% charging optimization
@@ -268,7 +269,6 @@ for i=1:tsim
         
         % index of energy layer
         t=(i-1)/P.beta+1;
-        
         
         switch P.enlayeralg
             
@@ -317,6 +317,9 @@ for i=1:tsim
         
     end
     
+    v2gallowed=q(i,:)>P.Operations.v2gminsoc;
+    chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
+    
                 
     %% pricing
 
@@ -353,11 +356,9 @@ for i=1:tsim
         Multiplier1=(g(prices(:,:,kp)));
         Multiplier2=(g(prices(:,:,kp+1)));
     end
-
+    
 
     %% relocation
-    
-    % TODO: reformat relocation into separate function
 
     % if it's time for a relocation decision
     if mod(i-1,tx)==0
@@ -393,92 +394,16 @@ for i=1:tsim
         Par.Trs=Trs;
         Par.bmin=bmin;
         
-        [Vout,relodisti]=Relocation(Vin,Par);
+        [Vout,bkt,relodisti]=Relocation(Vin,Par);
         
         used=logical(Vout(:,3));
         u(i,used)=chargingStations(Vout(used,1)); 
         d(i,:)=Vout(:,2)';
         s1(i,used)=1;
+        b(kt)=bkt;
         relodist(i)=relodisti;
         
-%         % vehicles at clusters
-%         uc=Clusters(u(i,:));
-%         uci=uc'.*(d(i,:)==0); % idle
-%         ucr=uc'.*logical(s1(i,:)+s3(i,:)); % relocating
-% 
-%         % number of vehicles at each station
-%         uv=histc(uci,1:nc);
-%         
-%         % vehicles relocating here between now and now+ts 
-%         uvr=histc(ucr,1:nc);
-% 
-% 
-%         % expected imbalance at stations
-%         b(kt,:)=uv ...
-%             -dw ...  number of passengers waiting at each station
-%             +round(sum(a_ts)) ...  expected arrivals between now and now+ts
-%             -round(sum(a_to,2))' ...     expected requests between now and now+ts+tr
-%             +uvr;% vehicles relocating here between now and now+ts
-% 
-%         % identify feeder and receiver stations
-%         F=min(uv,(b(kt,:)-bmin).*(b(kt,:)>=bmin)); % feeders
-%         R=(-b(kt,:)+bmin).*(b(kt,:)<bmin); % receivers
-% 
-%         % identify optimal relocation flux
-%         x=optimalrelocationfluxes(F,R,Trs);
-% 
-%         if ~isempty(x)
-% 
-%             % read results
-%             [Fs,Rs,Vr]=find(x);
-% 
-%             % distance of relocation
-%             arri=Trs(sub2ind(size(Trs),Fs,Rs)); 
-% 
-%             % duplicate fluxes with multiple vehicles
-%             Fs=repelem(Fs,Vr);
-%             Rs=repelem(Rs,Vr);
-%             arri=repelem(arri,Vr);
-% 
-%             % satisfy longer relocation tasks first
-%             [arris,dstnid]=sort(arri,'descend');
-% 
-%             for ka=1:length(arris)
-% 
-%                 % find candidate vehicles for the task with enough soc and idle
-%                 candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)).*(s1(i,:)==0).*(s3(i,:)==0); 
-% 
-%                 % remove unavailable vehicles
-%                 candidates(candidates==0)=NaN;
-% 
-%                 % sort candidate vehicles by SOC
-%                 [ur,ui]=max(candidates);
-% 
-%                 % if there is a vehicle available
-%                 if ~isnan(ur)
-% 
-%                     % update destination station
-%                     u(i,ui)=chargingStations(Rs(dstnid(ka)));
-%                     
-%                     % update delay
-%                     d(i,ui)=d(i,ui)+arris(ka);
-%                     
-%                     % update status
-%                     s1(i,ui)=true;
-% 
-%                     % save length of relocation
-%                     relodist(i)=relodist(i)+arris(ka);
-% 
-%                 end
-%             end
-%         end
     end
-
-
-    %% charging variables
-
-    v2gallowed=q(i,:)>P.Operations.v2gminsoc;
-    chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
 
 
     %% trip assignment
@@ -496,8 +421,6 @@ for i=1:tsim
     
         % TODO: fix the case for mode choice without pricing, harmonize code
         % TODO: fix pooling option 
-        % TODO: fix relocation status: if vehicles relocating are assigned to
-        %       passenger, need to change status
         
         % calculate pricing
         Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
@@ -577,7 +500,7 @@ for i=1:tsim
     S.lasttime=cputime;
     
     % update cputime of this step
-	comptime(i+1)=cputime;
+	S.comptime(i+1)=cputime;
     
 end
 
@@ -618,8 +541,6 @@ Internals.s3=sparse(logical(s3));
 Internals.zmacro=zmacro;
 
 %% create Res struct and save results
-
-% NOTE: need to reorganize results struct
 
 % total cpu time
 elapsed=cputime-S.starttime;

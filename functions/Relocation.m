@@ -1,7 +1,7 @@
 % Vin: vehicles information in the form: [station delay soc charging relocating]
 
 
-function [V,relodist]=Relocation(Vin,Par)
+function [V,b,relodist]=Relocation(Vin,Par)
 
 nc=size(Par.Trs);
 nv=size(Vin,1);
