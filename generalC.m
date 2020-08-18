@@ -1,7 +1,9 @@
 % [Res]=GENERALC(P[,extsave,dispiter])
 % Run SAEV simulation and relocation/charge oprimization.
 % Vehicles start at beginning of time step, arrive at end of time step.
-% 
+% TODO: explicitly define and document all statuses and corresponding
+% physical meanings
+% TODO: add relocation distance to trips in clusters to pickup
 % see also CPAR
 
 function [Res]=generalC(P,extsave,dispiter)
@@ -9,8 +11,7 @@ function [Res]=generalC(P,extsave,dispiter)
 
 %% initializations
 
-addpath functions
-addpath utilities
+addpath functions utilities
 DataFolder=setDataFolder();
 
 
@@ -46,28 +47,18 @@ end
 
 %% load external files: scenario, trips and energy
 
-load(['data/scenarios/' P.scenario '.mat'],'T','C');
+% load distance matrix
+load(['data/scenarios/' P.scenario '.mat'],'T');
 
+% load trips
 % NOTE: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,AbuckC,Distances]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
-% NOTE: should generalize vector length for cases with different beta, e,
-% etc. Also: change names of variables
-% elep is in $/MWh
+% load electricity prices and carbon emissions
+% x and y are electricity prices and carbon emissions, respectively. They
+% are in matrix of shape N x days, with N the number of data points in a day
 load(['data/eleprices/' P.gridfile '.mat'],'x','y');
-% melep=generateProfile(x);
-% mco2=generateProfile(y);
-d1=P.gridday;
-d2=rem(P.gridday,size(x,2))+1;
-ReshapeFactor=1440/size(x,1)/P.beta;
-melep=repelem( [ x(:,d1);x(:,d2) ] , ReshapeFactor ,1); % electricity price profiles
-if exist('y','var') % carbon emissions profiles [g/kWh]
-    mco2=repelem( [ y(:,d1);y(:,d2) ] , ReshapeFactor ,1);
-else
-    mco2=zeros(24*2*2,1);
-end
-clear x y;
 
 
 %% parameters of simulation
@@ -79,13 +70,11 @@ etsim=floor(1440/P.beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
-elep=repelem(melep,P.beta/P.e);                 % electricity price in each transport layer time step
-co2=repelem(mco2,P.beta/P.e);                 % carbon intensity in each transport layer time step
 ts=round(P.TransportLayer.ts/P.e);
 tr=round(P.TransportLayer.tr/P.e);
 tx=round(P.TransportLayer.tx/P.e);
+bmin=P.TransportLayer.bmin;
 mthor=round(P.EnergyLayer.mthor/P.beta);
-MaxIdle=5;
 
 % main variables
 q=zeros(tsim,P.m,'double'); % SOC
@@ -100,11 +89,11 @@ queue=zeros(100,1);         % temporary variable to store queued arrivals
 
 % results variables
 waiting=zeros(length(A),1);  % minutes waited for each request
-dropped=zeros(length(A),1);  % request is dropped?
+dropped=false(length(A),1);  % request is dropped?
 chosenmode=false(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
-offeredprices=ones(length(A),1);  % price offered to each passenger
+offeredprices=zeros(length(A),1);  % price offered to each passenger
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 
@@ -119,6 +108,20 @@ else
     u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
 end
 
+% electicity price and emissions profiles
+d1=P.gridday;
+d2=rem(P.gridday,size(x,2))+1;
+ReshapeFactor=tsim/size(x,1);
+elep=repelem( [ x(:,d1);x(:,d2) ] , ReshapeFactor ,1); % electricity price profiles in $/MWh 
+if exist('y','var') % carbon emissions profiles [g/kWh]
+    co2=repelem( [ y(:,d1);y(:,d2) ] , ReshapeFactor ,1);
+else
+    co2=zeros(tsim*2,1);
+end
+melep=average2(elep,P.beta/P.e);
+mco2=average2(co2,P.beta/P.e);
+clear d1 d2 ReshapeFactor x y;
+
 
 %% clustering
 
@@ -130,7 +133,6 @@ if isfield(P,'clusters')
     nc=length(chargingStations);             % number of clusters
 else
     chargingStations=(1:n)';
-%     chargingStID=true(n,1);
     Clusters=(1:n)';
     As=A;
     Trs=Tr;
@@ -139,29 +141,19 @@ end
 b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
 
 
-%% trip processing
-% generate number of arrivals at each station
-% generate EMD in case of aggregate energy layer
-% calculate from expected arrivals
-% etsim is the number of energy layer time steps in a day
-% dkemd, dkod, dktrip are the number of minutes of travel for
-% relocation, serving trips, and total, respectively, for each
-% energy layer time step. fk
-[fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,P.tripday);
-
-
-%% setup energy layer
+%% setup charging module
 
 if strcmp(P.enlayeralg,'aggregate') 
+    
+    % generate aggregate trip statistics
+    [Trips,~,~]=generateEMD(A,Atimes,T,etsim,TripName,P.tripday);
 
     % append values for next day
-    if isfield(P,'tripfolder') 
+    if isfield(P,'tripfolder')
         P2=P;
         P2.tripday=P.tripday+1;
         [A2,Atimes2,~,~]=loadTrips(P2);
-        [fo2,fd2,Trips2]=generateEMD(A2,Atimes2,T,etsim,TripName,P.tripday+1);
-        fo=[fo(1:1440,:) ; fo2(1:1440,:)];
-        fd=[fd(1:1440,:) ; fd2(1:1440,:)];
+        [Trips2,~,~]=generateEMD(A2,Atimes2,T,etsim,TripName,P.tripday+1);
         Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
     end
 
@@ -189,6 +181,7 @@ end
 
 %% mode choice
 
+% TODO: harmonize and generalize
 VOT=15; % value of time
 beta=1.5; % tortuosity of walking
 % CostMinute=P.TransportLayer.basetariff;
@@ -369,25 +362,14 @@ for i=1:tsim
     % if it's time for a relocation decision
     if mod(i-1,tx)==0
         
-        % vehicles at clusters
-        uc=Clusters(u(i,:));
-        uci=uc'.*(d(i,:)==0); % idle
-        ucr=uc'.*logical(s1(i,:)+s3(i,:)); % relocating
-
         % current relocation number
         kt=(i-1)/tx+1;
-        
-        % number of vehicles at each station
-        uv=histc(uci,1:nc);
-        
-        % vehicles relocating here between now and now+ts 
-        uvr=histc(ucr,1:nc);
 
         % number of waiting passenger at station
         if sum(queue)>0
-            dw=histc(As(queue(queue>0),1)',1:nc);
+            dw=histc(As(queue(queue>0),1),1:nc);
         else 
-            dw=zeros(1,nc);
+            dw=zeros(nc,1);
         end
 
         % expected trips
@@ -402,66 +384,94 @@ for i=1:tsim
         Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts+tr));
         a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
-
-        % expected imbalance at stations
-        b(kt,:)=uv ...
-            -dw ...  number of passengers waiting at each station
-            +round(sum(a_ts)) ...  expected arrivals between now and now+ts
-            -round(sum(a_to,2))' ...     expected requests between now and now+ts+tr
-            +uvr;% vehicles relocating here between now and now+ts
-
-        % identify feeder and receiver stations
-        F=min(uv,(b(kt,:)-P.TransportLayer.bmin).*(b(kt,:)>=P.TransportLayer.bmin)); % feeders
-        R=(-b(kt,:)+P.TransportLayer.bmin).*(b(kt,:)<P.TransportLayer.bmin); % receivers
-
-        % identify optimal relocation flux
-        x=optimalrelocationfluxes(F,R,Trs);
-
-        if ~isempty(x)
-
-            % read results
-            [Fs,Rs,Vr]=find(x);
-
-            % distance of relocation
-            arri=Trs(sub2ind(size(Trs),Fs,Rs)); 
-
-            % duplicate fluxes with multiple vehicles
-            Fs=repelem(Fs,Vr);
-            Rs=repelem(Rs,Vr);
-            arri=repelem(arri,Vr);
-
-            % satisfy longer relocation tasks first
-            [arris,dstnid]=sort(arri,'descend');
-
-            for ka=1:length(arris)
-
-                % find candidate vehicles for the task with enough soc and idle
-                candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)).*(s1(i,:)==0).*(s3(i,:)==0); 
-
-                % remove unavailable vehicles
-                candidates(candidates==0)=NaN;
-
-                % sort candidate vehicles by SOC
-                [ur,ui]=max(candidates);
-
-                % if there is a vehicle available
-                if ~isnan(ur)
-
-                    % update destination station
-                    u(i,ui)=chargingStations(Rs(dstnid(ka)));
-                    
-                    % update delay
-                    d(i,ui)=d(i,ui)+arris(ka);
-                    
-                    % update status
-                    s1(i,ui)=true;
-
-                    % save length of relocation
-                    relodist(i)=relodist(i)+arris(ka);
-
-                end
-            end
-        end
+        
+        % Vin: vehicles information in the form: [station delay soc charging relocating]
+        Vin=[Clusters(u(i,:)) , d(i,:)' , q(i,:)' , s2(i,:)' , logical(s1(i,:)+s3(i,:))' ];
+        Par.dw=dw; % number of passengers waiting at each station
+        Par.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
+        Par.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
+        Par.Trs=Trs;
+        Par.bmin=bmin;
+        
+        [Vout,relodisti]=Relocation(Vin,Par);
+        
+        used=logical(Vout(:,3));
+        u(i,used)=chargingStations(Vout(used,1)); 
+        d(i,:)=Vout(:,2)';
+        s1(i,used)=1;
+        relodist(i)=relodisti;
+        
+%         % vehicles at clusters
+%         uc=Clusters(u(i,:));
+%         uci=uc'.*(d(i,:)==0); % idle
+%         ucr=uc'.*logical(s1(i,:)+s3(i,:)); % relocating
+% 
+%         % number of vehicles at each station
+%         uv=histc(uci,1:nc);
+%         
+%         % vehicles relocating here between now and now+ts 
+%         uvr=histc(ucr,1:nc);
+% 
+% 
+%         % expected imbalance at stations
+%         b(kt,:)=uv ...
+%             -dw ...  number of passengers waiting at each station
+%             +round(sum(a_ts)) ...  expected arrivals between now and now+ts
+%             -round(sum(a_to,2))' ...     expected requests between now and now+ts+tr
+%             +uvr;% vehicles relocating here between now and now+ts
+% 
+%         % identify feeder and receiver stations
+%         F=min(uv,(b(kt,:)-bmin).*(b(kt,:)>=bmin)); % feeders
+%         R=(-b(kt,:)+bmin).*(b(kt,:)<bmin); % receivers
+% 
+%         % identify optimal relocation flux
+%         x=optimalrelocationfluxes(F,R,Trs);
+% 
+%         if ~isempty(x)
+% 
+%             % read results
+%             [Fs,Rs,Vr]=find(x);
+% 
+%             % distance of relocation
+%             arri=Trs(sub2ind(size(Trs),Fs,Rs)); 
+% 
+%             % duplicate fluxes with multiple vehicles
+%             Fs=repelem(Fs,Vr);
+%             Rs=repelem(Rs,Vr);
+%             arri=repelem(arri,Vr);
+% 
+%             % satisfy longer relocation tasks first
+%             [arris,dstnid]=sort(arri,'descend');
+% 
+%             for ka=1:length(arris)
+% 
+%                 % find candidate vehicles for the task with enough soc and idle
+%                 candidates=q(i,:).*(u(i,:)==Fs(dstnid(ka))).*(q(i,:)/ad >= arris(ka)).*(s1(i,:)==0).*(s3(i,:)==0); 
+% 
+%                 % remove unavailable vehicles
+%                 candidates(candidates==0)=NaN;
+% 
+%                 % sort candidate vehicles by SOC
+%                 [ur,ui]=max(candidates);
+% 
+%                 % if there is a vehicle available
+%                 if ~isnan(ur)
+% 
+%                     % update destination station
+%                     u(i,ui)=chargingStations(Rs(dstnid(ka)));
+%                     
+%                     % update delay
+%                     d(i,ui)=d(i,ui)+arris(ka);
+%                     
+%                     % update status
+%                     s1(i,ui)=true;
+% 
+%                     % save length of relocation
+%                     relodist(i)=relodist(i)+arris(ka);
+% 
+%                 end
+%             end
+%         end
     end
 
 
@@ -488,6 +498,8 @@ for i=1:tsim
         % TODO: fix pooling option 
         % TODO: fix relocation status: if vehicles relocating are assigned to
         %       passenger, need to change status
+        
+        % calculate pricing
         Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
         if isfield(P,'pricing')
             pp=prices(Selector,kp);
@@ -498,6 +510,7 @@ for i=1:tsim
 %             Cost=(VOT/60+CostMinute);
 %             UtilityAlternative=exp(UtilityWalking(tripID));
         end
+        offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc charging]
         Vin=[u(i,:)' , d(i,:)' , q(i,:)' , s2(i,:)' ];
@@ -506,8 +519,12 @@ for i=1:tsim
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
         % tripAssignment (no clustering) or tripAssignment2 (clustering)
-        [Vout,Bout,tripdisti,queuei]=tripAssignment2(Vin,Bin,Par);
-
+        if isfield(P,'clusters')
+            [Vout,Bout,tripdisti,queuei]=tripAssignment2(Vin,Bin,Par);
+        else 
+            [Vout,Bout,tripdisti,queuei]=tripAssignment(Vin,Bin,Par);
+        end
+        
         u(i,:)=Vout(:,1)';
         d(i,:)=Vout(:,2)';
         s1(i,:)=max(0,s1(i,:)-Vout(:,3)');
@@ -549,7 +566,7 @@ for i=1:tsim
     
     if isfield(P,'clusters')
         % move idle vehicles back to charging stations
-        IdleReached=(g(i+1,:).*(1-AtChargingStation)>=MaxIdle);
+        IdleReached=(g(i+1,:).*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
         u(i+1,IdleReached)=chargingStations(Clusters(u(i+1,IdleReached)));
         d(i+1,IdleReached)=Tr(sub2ind(size(Tr),u(i,IdleReached),u(i+1,IdleReached)));
         s3(i+1,IdleReached)=true;
@@ -565,42 +582,21 @@ for i=1:tsim
 end
 
 
-%% final calculations
+%% final results
 
-Internals.b=b;
-Internals.d=sparse(d);
-Internals.g=sparse(g);
-Internals.s1=sparse(logical(s1));
-Internals.s2=sparse(logical(s2));
-Internals.s3=sparse(logical(s3));
-Internals.zmacro=zmacro;
-
+% main Sim struct
 Sim.u=uint8(u); % final destination of vehicles (station) [tsim x m]
 Sim.q=single(q); % state of charge 
 Sim.e=sparse(e/ac*P.Tech.chargekw);
+Sim.waiting=sparse(waiting); % waiting times
+Sim.dropped=sparse(dropped); % dropped requests
+Sim.chosenmode=chosenmode; % chosen mode
+Sim.waitingestimated=sparse(waitingestimated); % estimated waiting time (only mode choice)
+Sim.relodist=relodist*P.e; % relocation minutes
+Sim.tripdist=tripdist*P.e; % trip minutes
+Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
-% waiting times
-Sim.waiting=sparse(waiting);
-
-% dropped requests
-Sim.dropped=sparse(dropped);
-
-% chosen mode
-Sim.chosenmode=chosenmode;
-
-% estimated waiting time (only mode choice)
-Sim.waitingestimated=sparse(waitingestimated);
-
-% relocation minutes
-Sim.relodist=relodist*P.e;
-
-% trip minutes
-Sim.tripdist=tripdist*P.e;
-
-% emissions [ton]
-Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6;
-
-% pricing info
+% add pricing info
 if isfield(P,'pricing')
     
     distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
@@ -608,11 +604,18 @@ if isfield(P,'pricing')
     Sim.revenues=sum((offeredprices-m.gamma_r).*distances.*chosenmode.*(1-dropped));
     Sim.relocationcosts=sum(relodist)*P.e*m.gamma_r;
     Sim.offeredprices=offeredprices;
-
     Sim.prices=prices;
     
 end
 
+% Internals struct
+Internals.b=b;
+Internals.d=sparse(d);
+Internals.g=sparse(g);
+Internals.s1=sparse(logical(s1));
+Internals.s2=sparse(logical(s2));
+Internals.s3=sparse(logical(s3));
+Internals.zmacro=zmacro;
 
 %% create Res struct and save results
 
@@ -660,39 +663,48 @@ end
 
 
 
-function [fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,tripday)
+function [Trips,fo,fd]=generateEMD(A,Atimes,T,etsim,TripName,tripday)
 
-    n=size(T,1);
-    statsname=['data/temp/tripstats-' TripName '-' num2str(tripday) '-N' num2str(n) '.mat'];
-    if exist(statsname,'file')
-        load(statsname,'fo','fd','dk');
+% generate number of arrivals at each station
+% generate EMD in case of aggregate energy layer
+% calculate from expected arrivals
+% etsim is the number of energy layer time steps in a day
+% dkemd, dkod, dktrip are the number of minutes of travel for
+% relocation, serving trips, and total, respectively, for each
+% energy layer time step. fk
+
+n=size(T,1);
+statsname=['data/temp/tripstats-' TripName '-' num2str(tripday) '-N' num2str(n) '.mat'];
+if exist(statsname,'file')
+    load(statsname,'fo','fd','dk');
+else
+    [~,fo,fd,dk]=tripstats2(A,Atimes,T);
+    save(statsname,'Atimes','fo','fd','dk');
+end
+
+
+emdname=['data/temp/emd-' TripName '-' num2str(tripday) '-' num2str(etsim) '.mat'];
+if exist(emdname,'file')
+    load(emdname,'dkemd','dkod','dktrip','fk');
+else
+
+    % is a probability distribution of trips available?
+    probabilistic=false;
+
+    if probabilistic
+        % calculate from known distribution
+        error('not implemented');
     else
-        [~,fo,fd,dk]=tripstats2(A,Atimes,T);
-        save(statsname,'Atimes','fo','fd','dk');
+        [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
     end
+    save(emdname,'dkemd','dkod','dktrip','fk');
 
+end
 
-    emdname=['data/temp/emd-' TripName '-' num2str(tripday) '-' num2str(etsim) '.mat'];
-    if exist(emdname,'file')
-        load(emdname,'dkemd','dkod','dktrip','fk');
-    else
+Trips.dkemd=dkemd;
+Trips.dkod=dkod;
+Trips.dktrip=dktrip;
+Trips.fk=fk;
 
-        % is a probability distribution of trips available?
-        probabilistic=false;
-
-        if probabilistic
-            % calculate from known distribution
-            error('not implemented');
-        else
-            [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
-        end
-        save(emdname,'dkemd','dkod','dktrip','fk');
-
-    end
-    
-    Trips.dkemd=dkemd;
-    Trips.dkod=dkod;
-    Trips.dktrip=dktrip;
-    Trips.fk=fk;
 end
 
