@@ -68,14 +68,14 @@ Operations.maxwait=10; % minutes
 
 P.trlayeralg=trlayer;
 
-% % % transport layer: opti
-% if strcmp(P.trlayeralg,'opti')
-%     Transport.thor=8;           % horizon (time steps)
-%     Transport.rho1=0.01;        % weight of secondary objective
-%     Transport.rho2=0.01;        % weight of charging objective for electricity price
-%     Transport.rho3=0.01;        % weight of charging objective for SOC
-%     Transport.rho4=0.000001;    % weight for fixed charge
-% end
+% % transport layer: opti
+if strcmp(P.trlayeralg,'opti')
+    Transport.thor=8;           % horizon (time steps)
+    Transport.rho1=0.01;        % weight of secondary objective
+    Transport.rho2=0.01;        % weight of charging objective for electricity price
+    Transport.rho3=0.01;        % weight of charging objective for SOC
+    Transport.rho4=0.000001;    % weight for fixed charge
+end
 
 % transport layer: simplified
 if strcmp(P.trlayeralg,'simplified')
