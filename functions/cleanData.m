@@ -1,7 +1,7 @@
 
 
 
-function [A,Atimes,ASortInd]=cleanData(AIN,AtimesIN)
+function [A,Atimes,ASortInd]=cleanData(AIN,AtimesIN,RmSameNode)
 
 if sum(AtimesIN(:,1)~=AtimesIN(:,2))>0
     % impossible trips
@@ -16,6 +16,15 @@ Rmv=logical(Rmv1+(AtimesIN(:,1)==0));
 % remove wrong trips
 AIN(Rmv,:)=[];
 AtimesIN(Rmv,:)=[];
+
+if nargin>2 && RmSameNode==true
+
+    % remove trips inside same node
+    SameNode=logical(AIN(:,1)==AIN(:,2));
+    AIN(SameNode,:)=[];
+    AtimesIN(SameNode,:)=[];
+
+end
 
 % trips sorted by departure time
 [Atimes,ASortInd]=sortrows(AtimesIN,1);
