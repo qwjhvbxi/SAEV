@@ -29,7 +29,7 @@ if sum(R)>0 && sum(F)>0
         R2=R(Used);
         
         if nargin<4 || isempty(limite)
-            limite=max(T2(:))*2;
+            limite=min(60,max(T2(:))*2);
         end
     
         X2=calculateflux(F2,R2,T2,limite,approx);
