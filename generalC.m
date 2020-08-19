@@ -10,6 +10,10 @@
 
 function [Res]=generalC(P,extsave,dispiter)
 
+if strcmp(P.trlayeralg,'opti')
+    Res=generalOpti(P,extsave,dispiter);
+    return
+end
 
 %% initializations
 
