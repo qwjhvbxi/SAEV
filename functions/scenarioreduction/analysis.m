@@ -6,7 +6,7 @@
 
 scenarioname='DayaheadPrices2017Germany';   % germany
 % scenarioname='DayaheadPrices2016Tokyo';     % tokyo
-load(['data/' scenarioname '-r.mat'])
+load([DataFolder , scenarioname '-r.mat'])
 resn=[21:104];              % which files to load (in case all)
 
 
@@ -19,7 +19,7 @@ z=outdesc(resn);            % load files
 if 0        % plot profiles selected
 
     % germany
-    load(['data/' scenarioname])
+    load([DataFolder , scenarioname])
     phour=DayaheadPrices2017Germany;
     x=reshape(phour,24,365);
 
