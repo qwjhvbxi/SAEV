@@ -8,7 +8,6 @@ if ~isempty(Bin)
     
     WaitingCostToggle=1;
     
-    ql=0; % initialize current queue
     n=size(Par.Tr,1);
     m=size(Bin,1);
     
@@ -28,9 +27,12 @@ if ~isempty(Bin)
     % create matrix X
     X=(Par.Tr(Bin(:,1),ui) + ... distance from passenger
         ones(m,1)*( di' + ... current delay
-        Vin(:,4)'*0.5 + ... penalty for currently charging vehicles
-        (1-Vin(:,3)')*0.5) ... penalty for low soc vehicles
-       ).*(EnergyReq<Vin(:,3)'); % requirement for enough SOC
+                    Vin(:,4)'*0.5 + ... penalty for currently charging vehicles
+                    (1-Vin(:,3)')*0.5) ... penalty for low soc vehicles
+                   )...
+         .*(EnergyReq<Vin(:,3)'); % requirement for enough SOC
+     
+     X(X==0)=NaN;
     
     for tripID=1:m
         
@@ -70,7 +72,7 @@ if ~isempty(Bin)
                 
                 % accept request and update vehicle position
                 ui(uids)=Bin(tripID,2); % position
-                di(uids)=WaitingTime+distancetomove(tripID); % delay
+                di(uids)=floor(Delay)+distancetomove(tripID); % delay
 
                 % update travelled distance
                 tripdist=tripdist+distancetomove(tripID);
@@ -104,13 +106,13 @@ if ~isempty(Bin)
         
     end
     
+    %% alternative assignment
+    
+    % assignmentoptimal(X);
     
     
-
-%     assignmentoptimal(X);
+    %% report results
     
-    
-
     V=[ui , di , Used];
     B=[chosenmode , waiting , dropped , waitingestimated ];
     
