@@ -3,7 +3,7 @@
 
 function T=populateT(T)
 
-addpath('../CarSharingModel/utilities/dijkstra_alg');
+addpath('utilities/dijkstra_alg');
 N=size(T,1);
 for i=1:N
     i
