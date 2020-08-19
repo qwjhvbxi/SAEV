@@ -34,7 +34,11 @@ end
 
 DataFolder=setDataFolder();
 
-numparams=cellfun('length',varargin(2:2:end)); % length of each set of parameter values
+% numparams=cellfun('length',varargin(2:2:end)); % length of each set of parameter values
+numparams=zeros(1,floor(length(varargin)/2));
+for i=1:length(numparams)
+    numparams(i)=length(varargin{2*i});
+end
 posparams=numparams>1;      % set with more than one values (sensitivity)
 whichparm=find(posparams); 
 varparams=numparams(posparams); % number of sets with more than 1 value
@@ -67,7 +71,7 @@ for k=1:varparams(1)
             if whichparm(1)==i
                 ThisValue=varargin{(i-1)*2+2}(k);
             elseif whichparm(2)==i
-                ThisValue=varargin{(i-1)*2+2}{j};
+                ThisValue=varargin{(i-1)*2+2}(j);
             else
                 ThisValue=varargin{(i-1)*2+2};
             end
