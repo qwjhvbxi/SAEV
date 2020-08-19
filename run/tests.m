@@ -36,34 +36,47 @@ P.e=1;
 Res=generalC(P,-1,2)
 
 
-%% check for contraint violations
+%% check for constraint violations
 
-if 0
+d=Res.Internals.d;
 
-    d=Res.Internals.d;
-    
-    % charging when not in charging stations and with delay=0
-    v1=(d>0).*Res.Internals.s2;
-    sum(v1(:))
+% charging when not in charging stations and with delay=0
+c(1)=sum(sum((d>0).*Res.Internals.s2));
 
-    % charging more than possible
+% charging more than possible
+c(2)=sum(abs(round(Res.Sim.e(:),5))>P.Tech.chargekw);
 
 % charging with wrong status
+c(3)=sum(sum((abs(round(Res.Sim.e,5))>0).*(Res.Internals.s2(1:end-1,:)==0)));
+
+% double status
+c(4)=sum(sum((Res.Internals.s1+Res.Internals.s2+Res.Internals.s3)>1));
 
 % moving while charging
+c(5)=sum(sum((d>0).*Res.Internals.s2));
 
-% delay
-% should be not more than 1
-dchanges=max(Res.Internals.d(1:end-1,:)-Res.Internals.d(2:end,:));
-find(dchanges>1)
+% soc limits
+c(6)=(max(Res.Sim.q(:))>P.Operations.maxsoc)+(min(Res.Sim.q(:))<P.Operations.minsoc);
 
-v=9972;
-z=1:100;
-% d s1 s2 s3
-full([Res.Internals.d(z,v) Res.Internals.s1(z,v) Res.Internals.s2(z,v) Res.Internals.s3(z,v)])
-plot(Res.Internals.d(z,v))
+% delay should be not more than 1
+c(8)=sum((max(Res.Internals.d(1:end-1,:)-Res.Internals.d(2:end,:)))>1);
 
+% % specific trip
+% v=9972;
+% z=1:100;
+% % d s1 s2 s3
+% full([Res.Internals.d(z,v) Res.Internals.s1(z,v) Res.Internals.s2(z,v) Res.Internals.s3(z,v)])
+% plot(Res.Internals.d(z,v))
+
+if sum(c)>0
+    c
+    warning('constraint violations!');
+else
+    fprintf('no violations\n');
 end
+
+
+
 
 
 
