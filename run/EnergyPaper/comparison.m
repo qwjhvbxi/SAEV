@@ -37,9 +37,8 @@
 
 %% 5 wednesdays
 
-addpath plots
-
 Days=13:7:13+7*4;
+% Days=13
 
 % optimal
 Transport.thor=8;          % horizon (time steps)
@@ -47,10 +46,12 @@ Transport.rho1=0.01;        % weight of secondary objective
 Transport.rho2=0.01;        % weight of charging objective for electricity price
 Transport.rho3=0.01;        % weight of charging objective for SOC
 Transport.rho4=0.000001;    % weight for fixed charge
-[P1,R1]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"opti",'TransportLayer',Transport,'gridfile',"NY_DA_2016",'tripfolder',"NYC2016-small",'tripday,gridday',Days);
+
+% optimal
+[P1,R1]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"opti",'TransportLayer',Transport,'gridfile',"NY_DA_2016",'tripfolder',["NYC2016-small_150","NYC2016-small_100"],'tripday,gridday',Days);
 
 % simplified
-[P2,R2]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"simplified",'gridfile',"NY_DA_2016",'tripfolder',"NYC2016-small",'tripday,gridday',Days);
+[P2,R2]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"simplified",'gridfile',"NY_DA_2016",'tripfolder',"NYC2016-small_150",'tripday,gridday',Days);
 
 % cost comparison
 sum([R1.cost])
