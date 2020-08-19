@@ -47,7 +47,6 @@ load([DataFolder 'scenarios/NYC2016-small.mat'],'C','T');
 
 setlimits=[0,5;0,5];
 
-
 if 0  % specific day
 
     P=cpar('NYC2016');
@@ -78,9 +77,10 @@ end
 
 if 1  % folder based
     
+    TripRatio=1/100;%1/200; % 
     Period=1:76;
     TripFolder='NYC2016';
-    NewTripFolder='NYC2016-small';
+    NewTripFolder='NYC2016-small_100';
     
     for d=1:length(Period)
         
@@ -88,13 +88,15 @@ if 1  % folder based
         load(tripFileLocation,'A','Atimes');
 
         [~,~,A2,A2times,tripsubset]=generateScenario(A,Atimes,10,setlimits,C);
+        
+        [A3,A3times,~]=cleanData(A2,A2times,1);
 
-        % remove trips with same origin/destination
-        DifferentOD=(A2(:,1)~=A2(:,2));
-        A3=A2(DifferentOD,:);
-        A3times=A2times(DifferentOD,:);
+%         % remove trips with same origin/destination
+%         DifferentOD=(A2(:,1)~=A2(:,2));
+%         A3=A2(DifferentOD,:);
+%         A3times=A2times(DifferentOD,:);
 
-        k=round(length(A2)/200);
+        k=round(length(A3)*TripRatio);
         [A,Atimes]=reduceTrips(A3,A3times,k);
 
         save([DataFolder 'trips/' NewTripFolder '/d' num2str(Period(d)) '.mat'],'A','Atimes');
@@ -120,7 +122,7 @@ end
 
 function [A,Atimes]=reduceTrips(A3,A3times,k)
 
-M=randperm(length(A3),k);
+M=sort(randperm(length(A3),k));
 A=A3(M,:);
 Atimes=A3times(M,:);
 
