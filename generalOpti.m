@@ -134,7 +134,7 @@ clear d1 d2 ReshapeFactor x y;
 % dkemd, dkod, dktrip are the number of minutes of travel for
 % relocation, serving trips, and total, respectively, for each
 % energy layer time step. fk
-[fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,P.tripday);
+[fo,fd,Trips]=generateEMD1(A,Atimes,T,etsim,TripName,P.tripday);
 
 
 %% setup energy layer
@@ -146,7 +146,7 @@ if strcmp(P.enlayeralg,'aggregate')
         P2=P;
         P2.tripday=P.tripday+1;
         [A2,Atimes2,~,~]=loadTrips(P2);
-        [fo2,fd2,Trips2]=generateEMD(A2,Atimes2,T,etsim,TripName,P.tripday+1);
+        [fo2,fd2,Trips2]=generateEMD1(A2,Atimes2,T,etsim,TripName,P.tripday+1);
         fo=[fo(1:1440,:) ; fo2(1:1440,:)];
         fd=[fd(1:1440,:) ; fd2(1:1440,:)];
         Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
@@ -884,7 +884,7 @@ end
 
 
 
-function [fo,fd,Trips]=generateEMD(A,Atimes,T,etsim,TripName,tripday)
+function [fo,fd,Trips]=generateEMD1(A,Atimes,T,etsim,TripName,tripday)
     
     DataFolder=setDataFolder();
     n=size(T,1);
