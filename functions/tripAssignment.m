@@ -1,4 +1,4 @@
-%% [V,B]=tripAssignment(Vin,Bin,Par)
+%% [V,B,tripdist,relodist,queue]=tripAssignment(Vin,Bin,Par)
 % Trip assignment for SAEV simulation
 % 
 % input
@@ -10,13 +10,16 @@
 %     Tr, ad, e, minsoc, maxwait, modechoice 
 % 
 % output 
-% V: vehicle movements in the form [station delay]
+% V: vehicle movements in the form [station delay used]
 % B: passengers status in the form:
-% [chosenmode waiting dropped waitingestimated offeredprice]
+% [chosenmode waiting dropped waitingestimated]
+% tripdist: total distance with passengers
+% relodist: total distance for relocation to pickup (0)
+% queue: queued passengers (IDs)
 %
 % See also: generalC
 
-function [V,B,tripdist,queue]=tripAssignment(Vin,Bin,Par)
+function [V,B,tripdist,relodist,queue]=tripAssignment(Vin,Bin,Par)
 
 tripdist=0;
 queue=zeros(100,1);

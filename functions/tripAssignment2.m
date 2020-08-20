@@ -1,6 +1,28 @@
-function [V,B,tripdist,queue]=tripAssignment2(Vin,Bin,Par)
+%% [V,B,tripdist,relodist,queue]=tripAssignment2(Vin,Bin,Par)
+% Trip assignment for SAEV simulation with active rebalancing
+% 
+% input
+% Vin: vehicles information in the form:
+% [station delay soc]
+% Bin: passengers info in the form:
+% [O D waiting]
+% Par: parameters:
+%     Tr, ad, e, minsoc, maxwait, modechoice 
+% 
+% output 
+% V: vehicle movements in the form [station delay used]
+% B: passengers status in the form:
+% [chosenmode waiting dropped waitingestimated]
+% tripdist: total distance with passengers
+% relodist: total distance for relocation to pickup
+% queue: queued passengers (IDs)
+%
+% See also: generalC
+
+function [V,B,tripdist,relodist,queue]=tripAssignment2(Vin,Bin,Par)
 
 tripdist=0;
+relodist=0;
 queue=zeros(100,1);
 
 % if there are trips
@@ -67,21 +89,24 @@ if ~isempty(Bin)
             
             % if the best vehicle is at the station
             if WaitingTime<=Par.maxwait
-
+                
                 waiting(tripID)=WaitingTime;
+                
+                % update travelled distance
+                tripdist=tripdist+distancetomove(tripID);
+                
+                % update additional travel distance to pickup
+                relodist=relodist+Par.Tr(ui(uids),Bin(tripID,1));
                 
                 % accept request and update vehicle position
                 ui(uids)=Bin(tripID,2); % position
                 di(uids)=floor(Delay)+distancetomove(tripID); % delay
-
-                % update travelled distance
-                tripdist=tripdist+distancetomove(tripID);
                 
                 % update X
                 X(:,uids)=Par.Tr(Bin(:,1),ui(uids))+di(uids);
                 
                 Used(uids)=1;
-
+                
             else
 
                 % TODO: fix pooling
