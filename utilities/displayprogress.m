@@ -1,13 +1,15 @@
 function TimeLeft=displayprogress(iteration,totaliterations,timeelapsed)
 
+LastIterations=100;
+
 if numel(timeelapsed)==1
     % global average
     timespent=timeelapsed;
     relatedtime=iteration;
 else
-    % consider only last 50 iterations
-    timespent=timeelapsed(max(1,iteration))-timeelapsed(max(1,iteration-50+1));
-    relatedtime=min(50,iteration);
+    % consider only last iterations
+    timespent=timeelapsed(max(1,iteration))-timeelapsed(max(1,iteration-LastIterations+1));
+    relatedtime=min(LastIterations,iteration);
 end
 
 DisplayResolution=20;
