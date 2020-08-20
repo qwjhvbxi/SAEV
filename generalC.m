@@ -4,6 +4,7 @@
 % 
 % TODO: explicitly define and document all statuses and corresponding
 % physical meanings
+% TODO: fix problem with pickup from same node (Tr(i,i)=0?)
 % 
 % see also CPAR
 
@@ -73,8 +74,9 @@ n=size(T,1);              % number of nodes
 tsim=1440/P.e;            % number of time steps
 etsim=floor(1440/P.beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
-ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
-ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
+Tr(1:n+1:end)=0;
+ac=P.Tech.chargekw/P.Tech.battery/60*P.e;    % charge rate per time step (normalized)
+ad=P.Tech.consumption/P.Tech.battery*P.e;    % discharge rate per time step (normalized)
 ts=round(P.TransportLayer.ts/P.e);
 tr=round(P.TransportLayer.tr/P.e);
 tx=round(P.TransportLayer.tx/P.e);
@@ -400,12 +402,15 @@ for i=1:tsim
         Par.Trs=Trs;
         Par.bmin=bmin;
         
-        [Vout,bkt,relodisti]=Relocation(Vin,Par);
+        [Vout,bkt]=Relocation(Vin,Par);
         
         % update vehicles position
-        used=logical(Vout(:,3));
-        u(i,used)=chargingStations(Vout(used,1)); 
-        d(i,:)=Vout(:,2)';
+        used=logical(Vout(:,2));
+        relodestinations=chargingStations(Vout(used,1));
+        relodisti=Tr(sub2ind(size(Tr),u(i,used),relodestinations'));
+        
+        u(i,used)=relodestinations; 
+        d(i,used)=d(i,used)+relodisti;
         
         % update vehicles status (relocating vehicles cannot be relocated)
         s1(i,used)=1;
@@ -414,7 +419,7 @@ for i=1:tsim
         
         % update results
         b(kt,:)=bkt;
-        relodist(i)=relodisti;
+        relodist(i)=sum(relodisti);
         
     end
 
@@ -490,7 +495,8 @@ for i=1:tsim
     e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+s2(i,:).*chargevector))-q(i,:);
 
     % update SOC 
-    q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
+    %     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
+    q(i+1,:)=q(i,:)+e(i,:)-(d(i,:)>0).*ad;
 
     % update position
     u(i+1,:)=u(i,:);

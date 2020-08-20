@@ -1,7 +1,7 @@
 % Vin: vehicles information in the form: [station delay soc charging relocating]
 
 
-function [V,b,relodist]=Relocation(Vin,Par)
+function [V,b]=Relocation(Vin,Par)
 
 nc=size(Par.Trs);
 nv=size(Vin,1);
@@ -10,7 +10,6 @@ position=Vin(:,1);
 delay=Vin(:,2);
 soc=Vin(:,3);
 relocating=Vin(:,5);
-relodist=0;
 used=zeros(nv,1);
 
 % vehicles at clusters
@@ -66,23 +65,17 @@ if ~isempty(x)
             % update destination station
             position(ui)=Rs(dstnid(ka));
 
-            % update delay
-            delay(ui)=delay(ui)+arris(ka);
-
             % update status
             used(ui)=true;
-
-            % save length of relocation
-            relodist=relodist+arris(ka);
 
         end
     end
     
-    V=[position , delay , used];
+    V=[position , used];
     
 else
     
-    V=[Vin(:,1:2) , zeros(nv,1)];
+    V=[Vin(:,1) , zeros(nv,1)];
     
 end
 
