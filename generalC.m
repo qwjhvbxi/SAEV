@@ -492,7 +492,7 @@ for i=1:tsim
     %% simulation variables update
     
     % power exchanged for vehicles charging
-    e(i,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+s2(i,:).*chargevector))-q(i,:);
+    e(i,:)=s2(i,:).*max(-ac,min(ac,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
 
     % update SOC 
     %     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
@@ -511,7 +511,7 @@ for i=1:tsim
     
     % update statuses
     s1(i+1,:)=(d(i+1,:)>0).*s1(i,:);
-    s2(i+1,:)=AtChargingStation.*(d(i+1,:)==0);
+    s2(i+1,:)=logical(AtChargingStation.*(d(i+1,:)==0));
     s3(i+1,:)=(d(i+1,:)>0).*s3(i,:);
     
     if isfield(P,'clusters')

@@ -96,11 +96,12 @@ if ~isempty(Bin)
                 tripdist=tripdist+distancetomove(tripID);
                 
                 % update additional travel distance to pickup
-                relodist=relodist+Par.Tr(ui(uids),Bin(tripID,1));
+                pickupdist=Par.Tr(ui(uids),Bin(tripID,1));
+                relodist=relodist+pickupdist;
                 
                 % accept request and update vehicle position
                 ui(uids)=Bin(tripID,2); % position
-                di(uids)=floor(Delay)+distancetomove(tripID); % delay
+                di(uids)=di(uids)+pickupdist+distancetomove(tripID); % delay
                 
                 % update X
                 X(:,uids)=Par.Tr(Bin(:,1),ui(uids))+di(uids);
