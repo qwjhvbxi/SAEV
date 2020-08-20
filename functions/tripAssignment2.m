@@ -43,10 +43,10 @@ if ~isempty(Bin)
     waitingestimated=zeros(m,1);
     dropped=zeros(m,1);
     
-    distancepickup=Par.Tr(Bin(:,1),ui);
+    distancepickup=Par.Tr(ui,Bin(:,1))';
     distancetomove=Par.Tr(sub2ind(size(Par.Tr),Bin(:,1),Bin(:,2)));
     
-    EnergyReq=(distancepickup+distancetomove*ones(1,v))*Par.ad+Par.minsoc;
+    EnergyReq=(distancepickup+(distancetomove+di'))*Par.ad+Par.minsoc;
     
     % create matrix X
     X=(distancepickup + ... distance from passenger
