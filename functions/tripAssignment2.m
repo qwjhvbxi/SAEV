@@ -32,6 +32,7 @@ if ~isempty(Bin)
     
     n=size(Par.Tr,1);
     m=size(Bin,1);
+    v=size(Vin,1);
     
     ui=Vin(:,1);
     di=Vin(:,2);
@@ -42,17 +43,18 @@ if ~isempty(Bin)
     waitingestimated=zeros(m,1);
     dropped=zeros(m,1);
     
+    distancepickup=Par.Tr(Bin(:,1),ui);
     distancetomove=Par.Tr(sub2ind(size(Par.Tr),Bin(:,1),Bin(:,2)));
     
-    EnergyReq=distancetomove*Par.ad+Par.minsoc;
+    EnergyReq=(distancepickup+distancetomove*ones(1,v))*Par.ad+Par.minsoc;
     
     % create matrix X
-    X=(Par.Tr(Bin(:,1),ui) + ... distance from passenger
+    X=(distancepickup + ... distance from passenger
         ones(m,1)*( di' + ... current delay
                     Vin(:,4)'*0.5 + ... penalty for currently charging vehicles
                     (1-Vin(:,3)')*0.5) ... penalty for low soc vehicles
                    )...
-         .*(EnergyReq<Vin(:,3)'); % requirement for enough SOC
+         .*(EnergyReq<ones(m,1)*Vin(:,3)'); % requirement for enough SOC
      
      X(X==0)=NaN;
     
@@ -104,7 +106,8 @@ if ~isempty(Bin)
                 di(uids)=di(uids)+pickupdist+distancetomove(tripID); % delay
                 
                 % update X
-                X(:,uids)=Par.Tr(Bin(:,1),ui(uids))+di(uids);
+                X(:,uids)=(Par.Tr(Bin(:,1),ui(uids))+di(uids)).*(EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
+                X(X(:,uids)==0,uids)=NaN;
                 
                 Used(uids)=1;
                 
