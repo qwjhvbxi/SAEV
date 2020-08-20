@@ -1,9 +1,7 @@
 %% check for constraint violations
 
-d=Res.Internals.d;
-
 % charging when not in charging stations and with delay=0
-c(1)=sum(sum((d>0).*Res.Internals.s2));
+c(1)=sum(sum((Res.Internals.d>0).*Res.Internals.s2));
 
 % charging more than possible
 c(2)=sum(abs(round(Res.Sim.e(:),4))>P.Tech.chargekw);
@@ -15,7 +13,7 @@ c(3)=sum(sum((abs(round(Res.Sim.e,5))>0).*(Res.Internals.s2(1:end-1,:)==0)));
 c(4)=sum(sum((Res.Internals.s1+Res.Internals.s2+Res.Internals.s3)>1));
 
 % moving while charging
-c(5)=sum(sum((d>0).*Res.Internals.s2));
+c(5)=sum(sum((Res.Internals.d>0).*Res.Internals.s2));
 
 % soc limits (can go loewer if going to charging station)
 c(6)=(max(Res.Sim.q(:))>P.Operations.maxsoc)+sum(sum(Res.Sim.q<P.Operations.minsoc.*full(Res.Internals.s2+Res.Internals.s3==0)));
@@ -23,18 +21,16 @@ c(6)=(max(Res.Sim.q(:))>P.Operations.maxsoc)+sum(sum(Res.Sim.q<P.Operations.mins
 % charging outside of charging stations
 c(7)=sum(setdiff(unique(full(abs(round(Res.Sim.e,5))>0).*double(Res.Sim.u(1:end-1,:))),P.chargingStations))>0;
 
-% delay change should be not more than 1
+% delay change more than 1
 c(8)=sum((max(Res.Internals.d(1:end-1,:)-Res.Internals.d(2:end,:)))>1);
 
-% assigned distances should be the same with traveled
+% assigned distances different from traveled
 c(9)=(sum(sum(Res.Internals.d>0))+sum(max(Res.Internals.d(end,:)-1,0))~=sum(Res.Sim.relodist)+sum(Res.Sim.tripdist));
 
-% total charged should be same as total traveled + (end soc-start soc)
+% energy in very different from energy out
 energyIn=(full(sum(max(0,Res.Sim.e(:)))/60*P.e)+double(sum(Res.Sim.q(1,:))*P.Tech.battery));
 energyOut=(-full(sum(min(0,Res.Sim.e(:)))/60*P.e)+(sum(Res.Sim.relodist+Res.Sim.tripdist)-sum(max(Res.Internals.d(end,:),0)))*P.Tech.consumption + sum(Res.Sim.q(end,:))*P.Tech.battery);
 c(10)=(round(energyIn/energyOut,3)~=1);
-
-
 
 
 
