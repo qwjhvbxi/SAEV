@@ -4,7 +4,6 @@
 % 
 % TODO: explicitly define and document all statuses and corresponding
 % physical meanings
-% TODO: add relocation distance to trips in clusters to pickup
 % 
 % see also CPAR
 
@@ -100,19 +99,11 @@ chosenmode=false(length(A),1);% which mode is chosen?
 pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
 offeredprices=zeros(length(A),1);  % price offered to each passenger
-relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
-tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
+relodist=zeros(tsim,1); % distances of relocation (at moment of decision)
+tripdist=zeros(tsim,1); % distances of trips (at moment of acceptance)
 
 % parameters for trip assignment
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',logical(P.modechoice+isfield(P,'pricing')),'maxwait',P.Operations.maxwait);
-
-% initial states
-q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
-if isfield(P.Operations,'uinit')
-    u(1,:)=P.Operations.uinit;
-else
-    u(1,:)=randi(n,1,P.m);                 % initial position of vehicles
-end
 
 % electicity price and emissions profiles
 d1=P.gridday;
@@ -145,6 +136,16 @@ else
     nc=n;
 end
 b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
+
+
+%% initial states
+
+q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
+if isfield(P.Operations,'uinit')
+    u(1,:)=P.Operations.uinit;
+else
+    u(1,:)=chargingStations(randi(nc,1,P.m));                 % initial position of vehicles
+end
 
 
 %% setup charging module
@@ -455,9 +456,9 @@ for i=1:tsim
 
         % tripAssignment (no clustering) or tripAssignment2 (clustering)
         if isfield(P,'clusters')
-            [Vout,Bout,tripdisti,queuei]=tripAssignment2(Vin,Bin,Par);
+            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
         else 
-            [Vout,Bout,tripdisti,queuei]=tripAssignment(Vin,Bin,Par);
+            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
         end
         
         % update vehicles positions
@@ -472,6 +473,7 @@ for i=1:tsim
         
         % update results
         tripdist(i)=tripdisti;
+        relodist(i)=relodist(i)+relodistiPU;
         chosenmode(trips)=Bout(:,1);
         waiting(trips)=Bout(:,2);
         dropped(trips)=Bout(:,3);
@@ -510,8 +512,10 @@ for i=1:tsim
         % move idle vehicles back to charging stations
         IdleReached=(g(i+1,:).*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
         u(i+1,IdleReached)=chargingStations(Clusters(u(i+1,IdleReached)));
-        d(i+1,IdleReached)=Tr(sub2ind(size(Tr),u(i,IdleReached),u(i+1,IdleReached)));
+        relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),u(i+1,IdleReached)));
+        d(i+1,IdleReached)=relodistCS;
         s3(i+1,IdleReached)=true;
+        relodist(i)=relodist(i)+sum(relodistCS);
     end
     
     % record time
