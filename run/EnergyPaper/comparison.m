@@ -35,10 +35,13 @@
 % P.gridfile='NY_DA_2016';
 % [S2,R2]=multiDaySim(Period,P,gridoffset);
 
-%% 5 wednesdays
 
-Days=13:7:13+7*4;
-% Days=13
+%% 1 week
+
+
+DataFolder=setDataFolder();
+Days=18:24;
+m=30;
 
 % optimal
 Transport.thor=8;          % horizon (time steps)
@@ -47,30 +50,98 @@ Transport.rho2=0.01;        % weight of charging objective for electricity price
 Transport.rho3=0.01;        % weight of charging objective for SOC
 Transport.rho4=0.000001;    % weight for fixed charge
 
-% optimal
-[P1,R1]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"opti",'TransportLayer',Transport,'gridfile',"NY_DA_2016",'tripfolder',["NYC2016-small_150","NYC2016-small_100"],'tripday,gridday',Days);
+Trips={'NYC2016-small_150','NYC2016-small_100','NYC2016-small_75','NYC2016-small_50'};
+
+% create P cell
+K=length(Trips);
+for k=1:K
+    
+%     load([DataFolder 'trips/' Trips{k} '/d' Days(1)],'A');
+%     StartSoc=ones(1,m)*0.7;
+%     StartPos=A(1:Pmat{k}.m,1);
+%     StartFile=[DataFolder 'temp/StartFile_' num2str(n) '-' num2str(P.m) '.mat'];
+%     save(StartFile,'StartSoc','StartPos');
+
+    % common parameters
+    Pmat{k}=cpar('NYC2016-small');
+    Pmat{k}.m=m;
+    Pmat{k}.Operations.maxwait=Inf;
+    %Pmat{k}.Operations.uinit=A(1:Pmat{k}.m,1);
+    Pmat{k}.trlayeralg='opti';
+    Pmat{k}.TransportLayer=Transport;
+    Pmat{k}.gridfile='NY_DA_2016';
+    Pmat{k}.tripfolder=Trips{k};
+    
+    
+    % simplified
+    Pmat{K+k}=cpar('NYC2016-small');
+    Pmat{K+k}.m=m;
+    Pmat{K+k}.e=1;
+    Pmat{K+k}.Operations.maxwait=Inf;
+    %Pmat{K+k}.Operations.uinit=A(1:Pmat{k}.m,1);
+    Pmat{K+k}.trlayeralg='simplified';
+    Pmat{K+k}.gridfile='NY_DA_2016';
+    Pmat{K+k}.tripfolder=Trips{k};
+    
+end
+
+gridoffset=0;
+
+parfor k=1:length(Pmat)
+    multiDaySim(Days,Pmat{k},gridoffset)
+end
+
+
+parfor k=1:length(Pmat)
+    [S1,R1]=multiDaySim(Days,Pmat{k},gridoffset)
+    S(k)=S1;
+    R(k)=R1;
+end
 
 % simplified
-[P2,R2]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"simplified",'gridfile',"NY_DA_2016",'tripfolder',"NYC2016-small_150",'tripday,gridday',Days);
-
-% cost comparison
-sum([R1.cost])
-sum([R2.cost])
-
-% waiting comparison
-Sims2=[R2.Sim];
-Totwaiting=full(vertcat(Sims2.waiting));
-
-sum(Totwaiting>0)/length(Totwaiting)
-mean(Totwaiting(Totwaiting>0))
-
-sum([R1.cost])
-sum([R2.cost])
+    
 
 
 
 
-if 1
+if 0
+
+    %% 5 wednesdays 
+
+    Days=13:7:13+7*4;
+    % Days=13
+
+    % optimal
+    Transport.thor=8;          % horizon (time steps)
+    Transport.rho1=0.01;        % weight of secondary objective
+    Transport.rho2=0.01;        % weight of charging objective for electricity price
+    Transport.rho3=0.01;        % weight of charging objective for SOC
+    Transport.rho4=0.000001;    % weight for fixed charge
+
+    % optimal
+    [P1,R1]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"opti",'TransportLayer',Transport,'gridfile',"NY_DA_2016",'tripfolder',["NYC2016-small_150","NYC2016-small_100"],'tripday,gridday',Days);
+
+    % simplified
+    [P2,R2]=generateplotline3('NYC2016-small',[],'Operations.maxwait',Inf,'trlayeralg',"simplified",'gridfile',"NY_DA_2016",'tripfolder',"NYC2016-small_150",'tripday,gridday',Days);
+
+    % cost comparison
+    sum([R1.cost])
+    sum([R2.cost])
+
+    % waiting comparison
+    Sims2=[R2.Sim];
+    Totwaiting=full(vertcat(Sims2.waiting));
+
+    sum(Totwaiting>0)/length(Totwaiting)
+    mean(Totwaiting(Totwaiting>0))
+
+    sum([R1.cost])
+    sum([R2.cost])
+
+end
+
+
+if 0
 
     d=1;
     
