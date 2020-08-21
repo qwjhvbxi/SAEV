@@ -77,10 +77,10 @@ end
 
 if 1  % folder based
     
-    TripRatio=1/100;%1/200; % 
+    TripRatio=1/50;
     Period=1:76;
     TripFolder='NYC2016';
-    NewTripFolder='NYC2016-small_100';
+    NewTripFolder='NYC2016-small_50';
     
     for d=1:length(Period)
         
@@ -90,11 +90,6 @@ if 1  % folder based
         [~,~,A2,A2times,tripsubset]=generateScenario(A,Atimes,10,setlimits,C);
         
         [A3,A3times,~]=cleanData(A2,A2times,1);
-
-%         % remove trips with same origin/destination
-%         DifferentOD=(A2(:,1)~=A2(:,2));
-%         A3=A2(DifferentOD,:);
-%         A3times=A2times(DifferentOD,:);
 
         k=round(length(A3)*TripRatio);
         [A,Atimes]=reduceTrips(A3,A3times,k);

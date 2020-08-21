@@ -30,7 +30,7 @@ for j=1:length(Period)
     R(j)=generalC(P,1,-j);
     SOC(j+1,:)=R(j).Sim.q(end,:);
     Uinit(j+1,:)=max(1, min( n , ...
-        double(R(j).Sim.u(end,:)) + full(sum(R(j).Internals.v(721:end,:))) + full(sum(R(j).Internals.w(721:end,:))) ) );
+        double(R(j).Sim.u(end,:)) ) );
 end
 
 
