@@ -22,6 +22,7 @@
 function [V,B,tripdist,relodist,queue]=tripAssignment(Vin,Bin,Par)
 
 tripdist=0;
+relodist=0;
 queue=zeros(100,1);
 
 % if there are trips
