@@ -1,3 +1,17 @@
+function tests(P,Res)
+
+DataFolder=setDataFolder();
+load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
+n=size(T,1);
+
+if isfield(P,'clusters')
+    chargingStations=P.chargingStations;
+    Clusters=P.clusters;
+else
+    chargingStations=(1:n)';
+    Clusters=(1:n)';
+end
+
 %% check for constraint violations
 
 % charging when not in charging stations and with delay=0
@@ -19,7 +33,7 @@ c(5)=sum(sum((Res.Internals.d>0).*Res.Internals.s2));
 c(6)=(max(Res.Sim.q(:))>P.Operations.maxsoc)+sum(sum(Res.Sim.q<P.Operations.minsoc.*full(Res.Internals.s2+Res.Internals.s3==0)));
 
 % charging outside of charging stations
-c(7)=sum(setdiff(unique(full(abs(round(Res.Sim.e,5))>0).*double(Res.Sim.u(1:end-1,:))),P.chargingStations))>0;
+c(7)=sum(setdiff(unique(full(abs(round(Res.Sim.e,5))>0).*double(Res.Sim.u(1:end-1,:))),chargingStations))>0;
 
 % delay change more than 1
 c(8)=sum((max(Res.Internals.d(1:end-1,:)-Res.Internals.d(2:end,:)))>1);
@@ -54,6 +68,6 @@ plot(Res.Internals.d(z,v))
 
 end
 
-
+end
 
 
