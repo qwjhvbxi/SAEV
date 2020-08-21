@@ -5,6 +5,7 @@
 % TODO: explicitly define and document all statuses and corresponding
 % physical meanings
 % TODO: fix problem with pickup from same node (Tr(i,i)=0?)
+% TODO: 
 % 
 % see also CPAR
 
@@ -266,6 +267,20 @@ for i=1:tsim
 	%% display progress
     
     displayState(i,tsim,dispiter,S.comptime(i)-S.comptime(1),40)
+    ui=u(i,:);
+    relodist(i)=0;
+    
+    
+    %% move idle vehicles back to charging stations
+    
+    if isfield(P,'clusters')
+        IdleReached=(g(i,:).*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
+        ui(IdleReached)=chargingStations(Clusters(ui(IdleReached)));
+        relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
+        d(i,IdleReached)=relodistCS;
+        s3(i,IdleReached)=true;
+        relodist(i)=relodist(i)+sum(relodistCS);
+    end
     
     
     %% charging optimization
@@ -340,7 +355,7 @@ for i=1:tsim
 
             % number of vehicles at each station (including vehicles directed there)
             % uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
-            uv=histc(u(i,:),1:n);
+            uv=histc(ui,1:n);
 
             % current pricing calculation
             PricingStep=ceil((i-1)/tp)+1;
@@ -395,7 +410,7 @@ for i=1:tsim
              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
-        Vin=[Clusters(u(i,:)) , d(i,:)' , q(i,:)' , s2(i,:)' , logical(s1(i,:)+s3(i,:))' ];
+        Vin=[Clusters(ui) , d(i,:)' , q(i,:)' , s2(i,:)' , logical(s1(i,:)+s3(i,:))' ];
         Par.dw=dw; % number of passengers waiting at each station
         Par.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
         Par.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
@@ -407,9 +422,9 @@ for i=1:tsim
         % update vehicles position
         used=logical(Vout(:,2));
         relodestinations=chargingStations(Vout(used,1));
-        relodisti=Tr(sub2ind(size(Tr),u(i,used),relodestinations'));
+        relodisti=Tr(sub2ind(size(Tr),ui(used),relodestinations'));
         
-        u(i,used)=relodestinations; 
+        ui(used)=relodestinations; 
         d(i,used)=d(i,used)+relodisti;
         
         % update vehicles status (relocating vehicles cannot be relocated)
@@ -419,7 +434,7 @@ for i=1:tsim
         
         % update results
         b(kt,:)=bkt;
-        relodist(i)=sum(relodisti);
+        relodist(i)=relodist(i)+sum(relodisti);
         
     end
 
@@ -454,20 +469,20 @@ for i=1:tsim
         offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc connected]
-        Vin=[u(i,:)' , d(i,:)' , q(i,:)' , s2(i,:)' ];
+        Vin=[ui' , d(i,:)' , q(i,:)' , s2(i,:)' ];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
         % tripAssignment (no clustering) or tripAssignment2 (clustering)
-        if isfield(P,'clusters')
+%         if isfield(P,'clusters')
             [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
-        else 
-            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
-        end
+%         else 
+%             [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
+%         end
         
         % update vehicles positions
-        u(i,:)=Vout(:,1)';
+        ui=Vout(:,1)';
         d(i,:)=Vout(:,2)';
         
         % update vehicles status
@@ -488,7 +503,7 @@ for i=1:tsim
         
     end
     
-
+    
     %% simulation variables update
     
     % power exchanged for vehicles charging
@@ -499,7 +514,7 @@ for i=1:tsim
     q(i+1,:)=q(i,:)+e(i,:)-(d(i,:)>0).*ad;
 
     % update position
-    u(i+1,:)=u(i,:);
+    u(i+1,:)=ui;%(i,:);
     
     % update delay
     d(i+1,:)=max(0,d(i,:)-1);
@@ -513,16 +528,6 @@ for i=1:tsim
     s1(i+1,:)=(d(i+1,:)>0).*s1(i,:);
     s2(i+1,:)=logical(AtChargingStation.*(d(i+1,:)==0));
     s3(i+1,:)=(d(i+1,:)>0).*s3(i,:);
-    
-    if isfield(P,'clusters')
-        % move idle vehicles back to charging stations
-        IdleReached=(g(i+1,:).*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
-        u(i+1,IdleReached)=chargingStations(Clusters(u(i+1,IdleReached)));
-        relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),u(i+1,IdleReached)));
-        d(i+1,IdleReached)=relodistCS;
-        s3(i+1,IdleReached)=true;
-        relodist(i)=relodist(i)+sum(relodistCS);
-    end
     
     % record time
     S.trlayerCPUtime(i)=cputime-S.lasttime;
