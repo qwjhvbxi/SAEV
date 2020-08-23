@@ -36,6 +36,8 @@ switch Scenario
         P.tripfile='Tokyo2008_1day_48k';
     case 'Munich'
         P.tripfile='Munich';
+    case 'Munich_clustered'
+        P.tripfile='Munich_clustered';
 end
 P.tripday=1;     % which day of the trip file
 
