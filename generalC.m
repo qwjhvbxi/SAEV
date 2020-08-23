@@ -11,15 +11,28 @@
 
 function [Res]=generalC(P,extsave,dispiter)
 
-if strcmp(P.trlayeralg,'opti')
-    Res=generalOpti(P,extsave,dispiter);
-    return
-end
-
 %% initializations
 
 addpath functions utilities
 DataFolder=setDataFolder();
+
+
+%% generate unique Hash for savefile
+
+Hash=DataHash(P);
+simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
+if extsave<2
+    if extsave>=0 && exist(simname,'file')
+        % if the file already exists, just return the previous result
+        load(simname,'Res');
+        return
+    end
+end
+
+if strcmp(P.trlayeralg,'opti')
+    Res=generalOpti(P,extsave,dispiter);
+    return
+end
 
 
 %% parallel computing and input check
@@ -36,19 +49,6 @@ if isfield(P,'tripfolder')
     TripName=P.tripfolder;
 else
     TripName=P.tripfile;
-end
-
-
-%% generate unique Hash for savefile
-
-Hash=DataHash(P);
-simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
-if extsave<2
-    if extsave>=0 && exist(simname,'file')
-        % if the file already exists, just return the previous result
-        load(simname,'Res');
-        return
-    end
 end
 
 

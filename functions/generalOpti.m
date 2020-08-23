@@ -23,11 +23,6 @@ if nargin<3
     end
 end
 
-if strcmp(P.enlayeralg,'opti') && strcmp(P.trlayeralg,'simplified')
-    warning('impossible combination!');
-    return
-end
-
 if isfield(P,'tripfolder')
     TripName=P.tripfolder;
 else
@@ -54,7 +49,6 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','C');
 
 % NOTE: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,AbuckC,Distances]=loadTrips(P);
-AbuckC=AbuckC(1:P.e:end);
 
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
@@ -71,10 +65,6 @@ etsim=floor(1440/P.beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
 ac=round(P.Tech.chargekw/P.Tech.battery/60*P.e,3);    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;             % discharge rate per time step (normalized)
-% ts=round(P.TransportLayer.ts/P.e);
-% tr=round(P.TransportLayer.tr/P.e);
-% tx=round(P.TransportLayer.tx/P.e);
-% bmin=P.TransportLayer.bmin;
 mthor=round(P.EnergyLayer.mthor/P.beta);
 
 % main variables
@@ -89,7 +79,6 @@ chosenmode=false(length(A),1);% which mode is chosen?
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
 waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
-offeredprices=ones(length(A),1);  % price offered to each passenger
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
