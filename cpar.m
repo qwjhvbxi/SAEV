@@ -17,32 +17,13 @@ if nargin<2
     trlayer='simplified';
 end
 
-% trip file associated with scenario
-switch Scenario 
-    case 'NYC2016'
-        % P.tripfile='NYC2016_Jan13-Mar16_10days';
-        % P.tripfolder='NYC2016';
-        P.tripfolder='NYC2016-nodes';
-    case 'NYC2018'
-        % P.tripfolder='NYC2018_10wed';
-        % P.tripfile='NY_trips_10wed_0103-0307_minutes';
-        P.tripfolder='NYC2018_10wed-nodes';
-    case 'NYC2016-small'
-        P.tripfile='NYC2016-small_13Jan';
-    case 'NYC2016-small2'
-        P.scenario='NYC2016-small';
-        P.tripfile='NYC2016-small2_13Jan';
-    case 'Tokyo189'
-        P.tripfile='Tokyo2008_1day_48k';
-    case 'Munich'
-        P.tripfile='Munich';
-    case 'Munich_clustered'
-        P.tripfile='Munich_clustered';
-end
-P.tripday=1;     % which day of the trip file
+P.tripfile=[];
+P.tripday=13;     % which day of the trip file
 
-P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'eleprices/' ($/MWh; half-hourly, 48x365)
-P.gridday=311;  % which day of the electricity file
+% P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'eleprices/' ($/MWh; half-hourly, 48x365)
+% P.gridday=311;  % which day of the electricity file
+P.gridfile='NY_DA_2016'; % electricity price file in 'eleprices/' ($/MWh; half-hourly, 48x365)
+P.gridday=13;  % which day of the electricity file
 
 % P.chargingstations=[4,4;5,6];
 
@@ -98,13 +79,34 @@ P.Operations=Operations;
 P.EnergyLayer=Energy;
 P.TransportLayer=Transport;
 
-% case-dependent adjustments
+% trip file associated with scenario & case-dependent adjustments
 switch Scenario 
+    case 'NYC2016'
+        % P.tripfile='NYC2016_Jan13-Mar16_10days';
+        % P.tripfolder='NYC2016';
+        P.tripfolder='NYC2016-nodes';
+    case 'NYC2016-20clusters'
+        P.Operations.maxidle=5; % minutes
+        P.tripfolder='NYC2016-nodes';
+    case 'NYC2018'
+        % P.tripfolder='NYC2018_10wed';
+        % P.tripfile='NY_trips_10wed_0103-0307_minutes';
+        P.tripfolder='NYC2018_10wed-nodes';
     case 'NYC2016-small'
+        P.tripfile='NYC2016-small_13Jan';
         P.m=30; 
     case 'NYC2016-small2'
+        P.scenario='NYC2016-small';
+        P.tripfile='NYC2016-small2_13Jan';
         P.m=5;
     case 'Tokyo189'
+        P.tripfile='Tokyo2008_1day_48k';
         P.m=3500;
+    case 'Munich'
+        P.tripfile='Munich';
+    case 'Munich_clustered'
+        P.tripfile='Munich_clustered';
+end
+
 end
 
