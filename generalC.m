@@ -55,7 +55,7 @@ end
 %% load external files: scenario, trips and energy
 
 % load distance matrix
-load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
+load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
 
 % load trips
 % TODO: can add secondary trip file (real vs expected/forecasted)
@@ -125,9 +125,13 @@ clear d1 d2 ReshapeFactor x y;
 
 %% setup clustering
 
+% override loaded info if passed from P struct
 if isfield(P,'clusters')
     chargingStations=P.chargingStations;
     Clusters=P.clusters;
+end
+
+if exist('Clusters','var')
     As=Clusters(A);
     Trs=Tr(chargingStations,chargingStations);
     nc=length(chargingStations);             % number of clusters
@@ -149,6 +153,15 @@ if isfield(P.Operations,'uinit')
 else
     u(1,:)=chargingStations(randi(nc,1,P.m));                 % initial position of vehicles
 end
+if isfield(P.Operations,'dinit')
+    d(1,:)=P.Operations.dinit;
+end
+
+AtChargingStation=sum(u(1,:)==chargingStations);
+    
+% update statuses
+s2(1,:)=logical(AtChargingStation.*(d(1,:)==0));
+    
 
 
 %% setup charging module
@@ -274,7 +287,7 @@ for i=1:tsim
     
     %% move idle vehicles back to charging stations
     
-    if isfield(P,'clusters')
+    if nc<n
         IdleReached=(g(i,:).*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
         ui(IdleReached)=chargingStations(Clusters(ui(IdleReached)));
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
@@ -476,11 +489,8 @@ for i=1:tsim
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
         % tripAssignment (no clustering) or tripAssignment2 (clustering)
-%         if isfield(P,'clusters')
-            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
-%         else 
-%             [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
-%         end
+        [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
+        % [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
         
         % update vehicles positions
         ui=Vout(:,1)';
