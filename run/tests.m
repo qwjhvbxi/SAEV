@@ -38,8 +38,8 @@ c(7)=sum(setdiff(unique(full(abs(round(Res.Sim.e,5))>0).*double(Res.Sim.u(1:end-
 % delay change more than 1
 c(8)=sum((max(Res.Internals.d(1:end-1,:)-Res.Internals.d(2:end,:)))>1);
 
-% assigned distances different from traveled
-c(9)=(sum(sum(Res.Internals.d>0))+sum(max(Res.Internals.d(end,:)-1,0))~=sum(Res.Sim.relodist)+sum(Res.Sim.tripdist));
+% assigned distances different from traveled (not relevant with new d)
+% c(9)=(  (sum(sum(Res.Internals.d>0))+sum(max(Res.Internals.d(end,:)-1,0)))*P.e ~= (sum(Res.Sim.relodist)+sum(Res.Sim.tripdist)));
 
 % energy in very different from energy out
 energyIn=(full(sum(max(0,Res.Sim.e(:)))/60*P.e)+double(sum(Res.Sim.q(1,:))*P.Tech.battery));
