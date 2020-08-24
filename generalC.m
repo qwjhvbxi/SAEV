@@ -67,6 +67,17 @@ AbuckC=AbuckC(1:P.e:end);
 % are in matrix of shape N x days, with N the number of data points in a day
 load([DataFolder 'eleprices/' P.gridfile '.mat'],'x','y');
 
+% frequency control reserve
+if isfield(P,'FCR') && ~isempty(P.FCR)
+    FCR=true;
+    load([DataFolder 'grid/' P.FCR.filename],'f');
+    ReshapeFactor=size(f,1)/1440*P.e;
+    f=average2(f(:,P.gridday),ReshapeFactor);
+    af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
+else
+    FCR=false;
+end
+
 
 %% parameters of simulation
 
@@ -90,6 +101,7 @@ u=zeros(tsim,P.m,'double'); % vehicles in charging stations
 d=zeros(tsim,P.m,'double'); % delay
 g=zeros(tsim,P.m,'double'); % idle time
 e=zeros(tsim,P.m,'double'); % charging
+ef=zeros(tsim,P.m,'double'); % charging
 s1=false(tsim,P.m); % relocating status
 s2=false(tsim,P.m); % connection status
 s3=false(tsim,P.m); % moving to charging station status
@@ -517,12 +529,26 @@ for i=1:tsim
     
     %% simulation variables update
     
-    % power exchanged for vehicles charging
-    e(i,:)=s2(i,:).*max(-ac,min(ac,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
+    if FCR
+        % power exchanged for vehicles charging
+        acv=(q(i,:)<P.FCR.fastchargesoc)*ac+(q(i,:)>=P.FCR.fastchargesoc)*ac*P.FCR.slowchargeratio;
+    else
+        acv=ac;
+    end
+    
+    e(i,:)=s2(i,:).*max(-acv,min(acv,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
+    
+    if FCR
+        FcrNeed=af*min(1,max(-1,(1-(f(i)-P.FCR.limits(1))/(P.FCR.limits(2)-P.FCR.limits(1))*2))); % needed FCR
+        AvailableCharge=max(0,min(ac-e(i,:),s2(i,:).*(1-q(i,:)))); % EXAMPLE!!
+        AvailableDischarge=max(0,min(ac+e(i,:),s2(i,:).*(q(i,:)))); % EXAMPLE!!
+        ef(i,:)=min(1,max(0,FcrNeed)/sum(AvailableDischarge)).*AvailableDischarge ...
+               -min(1,-min(0,FcrNeed)/sum(AvailableCharge)).*AvailableCharge;
+    end
 
     % update SOC 
     %     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
-    q(i+1,:)=q(i,:)+e(i,:)-(di>0).*ad;
+    q(i+1,:)=q(i,:)+e(i,:)-ef(i,:)-(di>0).*ad;
 
     % update position
     u(i+1,:)=ui;%(i,:);
@@ -556,6 +582,7 @@ end
 Sim.u=uint8(u); % final destination of vehicles (station) [tsim x m]
 Sim.q=single(q); % state of charge 
 Sim.e=sparse(e/ac*P.Tech.chargekw);
+Sim.ef=ef*P.Tech.battery*60/P.e;
 Sim.waiting=sparse(waiting); % waiting times
 Sim.dropped=sparse(dropped); % dropped requests
 Sim.chosenmode=chosenmode; % chosen mode
