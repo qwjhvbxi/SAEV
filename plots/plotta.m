@@ -1,4 +1,4 @@
-function plotta(Res,PlotType,FolderName)
+function plotta(Res,PlotType,FolderName,FileID)
 
 DataFolder=setDataFolder();
 tsim=length(Res.Sim.relodist);
@@ -7,7 +7,7 @@ x1=linspace(0,24,tsim+1);
 x2=linspace(0,24,1440);
 xt=0:4:24;
 % priceUnits='(yen/kWh)';
-priceUnits='(€/MWh)';
+priceUnits=['(' char(8364) '/MWh)']; % €
 % Format='-depsc2';
 % Resolution=[];
 Format='-dpng';
@@ -15,6 +15,10 @@ Resolution='-r300';
 
 if nargin<3
     FolderName=[];
+end
+
+if nargin<4
+    FileID='';
 end
 
 switch PlotType
@@ -41,7 +45,7 @@ switch PlotType
         legend({'power','price'},'Orientation','horizontal')
         set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
         if ~isempty(FolderName)
-            print([DataFolder 'figures/' FolderName '/power'],Format,Resolution);
+            print([DataFolder 'figures/' FolderName '/power' FileID],Format,Resolution);
         end
         
 end
