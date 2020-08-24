@@ -12,7 +12,7 @@ function [A,Atimes,AbuckC,Distances]=loadTrips(P)
 DataFolder=setDataFolder();
 
 % determine file name
-if isfield(P,'tripfolder')
+if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
     tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday) '.mat'];
     TripName=P.tripfolder;
 else

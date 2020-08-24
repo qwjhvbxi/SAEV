@@ -17,8 +17,9 @@ if nargin<2
     trlayer='simplified';
 end
 
+P.tripfolder=[];
 P.tripfile=[];
-P.tripday=13;     % which day of the trip file
+P.tripday=[];     % which day of the trip file
 
 % P.gridfile='TokyoDA-FY2017-Reduced'; % electricity price file in 'eleprices/' ($/MWh; half-hourly, 48x365)
 % P.gridday=311;  % which day of the electricity file
@@ -85,13 +86,28 @@ switch Scenario
         % P.tripfile='NYC2016_Jan13-Mar16_10days';
         % P.tripfolder='NYC2016';
         P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
+    case 'NYC2016-10clusters'
+        P.Operations.maxidle=5; % minutes
+        P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
     case 'NYC2016-20clusters'
         P.Operations.maxidle=5; % minutes
         P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
+    case 'NYC2016-50clusters'
+        P.Operations.maxidle=5; % minutes
+        P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
     case 'NYC2018'
         % P.tripfolder='NYC2018_10wed';
         % P.tripfile='NY_trips_10wed_0103-0307_minutes';
         P.tripfolder='NYC2018_10wed-nodes';
+        P.tripday=15;     % which day of the trip file
     case 'NYC2016-small'
         P.tripfile='NYC2016-small_13Jan';
         P.m=30; 
@@ -106,6 +122,10 @@ switch Scenario
         P.tripfile='Munich';
     case 'Munich_clustered'
         P.tripfile='Munich_clustered';
+        P.Operations.maxwait=Inf;
+        P.Tech.chargekw=22;
+        P.m=5000;
+        P.e=1;
 end
 
 end
