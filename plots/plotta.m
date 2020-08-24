@@ -21,9 +21,15 @@ switch PlotType
     
     case 'power'
         
+        if isfield(Res.Sim,'ef')
+            ef=sum(Res.Sim.ef,2);
+        else
+            ef=zeros(size(Res.Sim.e,1),1);
+        end
+        
         % power exchanged
         figure('Units','centimeters','Position',[10,7,10,7])
-        plot(x,sum(Res.Sim.e,2)/1000)
+        plot(x,(sum(Res.Sim.e,2)+ef)/1000)
         ylabel('power (MW)')
         hold on
         yyaxis right
