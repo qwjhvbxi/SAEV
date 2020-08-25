@@ -5,124 +5,85 @@
 % 3. with optimized charging and carbon pricing
 % (6x simulations)
 
-% use carbon emissions from NYISO 2018, Germany 2019 (more renewables),
-% carbon price... ?
-
-if 0
-    %% prova
-    Period=4:8;
-    P=cpar('NYC2016');
-    P.tripfolder='NYC2016'; % trips in 2019
-    P.m=13000;
-    P.gridfile='NY_DA_2016';
-    gridoffset=0; % same year
-    P.carbonprice=0;
-    P.Operations.maxwait=Inf;
-    % with optimized charging
-    P.enlayeralg='aggregate';
-    [S0a,R0a]=multiDaySim(Period,P,gridoffset);
-end
 
 %% initializations
 
-% period
-% Period=4:31;
 Period=18:31+14;
-gridfile_a='NY_DA_2016';
-gridoffset_a=0; % same year
-gridfile_b='Germany_DA_2019';
-gridoffset_b=-11;%3; % 2016/01/01: Fri; 2019/01/01: Tue; 
-gridfile_c='Germany_DA_2019';
-gridoffset_c=-11+7*20;%3+7*20; % 2016/01/01: Fri; 2019/01/01: Tue; 
+gridfiles={'NY_DA_2016','Germany_DA_2019','Germany_DA_2019'};
+gridoffsets=[0,-11,-11+7*20];    % 2016/01/01: Fri; 2019/01/01: Tue;
 
 % parameters
 P=cpar('NYC2016');
 P.Operations.maxwait=Inf; %20
-P.tripfolder='NYC2016'; % trips in 2019
-P.m=13000;
+P.e=1;
+P.m=10000;
 
-
-%% new york grid
-
-P.gridfile=gridfile_a;
+P.gridfile=gridfiles{1};
 P.carbonprice=0;
-
-% no optimization
 P.enlayeralg='no';
-[S1a,R1a]=multiDaySim(Period,P,gridoffset_a);
-
-% with optimized charging
+Pmat{1}=P;
 P.enlayeralg='aggregate';
-[S2a,R2a]=multiDaySim(Period,P,gridoffset_a);
-
-% with optimized charging and carbon pricing
+Pmat{2}=P;
 P.carbonprice=50; % [$/ton]
-[S3a,R3a]=multiDaySim(Period,P,gridoffset_a);
+Pmat{3}=P;
 
-
-
-%% germany grid
-
-P.gridfile=gridfile_b;
+P.gridfile=gridfiles{2};
 P.carbonprice=0;
-
-% no optimization 
 P.enlayeralg='no';
-[S1b,R1b]=multiDaySim(Period,P,gridoffset_b);
-
-% with optimized charging
+Pmat{4}=P;
 P.enlayeralg='aggregate';
-[S2b,R2b]=multiDaySim(Period,P,gridoffset_b);
-
-% with optimized charging and carbon pricing
+Pmat{5}=P;
 P.carbonprice=50; % [$/ton]
-[S3b,R3b]=multiDaySim(Period,P,gridoffset_b);
+Pmat{6}=P;
 
-
-
-
-%% germany grid (summer)
-
-P.gridfile=gridfile_c;
+P.gridfile=gridfiles{3};
 P.carbonprice=0;
-
-% no optimization 
 P.enlayeralg='no';
-[S1c,R1c]=multiDaySim(Period,P,gridoffset_c);
-
-% with optimized charging
+Pmat{7}=P;
 P.enlayeralg='aggregate';
-[S2c,R2c]=multiDaySim(Period,P,gridoffset_c);
-
-% with optimized charging and carbon pricing
+Pmat{8}=P;
 P.carbonprice=50; % [$/ton]
-[S3c,R3c]=multiDaySim(Period,P,gridoffset_c);
+Pmat{9}=P;
 
+GridOffsetsVec=repelem(gridoffsets,1,3);
+
+parfor k=1:length(Pmat)
+    multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
+end
+
+for k=1:length(Pmat)
+    [S1,R1]=multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
+    S(k)=S1;
+end
 
 
 return
 
-%% plots
+
+%% plots initializations
 
 DataFolder=setDataFolder();
 
-load(['data/eleprices/' gridfile_a '.mat'],'x','y');
+load(['data/eleprices/' gridfiles{1} '.mat'],'x','y');
 Ele_a=x;
 Emi_a=y;
-load(['data/eleprices/' gridfile_b '.mat'],'x','y');
+load(['data/eleprices/' gridfiles{2} '.mat'],'x','y');
 Ele_b=x;
 Emi_b=y;
-load(['data/eleprices/' gridfile_c '.mat'],'x','y');
+load(['data/eleprices/' gridfiles{3} '.mat'],'x','y');
 Ele_c=x;
 Emi_c=y;
+
+
+%% price profiles
 
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 box on
 x=linspace(0,4*7,length(Period)*48);
-plot(x,reshape(Ele_a(:,Period+gridoffset_a),length(Period)*48,1))
-plot(x,reshape(Ele_b(:,Period+gridoffset_b),length(Period)*48,1))
-plot(x,reshape(Ele_b(:,Period+gridoffset_c),length(Period)*48,1))
+plot(x,reshape(Ele_a(:,Period+gridoffsets(1)),length(Period)*48,1))
+plot(x,reshape(Ele_b(:,Period+gridoffsets(2)),length(Period)*48,1))
+plot(x,reshape(Ele_b(:,Period+gridoffsets(3)),length(Period)*48,1))
 xlim([0,4*7]);
 xlabel('day')
 ylabel('price ($/MWh)')
@@ -130,13 +91,16 @@ legend({'NYISO','DE-W','DE-S'},'Orientation','horizontal')
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 print([DataFolder 'figures/Energy/prices.eps'],'-depsc2');
 
+
+%% carbon intensity profiles
+
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 box on
 x=linspace(0,4*7,length(Period)*48);
-plot(x,reshape(Emi_a(:,Period+gridoffset_a),length(Period)*48,1))
-plot(x,reshape(Emi_b(:,Period+gridoffset_b),length(Period)*48,1))
-plot(x,reshape(Emi_b(:,Period+gridoffset_c),length(Period)*48,1))
+plot(x,reshape(Emi_a(:,Period+gridoffsets(1)),length(Period)*48,1))
+plot(x,reshape(Emi_b(:,Period+gridoffsets(2)),length(Period)*48,1))
+plot(x,reshape(Emi_b(:,Period+gridoffsets(3)),length(Period)*48,1))
 xlim([0,4*7]);
 xlabel('day')
 ylabel('carbon intensity (g/kWh)')
@@ -150,7 +114,6 @@ print([DataFolder 'figures/Energy/carbonintensity.eps'],'-depsc2');
 % plot(S2.cost+S2.emissions*50,'s-')
 % plot(S3.cost,'o-')
 
-
 % figure('Units','centimeters','Position',[10,7,10,7])
 % hold on
 % x=1:3;
@@ -162,10 +125,7 @@ print([DataFolder 'figures/Energy/carbonintensity.eps'],'-depsc2');
 % xticks(x);
 % xticklabels({'B','O','O+CP'})
 % legend({''})
-
-
-
-% 
+ 
 % sum(S2.emissions)
 % sum(S3.emissions)
 % 
@@ -186,8 +146,6 @@ print([DataFolder 'figures/Energy/carbonintensity.eps'],'-depsc2');
 % plot(S1.emissions)
 % plot(S2.emissions)
 % plot(S3.emissions)
-% 
-% 
 % 
 % figure
 % hold on
@@ -229,9 +187,6 @@ writeLine(S3b,0)
 writeLine(S1c,50)
 writeLine(S3c,0)
 
-
-
-
 return
 
 
@@ -252,26 +207,15 @@ Res4=general11(P,-1,0);
 
 %%
 
-tsim=720;
+tsim=1440/2;
 x=linspace(0,24,tsim);
 x1=linspace(0,24,tsim+1);
 x2=linspace(0,24,1440);
 xt=0:4:24;
 
-% power exchanged
-figure('Units','centimeters','Position',[10,7,10,7])
-plot(x,sum(Res4.Sim.e,2)/1000)
-ylabel('power (MW)')
-hold on
-yyaxis right
-plot(x,Res4.Params.elep(1:tsim),'r-')
-xlim([0,24])
-xticks(xt)
-xlabel('hours')
-ylabel('electricity price (yen/kWh)')
-legend({'power','price'},'Orientation','horizontal')
-set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
-print -depsc2 figures/power.eps
+%% power exchanged
+
+plotta(Res4,'power','Energy','','-depsc2')
 
 % waiting 
 figure('Units','centimeters','Position',[10,7,10,7])
