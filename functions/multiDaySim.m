@@ -1,4 +1,9 @@
-function [Summary,R]=multiDaySim(Period,P,gridoffset)
+function [Summary,R]=multiDaySim(Period,P,gridoffset,ResultsOut)
+
+if nargin<4
+    ResultsOut=false;
+    R=[];
+end
 
 DataFolder=setDataFolder();
 
@@ -20,6 +25,18 @@ end
 SOC(1,:)=StartSoc;
 Uinit(1,:)=StartPos;
 
+Summary.cost=zeros(length(Period),1);
+Summary.dropped=zeros(length(Period),1);
+Summary.peakwait=zeros(length(Period),1);
+Summary.avgwait=zeros(length(Period),1);
+Summary.emissions=zeros(length(Period),1);
+Summary.waiting=[];
+
+totreq=0;
+totdropped=0;
+totwait=0;
+totminutes=0;
+
 % launch or retrieve simulations
 for j=1:length(Period)
     k=Period(j);
@@ -27,38 +44,27 @@ for j=1:length(Period)
     P.gridday=k+gridoffset;
     P.Operations.initialsoc=SOC(j,:);
     P.Operations.uinit=Uinit(j,:);
-    R(j)=generalC(P,1,-j);
-    SOC(j+1,:)=R(j).Sim.q(end,:);
+    Res=generalC(P,1,-j);
+    SOC(j+1,:)=Res.Sim.q(end,:);
     Uinit(j+1,:)=max(1, min( n , ...
-        double(R(j).Sim.u(end,:)) ) );
-end
-
-
-
-
-
-% create Summary
-Summary.cost=[R(:).cost]';
-Summary.dropped=[R(:).dropped]';
-Summary.peakwait=[R(:).peakwait]';
-Summary.avgwait=[R(:).avgwait]';
-Summary.emissions=zeros(length(Period),1);
-Summary.waiting=[];
-% Summary.pricekm=zeros(length(Period),1);
-
-totreq=0;
-totdropped=0;
-totwait=0;
-totminutes=0;
-for j=1:length(Period)
-    Summary.emissions(j)=R(j).Sim.emissions;
-%     Summary.pricekm(j)=R(j).cost/
-    totreq=totreq+length(R(j).Sim.waiting);
-    totdropped=totdropped+full(sum(R(j).Sim.dropped));
-    totwait=totwait+full(sum(R(j).Sim.waiting));
-    totminutes=totminutes+sum(R(j).Sim.tripdist);
-    Summary.waiting=[Summary.waiting;R(j).Sim.waiting];
+        double(Res.Sim.u(end,:)) ) );
     
+    % create Summary
+    Summary.cost(j)=Res.cost;
+    Summary.dropped(j)=Res.dropped;
+    Summary.peakwait(j)=Res.peakwait;
+    Summary.avgwait(j)=Res.avgwait;
+    Summary.emissions(j)=Res.Sim.emissions;
+    
+    totreq=totreq+length(Res.Sim.waiting);
+    totdropped=totdropped+full(sum(Res.Sim.dropped));
+    totwait=totwait+full(sum(Res.Sim.waiting));
+    totminutes=totminutes+sum(Res.Sim.tripdist);
+    Summary.waiting=[Summary.waiting;Res.Sim.waiting];
+    
+    if ResultsOut
+        R(j)=Res;
+    end
 end
 
 Summary.totdropped=totdropped/totreq;
