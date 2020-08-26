@@ -14,7 +14,7 @@ FCR.fastchargesoc=0.5;
 load([DataFolder 'grid/' FCR.filename],'f');
 ReshapeFactor=size(f,1)/1440*P.e;
 f=average2(f(:,P.gridday),ReshapeFactor);
-FCRe=min(1,max(-1,(1-(f-P1.FCR.limits(1))/(P1.FCR.limits(2)-P1.FCR.limits(1))*2))); % needed FCR
+FCRe=min(1,max(-1,(1-(f-FCR.limits(1))/(FCR.limits(2)-FCR.limits(1))*2))); % needed FCR
 FCRe=FCRe(1:1440);
 
 P1=P;
@@ -29,6 +29,8 @@ Res2=generalC(P2,-1,2)
 addpath plots
 plotta(Res1,'power')
 plotta(Res2,'power')
+
+%%
 
 ContrVec=[0 1 5 10 20];
 mVec=[3000,4000,5000];
@@ -80,9 +82,11 @@ plotta(R(1,1),'power','FAU','_m3k_0MW')
 plotta(R(5,1),'power','FAU','_m3k_20MW')
 
 %% status
+Res=R(5,1);
 tsim=Res.Params.tsim;
 NumIdle=(sum(Res.Internals.g(1:tsim,:)>0,2));
 x=linspace(0,24,tsim);
+xt=0:4:24;
 
 linevect={'x-','s-','v-','^-','d-','>--','<--','o--','x--'};
 % Format='-depsc2';
@@ -94,8 +98,7 @@ plot(x,NumIdle)
 xlim([0,24])
 xticks(xt)
 xlabel('hours')
-xlabel('FCR contracted (MW)')
-ylabel('missed 1-minute intervals')
+ylabel('idle vehicles')
 legend({'m=3000','m=4000','m=5000'})
 set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
 print([DataFolder 'figures/FAU/status'],Format,Resolution);
