@@ -7,6 +7,15 @@
 % TODO: fix problem with pickup from same node (Tr(i,i)=0?)
 % TODO: 
 % 
+% u: destination or position at beginning of time step
+% q: SOC at beginning of time step
+% e: charging energy exchanged during time step
+% ef: FCR energy exchanged during time step
+% b: imbalance from relocation module
+% d: delay at beginning of time step
+% sc: status during time step: connected/not connected
+% sm: status during time step: moving/not moving
+% 
 % see also CPAR
 
 function [Res]=generalC(P,extsave,dispiter)
@@ -97,14 +106,15 @@ mthor=round(P.EnergyLayer.mthor/P.beta);
 
 % main variables
 q=zeros(tsim,P.m,'double'); % SOC
-u=zeros(tsim,P.m,'double'); % vehicles in charging stations
-d=zeros(tsim,P.m,'double'); % delay
-g=zeros(tsim,P.m,'double'); % idle time
+u=zeros(tsim,P.m,'uint16'); % vehicles in charging stations
+d=zeros(tsim,P.m,'uint16'); % delay
 e=zeros(tsim,P.m,'double'); % charging
 ef=zeros(tsim,P.m,'double'); % charging
-s1=false(tsim,P.m); % relocating status
-s2=false(tsim,P.m); % connection status
-s3=false(tsim,P.m); % moving to charging station status
+
+g=zeros(1,P.m); % current idle time
+s=false(3,P.m); % current status: [relocating, connected, moving to charging station]
+sc=false(tsim,P.m); % connected to charging station status
+sm=false(tsim,P.m); % moving status
 queue=zeros(100,1);         % temporary variable to store queued arrivals
 
 % results variables
@@ -172,7 +182,7 @@ end
 AtChargingStation=sum(u(1,:)==chargingStations);
     
 % update statuses
-s2(1,:)=logical(AtChargingStation.*(d(1,:)==0));
+s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
     
 
 
@@ -198,7 +208,7 @@ if strcmp(P.enlayeralg,'aggregate')
     E.v2g=P.Operations.v2g; % use V2G?
     E.eta=1;                % 
     E.selling=1;            % can sell to the grid?
-    E.minfinalsoc=0.9;      % final SOC. This only works for optimization horizon of ~24h
+    E.minfinalsoc=0.9;%0.9      % final SOC. This only works for optimization horizon of ~24h
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
@@ -257,7 +267,7 @@ if isfield(P,'pricing')
     prices=ones(n,n,ceil(tsim/tp)+1)*m.gamma_p;
     
     % calculates probability of acceptance given a certain price for each OD pair
-    g=@(p) exp(-p.*m.c)./(exp(-p.*m.c)+exp(-m.gamma_alt*m.c));
+    ProbAcc=@(p) exp(-p.*m.c)./(exp(-p.*m.c)+exp(-m.gamma_alt*m.c));
     
     if isfield(P,'pricingwaiting')
         WaitingCostToggle=1;
@@ -292,19 +302,19 @@ for i=1:tsim
 	%% display progress
     
     displayState(i,tsim,dispiter,S.comptime(i)-S.comptime(1),40)
-    ui=u(i,:);
-    di=d(i,:);
+    ui=double(u(i,:));
+    di=double(d(i,:));
     relodist(i)=0;
     
     
     %% move idle vehicles back to charging stations
     
     if nc<n
-        IdleReached=(g(i,:).*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
+        IdleReached=(g.*(1-AtChargingStation')>=P.Operations.maxidle/P.e);
         ui(IdleReached)=chargingStations(Clusters(ui(IdleReached)));
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
         di(IdleReached)=relodistCS;
-        s3(i,IdleReached)=true;
+        s(3,IdleReached)=true;
         relodist(i)=relodist(i)+sum(relodistCS);
     end
     
@@ -332,10 +342,10 @@ for i=1:tsim
                 actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
-                dktripnow=Trips.dktrip(t:t+mthor-1); % time steps spent traveling during this horizon
-                E.einit=sum(q(i,:))*P.Tech.battery;            % total initial energy [kWh]
-                E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
-                E.dkav=max(0,P.m*P.beta-dktripnow); % minutes of availability of cars
+                dktripnow=Trips.dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
+                E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
+                E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
+                E.dkav=max(0,P.m*P.beta-dktripnow);         % minutes of availability of cars
                 E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
                 E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
 
@@ -402,8 +412,8 @@ for i=1:tsim
 
         end
 
-        Multiplier1=(g(prices(:,:,kp)));
-        Multiplier2=(g(prices(:,:,kp+1)));
+        Multiplier1=(ProbAcc(prices(:,:,kp)));
+        Multiplier2=(ProbAcc(prices(:,:,kp+1)));
     end
     
 
@@ -436,7 +446,7 @@ for i=1:tsim
              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
-        Vin=[Clusters(ui) , di' , q(i,:)' , s2(i,:)' , logical(s1(i,:)+s3(i,:))' ];
+        Vin=[Clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
         Par.dw=dw; % number of passengers waiting at each station
         Par.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
         Par.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
@@ -454,9 +464,8 @@ for i=1:tsim
         di(used)=di(used)+relodisti;
         
         % update vehicles status (relocating vehicles cannot be relocated)
-        s1(i,used)=1;
-        s2(i,used)=0;
-        s3(i,used)=0;
+        s(1,used)=1;
+        s(2:3,used)=0;
         
         % update results
         b(kt,:)=bkt;
@@ -495,7 +504,7 @@ for i=1:tsim
         offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc connected]
-        Vin=[ui' , di' , q(i,:)' , s2(i,:)' ];
+        Vin=[ui' , di' , q(i,:)' , s(2,:)' ];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
@@ -510,9 +519,7 @@ for i=1:tsim
         
         % update vehicles status
         used=logical(Vout(:,3));
-        s1(i,used)=0;
-        s2(i,used)=0;
-        s3(i,used)=0;
+        s(1:3,used)=0;
         
         % update results
         tripdist(i)=tripdisti;
@@ -536,12 +543,12 @@ for i=1:tsim
         acv=ac;
     end
     
-    e(i,:)=s2(i,:).*max(-acv,min(acv,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
+    e(i,:)=s(2,:).*max(-acv,min(acv,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
     
     if FCR
         FcrNeed=af*min(1,max(-1,(1-(f(i)-P.FCR.limits(1))/(P.FCR.limits(2)-P.FCR.limits(1))*2))); % needed FCR
-        AvailableCharge=max(0,min(ac-e(i,:),s2(i,:).*(1-q(i,:)))); % EXAMPLE!!
-        AvailableDischarge=max(0,min(ac+e(i,:),s2(i,:).*(q(i,:)))); % EXAMPLE!!
+        AvailableCharge=max(0,min(ac-e(i,:),s(2,:)'.*(1-q(i,:)))); % EXAMPLE!!
+        AvailableDischarge=max(0,min(ac+e(i,:),s(2,:)'.*(q(i,:)))); % EXAMPLE!!
         ef(i,:)=min(1,max(0,FcrNeed)/sum(AvailableDischarge)).*AvailableDischarge ...
                -min(1,-min(0,FcrNeed)/sum(AvailableCharge)).*AvailableCharge;
     end
@@ -554,17 +561,21 @@ for i=1:tsim
     u(i+1,:)=ui;%(i,:);
     
     % update idle time
-    g(i+1,:)=(di==0).*(g(i,:)+1);
+    g=(di==0).*(g+1);
     
     % update delay
     d(i+1,:)=max(0,di-1);
     
     AtChargingStation=sum(u(i+1,:)==chargingStations);
     
-    % update statuses
-    s1(i+1,:)=(d(i+1,:)>0).*s1(i,:);
-    s2(i+1,:)=logical(AtChargingStation.*(d(i+1,:)==0));
-    s3(i+1,:)=(d(i+1,:)>0).*s3(i,:);
+    % update historic statuses
+    sm(i,:)=logical(di>0);
+    sc(i,:)=logical(s(2,:));
+    
+    % update current statuses
+    s(1,:)=(d(i+1,:)>0).*s(1,:);
+    s(2,:)=logical(AtChargingStation.*(d(i+1,:)==0));
+    s(3,:)=(d(i+1,:)>0).*s(3,:);
     
     % record time
     S.trlayerCPUtime(i)=cputime-S.lasttime;
@@ -579,10 +590,21 @@ end
 %% final results
 
 % main Sim struct
-Sim.u=uint8(u); % final destination of vehicles (station) [tsim x m]
+% if dispiter<0
+%     % if 
+%     uChanges=u.*logical(u(1:end,:)~=[zeros(1,size(u,2));u(1:end-1,:)]);
+%     [I,J,V]=find(uChanges);
+%     Sim.uSummary=uint16([I,J,V]);
+% else
+Sim.u=uint16(u); % final destination of vehicles (station) [tsim x m]
+% end
 Sim.q=single(q); % state of charge 
 Sim.e=sparse(e/ac*P.Tech.chargekw);
-Sim.ef=ef*P.Tech.battery*60/P.e;
+if FCR
+    Sim.ef=single(ef*P.Tech.battery*60/P.e);
+else
+    Sim.ef=sparse(ef);
+end
 Sim.waiting=sparse(waiting); % waiting times
 Sim.dropped=sparse(dropped); % dropped requests
 Sim.chosenmode=chosenmode; % chosen mode
@@ -605,11 +627,9 @@ end
 
 % Internals struct
 Internals.b=b;
-Internals.d=sparse(d);
-Internals.g=sparse(g);
-Internals.s1=sparse(logical(s1));
-Internals.s2=sparse(logical(s2));
-Internals.s3=sparse(logical(s3));
+Internals.sc=logical(sc);
+Internals.sm=logical(sm);
+Internals.d=uint8(d);
 Internals.zmacro=zmacro;
 
 %% create Res struct and save results
