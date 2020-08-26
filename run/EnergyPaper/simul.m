@@ -8,6 +8,9 @@
 
 %% initializations
 
+addpath functions utilities
+DataFolder=setDataFolder();
+
 Period=18:31+14;
 gridfiles={'NY_DA_2016','Germany_DA_2019','Germany_DA_2019'};
 gridoffsets=[0,-11,-11+7*20];    % 2016/01/01: Fri; 2019/01/01: Tue;
@@ -47,14 +50,32 @@ Pmat{9}=P;
 
 GridOffsetsVec=repelem(gridoffsets,1,3);
 
+% load or create start variables to avoid saving files in parallel
+% computing
+load([DataFolder 'scenarios/' P.scenario],'T');
+n=size(T,1);
+StartFile=[DataFolder 'temp/StartFile_' num2str(n) '-' num2str(P.m) '.mat'];
+if exist(StartFile,'file')
+    load(StartFile,'StartSoc','StartPos');
+else
+    StartSoc=ones(1,P.m)*0.7;
+    StartPos=randi(n,1,P.m);
+    save(StartFile,'StartSoc','StartPos');
+end
+
+
 parfor k=1:length(Pmat)
     multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
 end
 
-for k=1:length(Pmat)
-    [S1,R1]=multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
-    S(k)=S1;
-end
+% Period=18:31; % temp
+% for k=1:length(Pmat)
+%     [S1,~]=multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
+%     S(k)=S1;
+% end
+
+% k=1
+% [S0,R]=multiDaySim(18,Pmat{k},GridOffsetsVec(k),1);
 
 
 return
@@ -158,34 +179,35 @@ print([DataFolder 'figures/Energy/carbonintensity.eps'],'-depsc2');
 
 %% table
 
-writeLine=@(S,Tax) fprintf('& %d & %d & %.0f & %.3f & %.0f & %.2f \\\\\n',full(S.totwaitprctile(3)) , full(S.totwaitprctile(4)) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
+% writeLine=@(S,Tax) fprintf('& %d & %d & %.0f & %.3f & %.0f & %.2f \\\\\n',full(S.totwaitprctile(3)) , full(S.totwaitprctile(4)) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
+writeLine=@(S,Tax) fprintf('& %.2f & %.1f & %.0f & %.3f & %.0f & %.2f \\\\\n',(full(sum(S.waiting>0))/length(S.waiting)*100) , (full(sum(S.waiting))/full(sum(S.waiting>0))) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
 
-writeLine(S0a,0)
+% writeLine(S0a,0)
 
 % NY no carbon price
-writeLine(S1a,0)
-writeLine(S2a,0)
+writeLine(S(1),0)
+writeLine(S(2),0)
 
 % germany winter no carbon price
-writeLine(S1b,0)
-writeLine(S2b,0)
+writeLine(S(4),0)
+writeLine(S(5),0)
 
 % germany summer no carbon price
-writeLine(S1c,0)
-writeLine(S2c,0)
+writeLine(S(7),0)
+writeLine(S(8),0)
 
 
 % NY $50 carbon tax
-writeLine(S1a,50)
-writeLine(S3a,0)
+writeLine(S(1),50)
+writeLine(S(3),0)
 
 % germany winter $50 carbon tax
-writeLine(S1b,50)
-writeLine(S3b,0)
+writeLine(S(4),50)
+writeLine(S(6),0)
 
 % germany summer $50 carbon tax
-writeLine(S1c,50)
-writeLine(S3c,0)
+writeLine(S(7),50)
+writeLine(S(9),0)
 
 return
 
