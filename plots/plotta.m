@@ -1,4 +1,4 @@
-function plotta(Res,PlotType,FolderName,FileID)
+function plotta(Res,PlotType,FolderName,FileID,Format,Resolution)
 
 DataFolder=setDataFolder();
 tsim=length(Res.Sim.relodist);
@@ -7,11 +7,18 @@ x1=linspace(0,24,tsim+1);
 x2=linspace(0,24,1440);
 xt=0:4:24;
 % priceUnits='(yen/kWh)';
+% priceUnits='($/MWh)';
 priceUnits=['(' char(8364) '/MWh)']; % €
-% Format='-depsc2';
-% Resolution=[];
-Format='-dpng';
-Resolution='-r300';
+if nargin<6
+    if nargin<5
+        % Format='-depsc2';
+        % Resolution=[];
+        Format='-dpng';
+        Resolution='-r300';
+    else 
+        Resolution=[];
+    end
+end
 
 if nargin<3
     FolderName=[];
@@ -33,7 +40,7 @@ switch PlotType
         
         % power exchanged
         figure('Units','centimeters','Position',[10,7,10,7])
-        plot(x,(sum(Res.Sim.e,2)+ef)/1000)
+        plot(x,full(sum(Res.Sim.e,2)+ef)/1000)
         ylabel('power (MW)')
         hold on
         yyaxis right
