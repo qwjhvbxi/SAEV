@@ -1,4 +1,15 @@
-%% 
+%% [T,C,A,Atimes,tripsubset]=generateScenario(AcoordComplete,AtimesComplete,N[,setlimits,C])
+% generate a new scenario and trip files from a larger scenario. The new
+% scenario only considers the area within 'setlimits'
+% [min_x,max_x,min_y,max_y] and with 'N' nodes 
+% 
+% generateScenario(AcoordComplete,AtimesComplete,N) 
+%   generate new scenario with N nodes from same area 
+% generateScenario(AcoordComplete,AtimesComplete,N,setlimits) 
+%   generate new scenario with N nodes from area defined in setlimits
+% generateScenario(AcoordComplete,AtimesComplete,N,setlimits,C) 
+%   generate only trips from from area defined in setlimits and node
+%   coordinates in C. N should be ==size(C,1)
 
 function [T,C,A,Atimes,tripsubset]=generateScenario(AcoordComplete,AtimesComplete,N,setlimits,C)
 

@@ -7,7 +7,7 @@
 % - 'NYC2016-small2'
 % - 'Tokyo189'
 % 
-% see also SCENARIOGENERATOR
+% see also GENERALC
 
 function P=cpar(Scenario,trlayer)
 
