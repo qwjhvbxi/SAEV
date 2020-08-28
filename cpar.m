@@ -122,6 +122,7 @@ switch Scenario
         P.tripfile='Munich';
     case 'Munich_clustered'
         P.tripfile='Munich_clustered';
+        P.gridfile='Germany_DA_2019';
         P.Operations.maxwait=Inf;
         P.Tech.chargekw=22;
         P.m=5000;
