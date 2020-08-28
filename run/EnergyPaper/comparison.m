@@ -38,7 +38,6 @@
 
 %% 1 week
 
-
 DataFolder=setDataFolder();
 Days=18:24;
 m=30;
@@ -92,10 +91,10 @@ parfor k=1:length(Pmat)
 end
 
 
-parfor k=1:length(Pmat)
+for k=1:3%length(Pmat)
     [S1,R1]=multiDaySim(Days,Pmat{k},gridoffset)
     S(k)=S1;
-    R(k)=R1;
+%     R(k)=R1;
 end
 
 % simplified

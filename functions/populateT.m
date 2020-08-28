@@ -1,5 +1,5 @@
 %% T=populateT(T)
-% reconstruct missing coordinates
+% reconstruct missing coordinates (==0) with Dijkstra algorithm
 
 function T=populateT(T)
 

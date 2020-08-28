@@ -1,4 +1,23 @@
-function [Summary,R]=multiDaySim(Period,P,gridoffset,ResultsOut)
+%% [Summary,R]=multiDaySim(Period,P[,GridOffset,ResultsOut])
+% launch simulations over multiple days.
+% Period is the consecutive days
+% P is the parameter struct
+% GridOffset is the offset of the griddays over the Period
+% ResultsOut is a logical variable to indicate if the full results should be
+%   outputted (warning: large memory use)
+% Summary is a struct with a summary of the results
+% R is the optional full results struct if ResultsOut==true
+
+function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut)
+
+if prod(Period(2:end)-Period(1:end-1)==1)==0
+    warning('Days in ''Period'' must be consecutive');
+    return
+end
+
+if nargin<3
+    GridOffset=0;
+end
 
 if nargin<4
     ResultsOut=false;
@@ -41,7 +60,7 @@ totminutes=0;
 for j=1:length(Period)
     k=Period(j);
     P.tripday=k;
-    P.gridday=k+gridoffset;
+    P.gridday=k+GridOffset;
     P.Operations.initialsoc=SOC(j,:);
     P.Operations.uinit=Uinit(j,:);
     Res=generalC(P,1,-j);
