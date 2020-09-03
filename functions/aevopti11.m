@@ -52,6 +52,9 @@ end
 if ~isfield(Q,'socboost')
     Q.socboost=0;
 end
+if ~isfield(Q,'minfinalsoc')
+    Q.minfinalsoc=0;
+end
 
 
 %% initializations
@@ -152,7 +155,7 @@ fbat=[ ones(Q.T,1)*Q.cyclingcost    ;   zeros(Q.T*(3+4*numgenerators),1)  ];
 fgrid=[zeros(2*Q.T,1) ;  Q.electricityprice ; -Q.electricityprice*Q.selling+0.001 ; zeros(Q.T*(4*numgenerators),1) ];
 
 % general cost function
-f=fbat+fmge+fmgs+fgrid+fco2+fsoc*Q.socboost*mean(Q.electricityprice);
+f=fbat+fmge+fmgs+fgrid+fco2+fsoc*Q.socboost;
 
 % integer constraints
 intcon=Q.T*4+repelem(((0:numgenerators-1)*Q.T*4),1,Q.T*3)+repmat([(1:Q.T*3)    ],1,numgenerators);
