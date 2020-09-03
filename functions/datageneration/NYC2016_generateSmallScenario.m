@@ -77,10 +77,10 @@ end
 
 if 1  % folder based
     
-    TripRatio=1/50;
+    TripRatio=1/25;
     Period=1:76;
     TripFolder='NYC2016';
-    NewTripFolder='NYC2016-small_50';
+    NewTripFolder='NYC2016-small_25';
     
     for d=1:length(Period)
         
