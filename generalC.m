@@ -2,11 +2,6 @@
 % Run SAEV simulation and relocation/charge oprimization.
 % Vehicles start at beginning of time step, arrive at end of time step.
 % 
-% TODO: explicitly define and document all statuses and corresponding
-% physical meanings
-% TODO: fix problem with pickup from same node (Tr(i,i)=0?)
-% TODO: 
-% 
 % u: destination or position at beginning of time step
 % q: SOC at beginning of time step
 % e: charging energy exchanged during time step
@@ -208,7 +203,8 @@ if strcmp(P.enlayeralg,'aggregate')
     E.v2g=P.Operations.v2g; % use V2G?
     E.eta=1;                % 
     E.selling=1;            % can sell to the grid?
-    E.minfinalsoc=0.9;%0.9      % final SOC. This only works for optimization horizon of ~24h
+%     E.minfinalsoc=0.9;%0.9      % final SOC. This only works for optimization horizon of ~24h
+    E.socboost=10000;
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
@@ -447,13 +443,14 @@ for i=1:tsim
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[Clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
-        Par.dw=dw; % number of passengers waiting at each station
-        Par.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
-        Par.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
-        Par.Trs=Trs;
-        Par.bmin=bmin;
+        ParRel.ad=ad;
+        ParRel.dw=dw; % number of passengers waiting at each station
+        ParRel.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
+        ParRel.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
+        ParRel.Trs=Trs;
+        ParRel.bmin=bmin;
         
-        [Vout,bkt]=Relocation(Vin,Par);
+        [Vout,bkt]=Relocation(Vin,ParRel);
         
         % update vehicles position
         used=logical(Vout(:,2));
@@ -547,8 +544,8 @@ for i=1:tsim
     
     if FCR
         FcrNeed=af*min(1,max(-1,(1-(f(i)-P.FCR.limits(1))/(P.FCR.limits(2)-P.FCR.limits(1))*2))); % needed FCR
-        AvailableCharge=max(0,min(ac-e(i,:),s(2,:)'.*(1-q(i,:)))); % EXAMPLE!!
-        AvailableDischarge=max(0,min(ac+e(i,:),s(2,:)'.*(q(i,:)))); % EXAMPLE!!
+        AvailableCharge=max(0,min(ac-e(i,:),s(2,:).*(1-q(i,:)))); % EXAMPLE!!
+        AvailableDischarge=max(0,min(ac+e(i,:),s(2,:).*(q(i,:)))); % EXAMPLE!!
         ef(i,:)=min(1,max(0,FcrNeed)/sum(AvailableDischarge)).*AvailableDischarge ...
                -min(1,-min(0,FcrNeed)/sum(AvailableCharge)).*AvailableCharge;
     end
