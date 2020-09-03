@@ -4,6 +4,11 @@
 
 function av=average2(t,n)
 
+if n==1
+    av=t;
+    return
+end
+
 if (rem(n,1)==0)
     
     if (n>0)
