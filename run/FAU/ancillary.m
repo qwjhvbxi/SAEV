@@ -11,11 +11,34 @@ FCR.contracted=10;      % MW
 FCR.slowchargeratio=0.8;
 FCR.fastchargesoc=0.5;
 
+%% test frequency file
+
+testfilename='frequency_test';
+f=repelem(repmat([eye(96)*(FCR.limits(1)-50) eye(96)*(FCR.limits(2)-50)],1,2),15,1)+50;
+save([DataFolder 'grid/' testfilename],'f'); % resolution must be at least 1 minute
+
+%% 
+
+FCRtest=FCR;
+FCRtest.filename='frequency_test';
+FCRtest.contracted=10;
+Ptest=P;
+Ptest.FCR=FCRtest;
+Ptest.m=3000;
+Ptest.gridday=17*4+96; % positive from 18:00
+Res1=generalC(Ptest,-1,2)
+figure
+plot(sum(Res1.Sim.ef,2))
+
+%% expected FCR
+
 load([DataFolder 'grid/' FCR.filename],'f');
 ReshapeFactor=size(f,1)/1440*P.e;
 f=average2(f(:,P.gridday),ReshapeFactor);
 FCRe=min(1,max(-1,(1-(f-FCR.limits(1))/(FCR.limits(2)-FCR.limits(1))*2))); % needed FCR
 FCRe=FCRe(1:1440);
+
+%% launching sims
 
 P1=P;
 P2=P;
