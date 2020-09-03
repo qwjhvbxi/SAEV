@@ -14,25 +14,24 @@ if nargin<=2
         Clusters=(1:n)';
     end
 
+    tsim=Res.Params.tsim;
+    
     %% check for constraint violations
 
     % charging when not in charging stations and with delay=0
-    c(1)=sum(sum((Res.Internals.d>0).*Res.Internals.s2));
+    c(1)=sum(sum((Res.Internals.d(1:tsim,:)>0).*Res.Internals.sc));
 
     % charging more than possible
     c(2)=sum(abs(round(Res.Sim.e(:),4))>P.Tech.chargekw);
 
     % charging with wrong status
-    c(3)=sum(sum((abs(round(Res.Sim.e,5))>0).*(Res.Internals.s2(1:end-1,:)==0)));
+    c(3)=sum(sum((abs(round(Res.Sim.e,5))>0).*(Res.Internals.sc==0)));
 
     % double status
-    c(4)=sum(sum((Res.Internals.s1+Res.Internals.s2+Res.Internals.s3)>1));
+    c(4)=sum(sum((Res.Internals.sm+Res.Internals.sc)>1));
 
-    % moving while charging
-    c(5)=sum(sum((Res.Internals.d>0).*Res.Internals.s2));
-
-    % soc limits (can go loewer if going to charging station)
-    c(6)=(max(Res.Sim.q(:))>P.Operations.maxsoc)+sum(sum(Res.Sim.q<P.Operations.minsoc.*full(Res.Internals.s2+Res.Internals.s3==0)));
+    % soc limits (can go lower if going to charging station)  (no explicit info on relocation with new results)
+    % c(6)=(max(Res.Sim.q(:))>P.Operations.maxsoc)+sum(sum(Res.Sim.q<P.Operations.minsoc.*full(Res.Internals.s2+Res.Internals.s3==0)));
 
     % charging outside of charging stations
     c(7)=sum(setdiff(unique(full(abs(round(Res.Sim.e,5))>0).*double(Res.Sim.u(1:end-1,:))),chargingStations))>0;
@@ -40,7 +39,7 @@ if nargin<=2
     % delay change more than 1
     c(8)=sum((max(Res.Internals.d(1:end-1,:)-Res.Internals.d(2:end,:)))>1);
 
-    % assigned distances different from traveled (not relevant with new d)
+    % assigned distances different from traveled  (not relevant with new d)
     % c(9)=(  (sum(sum(Res.Internals.d>0))+sum(max(Res.Internals.d(end,:)-1,0)))*P.e ~= (sum(Res.Sim.relodist)+sum(Res.Sim.tripdist)));
 
     % energy in very different from energy out
