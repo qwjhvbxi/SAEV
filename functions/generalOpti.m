@@ -125,7 +125,8 @@ if strcmp(P.enlayeralg,'aggregate')
     E.v2g=P.Operations.v2g; % use V2G?
     E.eta=1;                % 
     E.selling=1;            % can sell to the grid?
-    E.minfinalsoc=0.9;      % final SOC. This only works for optimization horizon of ~24h
+%     E.minfinalsoc=0.9;      % final SOC. This only works for optimization horizon of ~24h
+    E.socboost=10000;
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
@@ -249,15 +250,14 @@ for i=1:tsim
     
     %% energy layer
     
-    if rem(i,P.beta)==1 % only cases with energy layer
+    if rem(i,P.beta/P.e)==1 % only cases with energy layer
         
         % current time
         lasttimemacro=cputime;
         
         % index of energy layer
-        t=(i-1)/P.beta+1;
-        
-        
+        t=(i-1)/(P.beta/P.e)+1;
+                
         switch P.enlayeralg
             
             case 'no'
@@ -268,13 +268,13 @@ for i=1:tsim
             case 'aggregate'
                 
                 % dynamic variables
-                actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+                actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.9); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
                 dktripnow=Trips.dktrip(t:t+mthor-1); % time steps spent traveling during this horizon
                 E.einit=sum(q(i,:))*P.Tech.battery;            % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;        % energy used per step [kWh] 
-                E.dkav=max(0,P.m*P.beta*P.e-dktripnow); % minutes of availability of cars
+                E.dkav=max(0,P.m*P.beta-dktripnow); % minutes of availability of cars
                 E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
                 E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
 
@@ -288,9 +288,9 @@ for i=1:tsim
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
                 maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
                 zmacro(:,t:t+mthor-1)=[ ELayerResults.charging./maxc , ...
-                                                                        ELayerResults.discharging./maxc , ...
-                                                                        maxc , ...
-                                                                        E.etrip]';
+                                        ELayerResults.discharging./maxc , ...
+                                        maxc , ...
+                                        E.etrip]';
                 zmacro(isnan(zmacro))=0;
 
             otherwise
@@ -305,6 +305,9 @@ for i=1:tsim
         
     end
     
+%     v2gallowed=q(i,:)>P.Operations.v2gminsoc;
+%     chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
+    
     
     %% transport layer
     
@@ -318,13 +321,16 @@ for i=1:tsim
             beqt=beq*X(1:varno,i)    +beqc   ;%+beqC*c(n^2*(i-1)+1:n^2*(i+P.TransportLayer.thor));
                        
             % determine which vehicles can discharge to grid
-            v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,EMaxHorizon);
+%             v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)]*ones(1,EMaxHorizon);
+            v2gallowed=[ones(P.m,1);(q(i,:)'>P.Operations.v2gminsoc)];
             
             % create charge vector
-            chargevector=repmat(     reshape(repelem(zmacro(1:2,t:t+EMaxHorizon-1),P.m,1).*v2gallowed,EMaxHorizon*2*P.m,1),P.beta,1);
-            
+%             chargevector=repmat(     reshape(repelem(zmacro(1:2,t:t+EMaxHorizon-1),P.m,1).*v2gallowed,EMaxHorizon*2*P.m,1),P.beta,1);
+            chargevector=repmat( reshape(repelem(zmacro(1:2,t),P.m,1).*v2gallowed,2*P.m,1),P.TransportLayer.thor,1);
+
             % apply charging constraints
-            ub(ubChargingSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
+%             ub(ubChargingSelector)=chargevector(1:P.TransportLayer.thor*P.m*2)*ac;
+            ub(ubChargingSelector)=chargevector*ac;
         
             % transport layer optimization
             zres=intlinprog(f,intcon,Adis,bdist,Aeq,beqt,lb,ub,options);
