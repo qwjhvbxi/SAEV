@@ -21,6 +21,9 @@ end
 
 if nargin<4
     ResultsOut=false;
+end
+
+if  ResultsOut==false
     R=[];
 end
 
@@ -50,6 +53,7 @@ Summary.peakwait=zeros(length(Period),1);
 Summary.avgwait=zeros(length(Period),1);
 Summary.emissions=zeros(length(Period),1);
 Summary.waiting=[];
+Summary.soc=[];
 
 totreq=0;
 totdropped=0;
@@ -80,9 +84,11 @@ for j=1:length(Period)
     totwait=totwait+full(sum(Res.Sim.waiting));
     totminutes=totminutes+sum(Res.Sim.tripdist);
     Summary.waiting=[Summary.waiting;Res.Sim.waiting];
+    Summary.soc=[Summary.soc;mean(Res.Sim.q,2)];
     
     if ResultsOut
         R(j)=Res;
+%         Pmat(j)=P;
     end
 end
 
