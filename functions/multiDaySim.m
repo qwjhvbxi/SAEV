@@ -52,6 +52,7 @@ Summary.dropped=zeros(length(Period),1);
 Summary.peakwait=zeros(length(Period),1);
 Summary.avgwait=zeros(length(Period),1);
 Summary.emissions=zeros(length(Period),1);
+Summary.cputime=zeros(length(Period),1);
 Summary.waiting=[];
 Summary.soc=[];
 
@@ -78,6 +79,7 @@ for j=1:length(Period)
     Summary.peakwait(j)=Res.peakwait;
     Summary.avgwait(j)=Res.avgwait;
     Summary.emissions(j)=Res.Sim.emissions;
+    Summary.cputime(j)=Res.cputime;
     
     totreq=totreq+length(Res.Sim.waiting);
     totdropped=totdropped+full(sum(Res.Sim.dropped));
