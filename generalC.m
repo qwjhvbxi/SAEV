@@ -331,6 +331,15 @@ for i=1:tsim
                 
                 % charge as much as possible
                 zmacro(1,t)=1;
+                
+            case 'night'
+                
+                % charge as much as possible only between midnight and 5am
+                if i*P.e<60*5
+                    zmacro(1,t)=1;
+                else
+                    zmacro(1,t)=0;
+                end
             
             case 'aggregate'
                 
