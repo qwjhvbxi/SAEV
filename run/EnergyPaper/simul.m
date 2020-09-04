@@ -15,11 +15,12 @@ Period=18:31+14;
 gridfiles={'NY_DA_2016','Germany_DA_2019','Germany_DA_2019'};
 gridoffsets=[0,-11,-11+7*20];    % 2016/01/01: Fri; 2019/01/01: Tue;
 
-% parameters
 P=cpar('NYC2016');
 P.Operations.maxwait=Inf; %20
 P.e=1;
 P.m=10000;
+
+%% create Pmat
 
 P.gridfile=gridfiles{1};
 P.carbonprice=0;
@@ -50,6 +51,23 @@ Pmat{9}=P;
 
 GridOffsetsVec=repelem(gridoffsets,1,3);
 
+%% create night charging
+
+P.gridfile=gridfiles{1};
+P.carbonprice=0;
+P.enlayeralg='night';
+Pmat{1}=P;
+
+P.gridfile=gridfiles{2};
+Pmat{2}=P;
+
+P.gridfile=gridfiles{3};
+Pmat{3}=P;
+
+GridOffsetsVec=gridoffsets;
+
+%%
+
 % load or create start variables to avoid saving files in parallel
 % computing
 load([DataFolder 'scenarios/' P.scenario],'T');
@@ -69,13 +87,16 @@ parfor k=1:length(Pmat)
 end
 
 % Period=18:31; % temp
-% for k=1:length(Pmat)
-%     [S1,~]=multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
-%     S(k)=S1;
-% end
+for k=1:length(Pmat)
+    k
+    [S1,~]=multiDaySim(Period,Pmat{k},GridOffsetsVec(k));
+    S(k)=S1;
+end
 
-% k=1
+
+k=2;
 % [S0,R]=multiDaySim(18,Pmat{k},GridOffsetsVec(k),1);
+[S1,~]=multiDaySim(Period,Pmat{k},GridOffsetsVec(k),0);
 
 
 return
@@ -180,7 +201,7 @@ print([DataFolder 'figures/Energy/carbonintensity.eps'],'-depsc2');
 %% table
 
 % writeLine=@(S,Tax) fprintf('& %d & %d & %.0f & %.3f & %.0f & %.2f \\\\\n',full(S.totwaitprctile(3)) , full(S.totwaitprctile(4)) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
-writeLine=@(S,Tax) fprintf('& %.2f & %.1f & %.0f & %.3f & %.0f & %.2f \\\\\n',(full(sum(S.waiting>0))/length(S.waiting)*100) , (full(sum(S.waiting))/full(sum(S.waiting>0))) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
+writeLine=@(S,Tax) fprintf('& %.2f & %.2f & %.0f & %.3f & %.0f & %.2f \\\\\n',(full(sum(S.waiting>0))/length(S.waiting)*100) , (full(sum(S.waiting))/full(sum(S.waiting>0))) , mean(S.cost+S.emissions*Tax) , sum(S.cost+S.emissions*Tax)/S.totminutes*60 , mean(S.emissions) , sum(S.emissions)/S.totminutes*10^6);
 
 % writeLine(S0a,0)
 
@@ -208,6 +229,16 @@ writeLine(S(6),0)
 % germany summer $50 carbon tax
 writeLine(S(7),50)
 writeLine(S(9),0)
+
+
+%% EXTENSION WITH NIGHT CHARGING
+writeLine(S(1),0)
+writeLine(S(2),0)
+writeLine(S(3),0)
+
+writeLine(S(1),50)
+writeLine(S(2),50)
+writeLine(S(3),50)
 
 return
 
