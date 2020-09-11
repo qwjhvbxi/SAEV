@@ -353,21 +353,30 @@ for i=1:tsim
                 E.dkav=max(0,P.m*P.beta-dktripnow);         % minutes of availability of cars
                 E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
                 E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
+                maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
 
                 ELayerResults=aevopti11(E);
 
-                % make sure that there is no discharging when V2G is not allowed
-                if P.Operations.v2g==0
-                    ELayerResults.discharging(:)=0;
-                end
+                if ~isempty(ELayerResults)
+                    
+                    % make sure that there is no discharging when V2G is not allowed
+                    if P.Operations.v2g==0
+                        ELayerResults.discharging(:)=0;
+                    end
 
-                % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
-                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging./maxc , ...
-                                        ELayerResults.discharging./maxc , ...
-                                        maxc , ...
-                                        E.etrip]';
-                zmacro(isnan(zmacro))=0;
+                    % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
+                    zmacro(:,t:t+mthor-1)=[ ELayerResults.charging./maxc , ...
+                                            ELayerResults.discharging./maxc , ...
+                                            maxc , ...
+                                            E.etrip]';
+                    zmacro(isnan(zmacro))=0;
+                    
+                else
+                    
+                    % charge as much as possible
+                    zmacro(:,t:t+mthor-1)=[ones(size(maxc,1),2),maxc,E.etrip]';
+                    
+                end
 
             otherwise
             

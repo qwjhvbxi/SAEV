@@ -167,25 +167,33 @@ catch
 end
 
 % optimization 
-x1=intlinprog(f,intcon,A,b,Aeq,beq,lb,ub,options);
+[x1,~,Flag]=intlinprog(f,intcon,A,b,Aeq,beq,lb,ub,options);
 
-% vehicle charging / discharging
-Res.charging=x1(1:Q.T);
-Res.discharging=x1(Q.T+1:2*Q.T);
+if Flag>0
 
-% stored energy
-Res.E(2:end)=  Res.E(1)  +cumsum(x1(1:Q.T)) -cumsum(x1(Q.T+1:2*Q.T))/Q.eta  -etripcday;
+    % vehicle charging / discharging
+    Res.charging=x1(1:Q.T);
+    Res.discharging=x1(Q.T+1:2*Q.T);
 
-% grid import/export
-Res.gridimport=x1(2*Q.T+1:Q.T*3);
-Res.gridexport=x1(3*Q.T+1:Q.T*4);%*Q.selling;
+    % stored energy
+    Res.E(2:end)=  Res.E(1)  +cumsum(x1(1:Q.T)) -cumsum(x1(Q.T+1:2*Q.T))/Q.eta  -etripcday;
 
-% generators results
-Res.startups=reshape(round(   x1(   Q.T*4 + repelem(((0:numgenerators-1)*Q.T*4),1,Q.T)+repmat((Q.T*2+1:Q.T*3) ,1,numgenerators)   )         ),Q.T,numgenerators);
-Res.shutdowns=NaN;
-Res.generation=reshape(round(   x1(   Q.T*4 + repelem(((0:numgenerators-1)*Q.T*4),1,Q.T)+repmat((Q.T*3+1:Q.T*4) ,1,numgenerators)   )         ),Q.T,numgenerators);
+    % grid import/export
+    Res.gridimport=x1(2*Q.T+1:Q.T*3);
+    Res.gridexport=x1(3*Q.T+1:Q.T*4);%*Q.selling;
 
-Res.totalcost=x1'*f;
+    % generators results
+    Res.startups=reshape(round(   x1(   Q.T*4 + repelem(((0:numgenerators-1)*Q.T*4),1,Q.T)+repmat((Q.T*2+1:Q.T*3) ,1,numgenerators)   )         ),Q.T,numgenerators);
+    Res.shutdowns=NaN;
+    Res.generation=reshape(round(   x1(   Q.T*4 + repelem(((0:numgenerators-1)*Q.T*4),1,Q.T)+repmat((Q.T*3+1:Q.T*4) ,1,numgenerators)   )         ),Q.T,numgenerators);
+
+    Res.totalcost=x1'*f;
+
+else
+    
+    Res=[];
+    
+end
 
 
 end
