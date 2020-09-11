@@ -374,7 +374,7 @@ for i=1:tsim
                 else
                     
                     % charge as much as possible
-                    zmacro(:,t:t+mthor-1)=[ones(size(maxc,1),2),maxc,E.etrip]';
+                    zmacro(:,t:t+mthor-1)=[ones(size(maxc,1),1),zeros(size(maxc,1),1),maxc,E.etrip]';
                     
                 end
 
