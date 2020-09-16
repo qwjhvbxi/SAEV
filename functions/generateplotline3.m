@@ -34,72 +34,11 @@ end
 
 DataFolder=setDataFolder();
 
-% numparams=cellfun('length',varargin(2:2:end)); % length of each set of parameter values
-numparams=zeros(1,floor(length(varargin)/2));
-for i=1:length(numparams)
-    numparams(i)=length(varargin{2*i});
-end
-posparams=numparams>1;      % set with more than one values (sensitivity)
-whichparm=find(posparams); 
-varparams=numparams(posparams); % number of sets with more than 1 value
-if length(varparams)>2
-    Pmat=NaN;
-    warning('only a maximum of 2 parameter can vary');
-    return
-end
-if isempty(varparams)
-    varparams(1)=1;
-    whichparm(1)=0;
-end
-if length(varparams)==1
-    varparams(2)=1;
-    whichparm(2)=0;
-end
+% generate input matrix of struct
+S=cpar(mapscenario);
+[Pmat,varparams]=changeStruct(S,varargin);
 
-N=0;
-
-for k=1:varparams(1)
-
-    for j=1:varparams(2)
-
-        N=N+1;
-        
-        Pmat{N}=cpar(mapscenario);
-
-        for i=1:floor(length(varargin)/2)
-            
-            if whichparm(1)==i
-                ThisValue=varargin{(i-1)*2+2}(k);
-            elseif whichparm(2)==i
-                ThisValue=varargin{(i-1)*2+2}(j);
-            else
-                ThisValue=varargin{(i-1)*2+2};
-            end
-            
-            FieldNameTot=char(varargin{(i-1)*2+1});
-            FieldNames=split(FieldNameTot,',');
-            
-            if isstring(ThisValue)
-                ThisValue=char(ThisValue);
-            end
-            
-            for VarL=1:length(FieldNames)
-            
-                FieldName=FieldNames{VarL};
-                PointPos=find(FieldName=='.');
-            
-                % todo: check if ThisValue is string
-                if isempty(PointPos) 
-                    Pmat{N}.(FieldName)=ThisValue;
-                else
-                    Pmat{N}.(FieldName(1:PointPos-1)).(FieldName(PointPos+1:end))=ThisValue;
-                end
-            end
-            
-            
-        end
-    end
-end
+N=numel(Pmat);
 
 if ischar(outfieldname)
     
