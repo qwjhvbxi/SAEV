@@ -28,8 +28,6 @@ queue=zeros(100,1);
 % if there are trips
 if ~isempty(Bin)
     
-    WaitingCostToggle=1;
-    
     n=size(Par.Tr,1);
     m=size(Bin,1);
     v=size(Vin,1);
@@ -70,7 +68,7 @@ if ~isempty(Bin)
 
             if Par.modechoice
 
-                UtilitySAEV=-distancetomovesorted(ka)*Par.e*Bin(tripID,4)-WaitingTime*VOT/60*WaitingCostToggle;
+                UtilitySAEV=-distancetomove(tripID)*Par.e*Bin(tripID,4)-WaitingTime*Par.VOT/60*Par.WaitingCostToggle;
 
                 AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+Bin(tripID,5));
 

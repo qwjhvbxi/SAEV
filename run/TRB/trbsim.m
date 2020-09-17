@@ -22,16 +22,20 @@ P=cpar('NYC2018');
 % P=cpar('NYC2016');
 P.Operations.maxwait=Inf;
 P.m=2500;
-P.TransportLayer.tp=30;
 P.enlayeralg='no';
-P.TransportLayer.relocationcost=0.1;
-P.TransportLayer.basetariff=0.25;
 P.tripday=3;
 
-P.pricing=false;
+Pricing.tp=30;
+Pricing.relocationcost=0.1;
+Pricing.basetariff=0.25;
+Pricing.alternative=0.25;
+Pricing.VOT=15; % value of time
+Pricing.pricingwaiting=0;
+
+P.Pricing=[];
 Res1=generalC(P,1,2)
 
-P.pricing=true;
+P.Pricing=Pricing;
 Res2=generalC(P,1,2)
 
 [   Res1.Sim.revenues;
@@ -93,9 +97,17 @@ boxplot([[S1.revenues];[S1.revenues]-[S1.relocationcosts];[S2.revenues];[S2.reve
 
 %%
 
+Pricing.relocationcost=0.1;
+Pricing.basetariff=0.25;
+Pricing.alternative=0.25;
+Pricing.tp=30;
+Pricing.pricingwaiting=false;
+Pricing.dynamic=true;
+Pricing.VOT=15;
+
 addpath plots functions utilities
-[P1,R1]=generateplotline3('NYC2018',1,'tripday',1,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',false,'TransportLayer.relocationcost',1,'TransportLayer.basetariff',2.3,'TransportLayer.alternative',2.5);
-[P2,R2]=generateplotline3('NYC2018',2,'tripday',1,'Operations.maxwait',Inf,'m',5000,'TransportLayer.tp',30,'enlayeralg',"no",'pricing',true,'TransportLayer.relocationcost',1,'TransportLayer.basetariff',2.5,'TransportLayer.alternative',2.5);
+[P1,R1]=generateplotline3('NYC2018',-1,'tripday',1,'Operations.maxwait',Inf,'m',5000,'modechoice',true,'Pricing',Pricing,'enlayeralg',"no",'Pricing.dynamic',false);
+[P2,R2]=generateplotline3('NYC2018',-1,'tripday',1,'Operations.maxwait',Inf,'m',5000,'modechoice',true,'Pricing',Pricing,'enlayeralg',"no",'Pricing.dynamic',true);
 
 
 %%

@@ -122,9 +122,6 @@ offeredprices=zeros(length(A),1);  % price offered to each passenger
 relodist=zeros(tsim,1); % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1); % distances of trips (at moment of acceptance)
 
-% parameters for trip assignment
-Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',logical(P.modechoice+isfield(P,'pricing')),'maxwait',P.Operations.maxwait);
-
 % electicity price and emissions profiles
 d1=P.gridday;
 d2=rem(P.gridday,size(x,2))+1;
@@ -180,7 +177,6 @@ AtChargingStation=sum(u(1,:)==chargingStations);
 s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
     
 
-
 %% setup charging module
 
 if strcmp(P.enlayeralg,'aggregate') 
@@ -222,63 +218,57 @@ else
 end
 
 
-%% setup mode choice
-
-% TODO: harmonize and generalize
-VOT=15; % value of time
-beta=1.5; % tortuosity of walking
-% CostMinute=P.TransportLayer.basetariff;
-
-% calculate benefit of alternative trip
-WalkingSpeed=4; % km/h
-if ~isempty(Distances)
-    UtilityWalking=-Distances.RawDistance*beta/WalkingSpeed*VOT;
-else
-    UtilityWalking=0;
-end
-% PTSpeed=20;
-% UtilityPT=-Distances.RawDistance/PTSpeed*VOT;
-
-
 %% setup pricing module 
 
-if isfield(P.TransportLayer,'tp')
-    tp=P.TransportLayer.tp;
-else 
-    tp=1;
-end
-
-if isfield(P,'pricing')
+if isfield(P,'Pricing')
     
+    dynamicpricing=P.Pricing.dynamic;
+    
+    m.gamma_r=P.Pricing.relocationcost; % relocation cost per minute
+    m.gamma_p=P.Pricing.basetariff; % base tariff per minute
+    m.gamma_alt=P.Pricing.alternative;
+    m.VOT=P.Pricing.VOT;
     m.c=Tr*P.e;
-    m.gamma_r=P.TransportLayer.relocationcost; % relocation cost per minute
-    m.gamma_p=P.TransportLayer.basetariff; % base tariff per minute
-    if isfield(P.TransportLayer,'alternative')
-        m.gamma_alt=P.TransportLayer.alternative;
-    else
-        m.gamma_alt=m.gamma_p;
-    end
+    m.pricingwaiting=P.Pricing.pricingwaiting;
     
-    % real prices offered
-    prices=ones(n,n,ceil(tsim/tp)+1)*m.gamma_p;
+    tp=P.Pricing.tp;
     
-    % calculates probability of acceptance given a certain price for each OD pair
+    % function to calculate probability of acceptance given a certain price for each OD pair
     ProbAcc=@(p) exp(-p.*m.c)./(exp(-p.*m.c)+exp(-m.gamma_alt*m.c));
-    
-    if isfield(P,'pricingwaiting')
-        WaitingCostToggle=1;
-    else
-        WaitingCostToggle=0;
-    end
     
 else
     
-	prices=zeros(1,1,ceil(tsim/tp)+1);
+    tp=1;
+    dynamicpricing=false;
+    m.gamma_r=0; % relocation cost per minute
+    m.gamma_p=0; % base tariff per minute
+    m.gamma_alt=0;
+    m.VOT=0;
+    m.pricingwaiting=1;
+
+end
+
+if dynamicpricing
+    
+    % initialize matrix of real prices offered
+    prices=ones(n,n,ceil(tsim/tp)+1)*m.gamma_p;
+    
+else
+    
+	prices=ones(1,1,ceil(tsim/tp)+1)*m.gamma_p;
+
+end
+
+if P.modechoice==0
     
     Multiplier1=1;
     Multiplier2=1;
     
 end
+
+
+% parameters for trip assignment
+Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,'maxwait',P.Operations.maxwait,'VOT',m.VOT,'WaitingCostToggle',m.pricingwaiting);
 
 
 %% variables for progress display and display initializations
@@ -394,14 +384,16 @@ for i=1:tsim
     chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
     
                 
-    %% pricing
+    %% pricing optimization
 
     % current pricing number
     kp=ceil(i/tp);
 
-    if isfield(P,'pricing')  % TODO: waiting trips are not influenced by prices! should be included outside
+    if P.modechoice
+        
+        % TODO: waiting trips are not influenced by prices! should be included outside
 
-        if P.pricing~=0 && (i==1 || mod(i-(ts+tr+1),tp)==0)
+        if dynamicpricing && (i==1 || mod(i-(ts+tr+1),tp)==0)
 
             % number of vehicles at each station (including vehicles directed there)
             % uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
@@ -423,11 +415,12 @@ for i=1:tsim
             prices(:,:,PricingStep)=pricesNow;
 
             % plot(0:0.01:0.5,histc(normalizedprices(:)*2*m.gamma_p,0:0.01:0.5))
-
+            
         end
 
         Multiplier1=(ProbAcc(prices(:,:,kp)));
         Multiplier2=(ProbAcc(prices(:,:,kp+1)));
+        
     end
     
 
@@ -507,15 +500,13 @@ for i=1:tsim
         
         % calculate pricing
         Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
-        if isfield(P,'pricing')
-            pp=prices(Selector,kp);
-            alte=exp(-Tr(Selector)*P.e*m.gamma_alt);
+        if dynamicpricing
+            pricesNow=prices(:,:,kp);
+            pp=pricesNow(Selector);
         else
             pp=ones(length(trips),1)*prices(1,1,kp);
-            alte=zeros(length(trips),1);
-            %             Cost=(VOT/60+CostMinute);
-            %             UtilityAlternative=exp(UtilityWalking(tripID));
         end
+        alte=exp(-Tr(Selector)*P.e*m.gamma_alt);
         offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc connected]
@@ -629,7 +620,7 @@ Sim.tripdist=tripdist*P.e; % trip minutes
 Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
 % add pricing info
-if isfield(P,'pricing')
+if isfield(P,'Pricing')
     
     distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
     
