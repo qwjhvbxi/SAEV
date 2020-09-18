@@ -4,7 +4,6 @@
 % - 'NYC2016'
 % - 'NYC2018'
 % - 'NYC2016-small'
-% - 'NYC2016-small2'
 % - 'Tokyo189'
 % 
 % see also GENERALC
@@ -72,7 +71,7 @@ end
 % energy layer: aggregate
 P.enlayeralg='aggregate';
 Energy.mthor=1440;      % macro horizon (minutes)
-Energy.extrasoc=0.25;  % extra soc for energy layer to account for aggregate uncertainty
+Energy.extrasoc=0.25; %0.25 % extra soc for energy layer to account for aggregate uncertainty
 
 % append to main struct
 P.Tech=Tech;
@@ -107,16 +106,18 @@ switch Scenario
         % P.tripfolder='NYC2018_10wed';
         % P.tripfile='NY_trips_10wed_0103-0307_minutes';
         P.tripfolder='NYC2018_10wed-nodes';
-        P.tripday=15;     % which day of the trip file
+        P.tripday=1;     % which day of the trip file
     case 'NYC2016-small'
-        P.tripfile='NYC2016-small_13Jan';
+        % P.tripfile='NYC2016-small_13Jan';
+        P.tripfolder='NYC2016-small_100';
+        P.tripday=1;     % which day of the trip file
         P.m=30; 
     case 'NYC2016-small2'
         P.scenario='NYC2016-small';
         P.tripfile='NYC2016-small2_13Jan';
         P.m=5;
     case 'Tokyo189'
-        P.tripfile='Tokyo2008_1day_48k';
+        P.tripfile='Tokyo2008_1day_48k-nodes';
         P.m=3500;
     case 'Munich'
         P.tripfile='Munich';
