@@ -71,17 +71,6 @@ AbuckC=AbuckC(1:P.e:end);
 % are in matrix of shape N x days, with N the number of data points in a day
 load([DataFolder 'eleprices/' P.gridfile '.mat'],'x','y');
 
-% frequency control reserve
-if isfield(P,'FCR') && ~isempty(P.FCR)
-    FCR=true;
-    load([DataFolder 'grid/' P.FCR.filename],'f');
-    ReshapeFactor=size(f,1)/1440*P.e;
-    f=average2(f(:,P.gridday),ReshapeFactor);
-    af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
-else
-    FCR=false;
-end
-
 
 %% parameters of simulation
 
@@ -222,40 +211,44 @@ end
 
 if isfield(P,'Pricing')
     
+    % TODO: should use clusters not nodes
+    % TODO: add option to have alternative specific to each passenger
+    % TODO: modify model to have inbound/outbound pricing at nodes (clusters)
+    
     dynamicpricing=P.Pricing.dynamic;
     
-    m.gamma_r=P.Pricing.relocationcost; % relocation cost per minute
-    m.gamma_p=P.Pricing.basetariff; % base tariff per minute
-    m.gamma_alt=P.Pricing.alternative;
-    m.VOT=P.Pricing.VOT;
-    m.c=Tr*P.e;
-    m.pricingwaiting=P.Pricing.pricingwaiting;
+    ParPricing.gamma_r=P.Pricing.relocationcost; % relocation cost per minute
+    ParPricing.gamma_p=P.Pricing.basetariff; % base tariff per minute
+    ParPricing.gamma_alt=P.Pricing.alternative;
+    ParPricing.VOT=P.Pricing.VOT;
+    ParPricing.c=Tr*P.e;
+    ParPricing.pricingwaiting=P.Pricing.pricingwaiting;
     
     tp=P.Pricing.tp;
     
     % function to calculate probability of acceptance given a certain price for each OD pair
-    ProbAcc=@(p) exp(-p.*m.c)./(exp(-p.*m.c)+exp(-m.gamma_alt*m.c));
+    ProbAcc=@(p) exp(-p.*ParPricing.c)./(exp(-p.*ParPricing.c)+exp(-ParPricing.gamma_alt*ParPricing.c));
     
 else
     
     tp=1;
     dynamicpricing=false;
-    m.gamma_r=0; % relocation cost per minute
-    m.gamma_p=0; % base tariff per minute
-    m.gamma_alt=0;
-    m.VOT=0;
-    m.pricingwaiting=1;
+    ParPricing.gamma_r=0; % relocation cost per minute
+    ParPricing.gamma_p=0; % base tariff per minute
+    ParPricing.gamma_alt=0;
+    ParPricing.VOT=0;
+    ParPricing.pricingwaiting=1;
 
 end
 
 if dynamicpricing
     
     % initialize matrix of real prices offered
-    prices=ones(n,n,ceil(tsim/tp)+1)*m.gamma_p;
+    prices=ones(n,n,ceil(tsim/tp)+1)*ParPricing.gamma_p;
     
 else
     
-	prices=ones(1,1,ceil(tsim/tp)+1)*m.gamma_p;
+	prices=ones(1,1,ceil(tsim/tp)+1)*ParPricing.gamma_p;
 
 end
 
@@ -268,7 +261,21 @@ end
 
 
 % parameters for trip assignment
-Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,'maxwait',P.Operations.maxwait,'VOT',m.VOT,'WaitingCostToggle',m.pricingwaiting);
+Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
+    'maxwait',P.Operations.maxwait,'VOT',ParPricing.VOT,'WaitingCostToggle',ParPricing.pricingwaiting);
+
+
+%% frequency control reserve
+
+if isfield(P,'FCR') && ~isempty(P.FCR)
+    FCR=true;
+    load([DataFolder 'grid/' P.FCR.filename],'f');
+    ReshapeFactor=size(f,1)/1440*P.e;
+    f=average2(f(:,P.gridday),ReshapeFactor);
+    af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
+else
+    FCR=false;
+end
 
 
 %% variables for progress display and display initializations
@@ -407,10 +414,10 @@ for i=1:tsim
             Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
             a_tp=sparse(A(Selection0,1),A(Selection0,2),1,n,n);%+q_t;
 
-            m.v=uv';
-            m.a=a_tp;
+            ParPricing.v=uv';
+            ParPricing.a=a_tp;
 
-            [pricesNow,~,~]=NLPricing(m);
+            [pricesNow,~,~]=NLPricing(ParPricing);
 
             prices(:,:,PricingStep)=pricesNow;
 
@@ -506,7 +513,7 @@ for i=1:tsim
         else
             pp=ones(length(trips),1)*prices(1,1,kp);
         end
-        alte=exp(-Tr(Selector)*P.e*m.gamma_alt);
+        alte=exp(-Tr(Selector)*P.e*ParPricing.gamma_alt);
         offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc connected]
@@ -624,8 +631,8 @@ if isfield(P,'Pricing')
     
     distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
     
-    Sim.revenues=sum((offeredprices-m.gamma_r).*distances.*chosenmode.*(1-dropped));
-    Sim.relocationcosts=sum(relodist)*P.e*m.gamma_r;
+    Sim.revenues=sum((offeredprices-ParPricing.gamma_r).*distances.*chosenmode.*(1-dropped));
+    Sim.relocationcosts=sum(relodist)*P.e*ParPricing.gamma_r;
     Sim.offeredprices=offeredprices;
     Sim.prices=prices;
     
