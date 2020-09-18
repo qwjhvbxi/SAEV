@@ -221,7 +221,7 @@ if isfield(P,'Pricing')
     ParPricing.gamma_p=P.Pricing.basetariff; % base tariff per minute
     ParPricing.gamma_alt=P.Pricing.alternative;
     ParPricing.VOT=P.Pricing.VOT;
-    ParPricing.c=Tr*P.e;
+    ParPricing.c=Trs*P.e;
     ParPricing.pricingwaiting=P.Pricing.pricingwaiting;
     
     tp=P.Pricing.tp;
@@ -403,8 +403,7 @@ for i=1:tsim
         if dynamicpricing && (i==1 || mod(i-(ts+tr+1),tp)==0)
 
             % number of vehicles at each station (including vehicles directed there)
-            % uv=histc(u(i,:)+sum(v(i:end,:))+sum(w(i:end,:)),1:n);
-            uv=histc(ui,1:n);
+            uv=histc(Clusters(ui),1:nc);
 
             % current pricing calculation
             PricingStep=ceil((i-1)/tp)+1;
@@ -412,7 +411,7 @@ for i=1:tsim
             % expected trips
             StartTime=(PricingStep-1)*tp+1;
             Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
-            a_tp=sparse(A(Selection0,1),A(Selection0,2),1,n,n);%+q_t;
+            a_tp=sparse(As(Selection0,1),As(Selection0,2),1,nc,nc);%+q_t;
 
             ParPricing.v=uv';
             ParPricing.a=a_tp;
@@ -506,13 +505,14 @@ for i=1:tsim
         % TODO: fix pooling option 
         
         % calculate pricing
-        Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
         if dynamicpricing
+            SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
             pricesNow=prices(:,:,kp);
-            pp=pricesNow(Selector);
+            pp=pricesNow(SelectorClusters);
         else
             pp=ones(length(trips),1)*prices(1,1,kp);
         end
+        Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
         alte=exp(-Tr(Selector)*P.e*ParPricing.gamma_alt);
         offeredprices(trips)=pp;
         
