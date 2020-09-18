@@ -244,7 +244,7 @@ end
 if dynamicpricing
     
     % initialize matrix of real prices offered
-    prices=ones(n,n,ceil(tsim/tp)+1)*ParPricing.gamma_p;
+    prices=ones(nc,nc,ceil(tsim/tp)+1)*ParPricing.gamma_p;
     
 else
     
@@ -303,7 +303,7 @@ for i=1:tsim
     %% move idle vehicles back to charging stations
     
     if nc<n
-        IdleReached=(g.*(1-AtChargingStation')>=P.Operations.maxidle/P.e);
+        IdleReached=(g.*(1-AtChargingStation)>=P.Operations.maxidle/P.e);
         ui(IdleReached)=chargingStations(Clusters(ui(IdleReached)));
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
         di(IdleReached)=relodistCS;
@@ -413,7 +413,7 @@ for i=1:tsim
             Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
             a_tp=sparse(As(Selection0,1),As(Selection0,2),1,nc,nc);%+q_t;
 
-            ParPricing.v=uv';
+            ParPricing.v=uv;
             ParPricing.a=a_tp;
 
             [pricesNow,~,~]=NLPricing(ParPricing);
