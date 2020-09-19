@@ -253,15 +253,15 @@ print([DataFolder 'figures/TRB/linearization2'],'-depsc2');
 
 %% prices
 
+DataFolder=setDataFolder();
 k=1;
-load(['data/scenarios/' P2{k}.scenario],'T')
+load([DataFolder 'scenarios/' P2{k}.scenario],'T')
 g=@(a,s) exp(s)./(exp(s)+a);        % value at s
 d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
 R=@(p,c) (exp(-p.*c)./(exp(-p.*c)+exp(-0.25*c))).*(p-0.1).*c; % net revenues at certain price and distance
 
 %%
 
-DataFolder=setDataFolder();
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 
@@ -292,17 +292,6 @@ text(0.2,0.82,'d=20')
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 legend({'7:00-8:00 am';'2:00-3:00 am';'theoretical best price'})
 % print([DataFolder 'figures/TRB/pricevariation2'],'-depsc2');
-
-
-
-function p=bestp(c)
-    P=0:0.001:0.5;
-    R=@(p,c) (exp(-p.*c)./(exp(-p.*c)+exp(-0.25*c))).*(p-0.1).*c; % net revenues at certain price and distance
-    [~,pind]=max(R(P,c));
-    p=P(pind);
-end
-
-
 
 
 
