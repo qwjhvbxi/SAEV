@@ -209,25 +209,18 @@ end
 
 %% setup pricing module 
 
-if isfield(P,'Pricing')
+if isfield(P,'Pricing') && ~isempty(P.Pricing)
     
-    % TODO: should use clusters not nodes
     % TODO: add option to have alternative specific to each passenger
     % TODO: modify model to have inbound/outbound pricing at nodes (clusters)
     
+    tp=P.Pricing.tp;
     dynamicpricing=P.Pricing.dynamic;
-    
     ParPricing.gamma_r=P.Pricing.relocationcost; % relocation cost per minute
     ParPricing.gamma_p=P.Pricing.basetariff; % base tariff per minute
     ParPricing.gamma_alt=P.Pricing.alternative;
     ParPricing.VOT=P.Pricing.VOT;
-    ParPricing.c=Trs*P.e;
     ParPricing.pricingwaiting=P.Pricing.pricingwaiting;
-    
-    tp=P.Pricing.tp;
-    
-    % function to calculate probability of acceptance given a certain price for each OD pair
-    ProbAcc=@(p) exp(-p.*ParPricing.c)./(exp(-p.*ParPricing.c)+exp(-ParPricing.gamma_alt*ParPricing.c));
     
 else
     
@@ -240,6 +233,11 @@ else
     ParPricing.pricingwaiting=1;
 
 end
+
+ParPricing.c=Trs*P.e;
+    
+% function to calculate probability of acceptance given a certain price for each OD pair
+ProbAcc=@(p) exp(-p.*ParPricing.c)./(exp(-p.*ParPricing.c)+exp(-ParPricing.gamma_alt*ParPricing.c));
 
 if dynamicpricing
     
