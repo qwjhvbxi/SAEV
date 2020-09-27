@@ -41,6 +41,7 @@ ylabel('relocation travel time (min)')
 
 P=cpar('NYC2016-20clusters');
 P.modechoice=1;
+P.m=2500;
 
 Pricing.relocationcost=0.1;
 Pricing.basetariff=0.25;
