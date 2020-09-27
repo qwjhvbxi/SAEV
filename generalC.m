@@ -82,10 +82,6 @@ Tr=max(1,round(T/P.e));   % distance matrix in steps
 Tr(1:n+1:end)=0;
 ac=P.Tech.chargekw/P.Tech.battery/60*P.e;    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;    % discharge rate per time step (normalized)
-ts=round(P.TransportLayer.ts/P.e);
-tr=round(P.TransportLayer.tr/P.e);
-tx=round(P.TransportLayer.tx/P.e);
-bmin=P.TransportLayer.bmin;
 mthor=round(P.EnergyLayer.mthor/P.beta);
 
 % main variables
@@ -145,7 +141,21 @@ else
     Trs=Tr;
     nc=n;
 end
-b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
+
+
+%% setup relocation module
+
+if ~isempty(P.TransportLayer)
+    ts=round(P.TransportLayer.ts/P.e);
+    tr=round(P.TransportLayer.tr/P.e);
+    tx=round(P.TransportLayer.tx/P.e);
+    bmin=P.TransportLayer.bmin;
+    b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
+    AutoRelo=1;
+else
+    b=NaN;
+    AutoRelo=0;
+end
 
 
 %% initial states
@@ -225,7 +235,7 @@ if isfield(P,'Pricing') && ~isempty(P.Pricing)
 else
     
     tp=1;
-    dynamicpricing=false;
+    dynamicpricing=0;
     ParPricing.gamma_r=0; % relocation cost per minute
     ParPricing.gamma_p=0; % base tariff per minute
     ParPricing.gamma_alt=0;
@@ -235,25 +245,39 @@ else
 end
 
 ParPricing.c=Trs*P.e;
-    
+
 % function to calculate probability of acceptance given a certain price for each OD pair
-ProbAcc=@(p) exp(-p.*ParPricing.c)./(exp(-p.*ParPricing.c)+exp(-ParPricing.gamma_alt*ParPricing.c));
-
-if dynamicpricing
+ProbAcc=@(p,s) exp(-p.*ParPricing.c-s)./(exp(-p.*ParPricing.c-s)+exp(-ParPricing.gamma_alt*ParPricing.c));
     
-    % initialize matrix of real prices offered
-    prices=ones(nc,nc,ceil(tsim/tp)+1)*ParPricing.gamma_p;
-    
-else
-    
-	prices=ones(1,1,ceil(tsim/tp)+1)*ParPricing.gamma_p;
-
-end
 
 if P.modechoice==0
     
     Multiplier1=1;
     Multiplier2=1;
+    
+else
+    
+    switch dynamicpricing
+
+        case 0
+
+            prices=ParPricing.gamma_p;
+
+            Multiplier1=ProbAcc(ParPricing.gamma_p,0);
+            Multiplier2=ProbAcc(ParPricing.gamma_p,0);
+
+        case 1
+
+            % initialize matrix of real prices offered
+            prices=ones(nc,nc,ceil(tsim/tp)+1)*ParPricing.gamma_p;
+
+        case 2
+
+            prices=ones(ceil(tsim/tp)+1,nc*2)*ParPricing.gamma_p;
+            ParPricing.gamma_d=bestp((1:120)',ParPricing.gamma_r,ParPricing.gamma_alt);
+            PerDistanceTariff=ParPricing.gamma_d(max(1,Trs)).*ParPricing.c;
+
+    end
     
 end
 
@@ -395,13 +419,8 @@ for i=1:tsim
     kp=ceil(i/tp);
 
     if P.modechoice
-        
-        % TODO: waiting trips are not influenced by prices! should be included outside
 
-        if dynamicpricing && (i==1 || mod(i-(ts+tr+1),tp)==0)
-
-            % number of vehicles at each station (including vehicles directed there)
-            uv=histc(Clusters(ui),1:nc);
+        if dynamicpricing>0 && mod(i-1,tp)==0 %(i==1 || mod(i-(ts+tr+1),tp)==0)
 
             % current pricing calculation
             PricingStep=ceil((i-1)/tp)+1;
@@ -411,19 +430,38 @@ for i=1:tsim
             Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
             a_tp=sparse(As(Selection0,1),As(Selection0,2),1,nc,nc);%+q_t;
 
-            ParPricing.v=uv;
+            % number of vehicles at each station (including vehicles directed there)
+            ParPricing.v=histc(Clusters(ui),1:nc);
+            
             ParPricing.a=a_tp;
 
-            [pricesNow,~,~]=NLPricing(ParPricing);
-
-            prices(:,:,PricingStep)=pricesNow;
+            if dynamicpricing==1
+            
+                [pricesNow,~,~]=NLPricing(ParPricing); % OD-pair-based pricing
+                
+                prices(:,:,PricingStep)=pricesNow;
+            
+                Multiplier1=(ProbAcc(prices(:,:,kp),0));
+                Multiplier2=(ProbAcc(prices(:,:,kp+1),0));
+                
+            elseif dynamicpricing==2
+                
+                [pricesNow,~,~]=NLPricing2(ParPricing); % node-based pricing
+                
+                prices(PricingStep,:)=pricesNow';
+                % prices(PricingStep,:)=[pricesNow(1:nc)-pricesNow(nc+1:nc*2) ; pricesNow(nc*2+1:nc*3)-pricesNow(nc*3+1:nc*4)]';
+                
+                Surcharges1=prices(kp,1:nc)+prices(kp,nc+1:2*nc)';
+                Surcharges2=prices(kp+1,1:nc)+prices(kp+1,nc+1:2*nc)';
+                
+                Multiplier1=(ProbAcc(PerDistanceTariff,Surcharges1));
+                Multiplier2=(ProbAcc(PerDistanceTariff,Surcharges2));
+                
+            end
 
             % plot(0:0.01:0.5,histc(normalizedprices(:)*2*m.gamma_p,0:0.01:0.5))
             
         end
-
-        Multiplier1=(ProbAcc(prices(:,:,kp)));
-        Multiplier2=(ProbAcc(prices(:,:,kp+1)));
         
     end
     
@@ -431,7 +469,7 @@ for i=1:tsim
     %% relocation
 
     % if it's time for a relocation decision
-    if mod(i-1,tx)==0
+    if AutoRelo && mod(i-1,tx)==0
         
         % current relocation number
         kt=(i-1)/tx+1;
@@ -503,12 +541,18 @@ for i=1:tsim
         % TODO: fix pooling option 
         
         % calculate pricing
-        if dynamicpricing
-            SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
-            pricesNow=prices(:,:,kp);
-            pp=pricesNow(SelectorClusters);
+        if dynamicpricing>0
+            Distances=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*P.e;
+            if dynamicpricing==1
+                SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
+                pricesNow=prices(:,:,kp);
+                pp=pricesNow(SelectorClusters).*Distances;
+            elseif dynamicpricing==2
+                Surcharge=prices(kp,As(trips,1))+prices(kp,nc+As(trips,2));
+                pp=(ParPricing.gamma_d(Distances).*Distances'+Surcharge)';
+            end
         else
-            pp=ones(length(trips),1)*prices(1,1,kp);
+            pp=Distances*prices;
         end
         Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
         alte=exp(-Tr(Selector)*P.e*ParPricing.gamma_alt);
@@ -521,8 +565,11 @@ for i=1:tsim
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
         % tripAssignment (no clustering) or tripAssignment2 (clustering)
-        [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
-        % [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
+        if AutoRelo
+            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
+        else
+            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
+        end
         
         % update vehicles positions
         ui=Vout(:,1)';
@@ -629,7 +676,7 @@ if isfield(P,'Pricing')
     
     distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
     
-    Sim.revenues=sum((offeredprices-ParPricing.gamma_r).*distances.*chosenmode.*(1-dropped));
+    Sim.revenues=sum((offeredprices-ParPricing.gamma_r.*distances).*chosenmode.*(1-dropped));
     Sim.relocationcosts=sum(relodist)*P.e*ParPricing.gamma_r;
     Sim.offeredprices=offeredprices;
     Sim.prices=prices;
