@@ -17,7 +17,7 @@ testfilename='frequency_test';
 f=repelem(repmat([eye(96)*(FCR.limits(1)-50) eye(96)*(FCR.limits(2)-50)],1,2),15,1)+50;
 save([DataFolder 'grid/' testfilename],'f'); % resolution must be at least 1 minute
 
-%% 
+%% launch test
 
 FCRtest=FCR;
 FCRtest.filename='frequency_test';
@@ -55,9 +55,12 @@ plotta(Res2,'power')
 
 %%
 
-ContrVec=[0 1 5 10 20];
-mVec=[3000,4000,5000];
-FreqExpect=FCRe*ContrVec*1000;
+% ContrVec=[0 1 5 10 20];
+% mVec=[3000,4000,5000];
+% FreqExpect=FCRe*ContrVec*1000;
+
+ContrVec=[0];
+mVec=[2500:100:3000];
 
 [P,R]=generateplotline3('Munich_clustered',[],'Operations.maxsoc',0.9,'gridday',135,'FCR',FCR,'FCR.contracted',ContrVec,'m',mVec);
 
@@ -68,8 +71,6 @@ for j=1:size(R,2)
     S=[R(:,j).Sim];
     Freq=reshape(sum(vertcat(S.ef),2),1440,size(R,1));
 
-    
-    
     for k=1:size(R,1)
         GridIn=R(k,j).Sim.ef-R(k,j).Sim.e;
         Violations(k,j)=sum(sum(abs(GridIn)>Par.Tech.chargekw));
@@ -86,6 +87,8 @@ linevect={'x-','s-','v-','^-','d-','>--','<--','o--','x--'};
 % Resolution=[];
 Format='-dpng';
 Resolution='-r300';
+
+
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
 for i=1:size(FCRfails,2)
@@ -105,9 +108,11 @@ plotta(R(1,1),'power','FAU','_m3k_0MW')
 plotta(R(5,1),'power','FAU','_m3k_20MW')
 
 %% status
-Res=R(5,1);
+
+% Res=R(5,1);
+Res=Res1;
 tsim=Res.Params.tsim;
-NumIdle=(sum(Res.Internals.g(1:tsim,:)>0,2));
+NumIdle=(sum(Res.Internals.sc(1:tsim,:),2));
 x=linspace(0,24,tsim);
 xt=0:4:24;
 
@@ -124,7 +129,7 @@ xlabel('hours')
 ylabel('idle vehicles')
 legend({'m=3000','m=4000','m=5000'})
 set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
-print([DataFolder 'figures/FAU/status'],Format,Resolution);
+% print([DataFolder 'figures/FAU/status'],Format,Resolution);
 
 
 
