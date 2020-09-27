@@ -19,6 +19,12 @@ function [Res]=generalC(P,extsave,dispiter)
 
 addpath functions utilities
 DataFolder=setDataFolder();
+if nargin<3
+    dispiter=1;
+    if nargin<2
+        extsave=1;
+    end
+end
 
 
 %% generate unique Hash for savefile
@@ -42,12 +48,6 @@ end
 %% parallel computing and input check
 
 parcomp=is_in_parallel();
-if nargin<3
-    dispiter=1;
-    if nargin<2
-        extsave=1;
-    end
-end
 
 if isfield(P,'tripfolder')
     TripName=P.tripfolder;
@@ -120,6 +120,9 @@ end
 melep=average2(elep,P.beta/P.e);
 mco2=average2(co2,P.beta/P.e);
 clear d1 d2 ReshapeFactor x y;
+
+% trip distances
+TripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
 
 
 %% setup clustering
@@ -254,6 +257,7 @@ if P.modechoice==0
     
     Multiplier1=1;
     Multiplier2=1;
+    prices=0;
     
 else
     
@@ -542,17 +546,16 @@ for i=1:tsim
         
         % calculate pricing
         if dynamicpricing>0
-            Distances=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*P.e;
             if dynamicpricing==1
                 SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
                 pricesNow=prices(:,:,kp);
-                pp=pricesNow(SelectorClusters).*Distances;
+                pp=pricesNow(SelectorClusters).*TripDistances(trips);
             elseif dynamicpricing==2
                 Surcharge=prices(kp,As(trips,1))+prices(kp,nc+As(trips,2));
-                pp=(ParPricing.gamma_d(Distances).*Distances'+Surcharge)';
+                pp=(ParPricing.gamma_d(Distances).*TripDistances(trips)'+Surcharge)';
             end
         else
-            pp=Distances*prices;
+            pp=TripDistances(trips)*prices;
         end
         Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
         alte=exp(-Tr(Selector)*P.e*ParPricing.gamma_alt);
@@ -674,9 +677,7 @@ Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 % add pricing info
 if isfield(P,'Pricing')
     
-    distances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
-    
-    Sim.revenues=sum((offeredprices-ParPricing.gamma_r.*distances).*chosenmode.*(1-dropped));
+    Sim.revenues=sum((offeredprices-ParPricing.gamma_r.*TripDistances).*chosenmode.*(1-dropped));
     Sim.relocationcosts=sum(relodist)*P.e*ParPricing.gamma_r;
     Sim.offeredprices=offeredprices;
     Sim.prices=prices;
