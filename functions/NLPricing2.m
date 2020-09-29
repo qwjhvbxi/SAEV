@@ -10,19 +10,12 @@ function [prices,k,m,reloc]=NLPricing2(m)
 
 %% useful functions
 
-% price at certain probability: given a trip distance d, find the price at
-% which the probability of acceptance is x
-% q=@(d,x) -(log(  (  x.*exp(-m.gamma_alt*d)  )./(1-x)  ))./d;
-% g=@(a,s) exp(s)./(exp(s)+a);        % value at s
-
 % price at certain probability: given a trip distance d, find the
 % additional surcharge at which the probability of acceptance is x
 q=@(d,x) -log(  (  x.*exp(-m.gamma_alt*d)  )./(1-x)  ) - m.gamma_d(d).*d;
 s=@(d,S) exp(-m.gamma_d(d).*d-S)./(exp(-m.gamma_d(d).*d-S)+exp(-m.gamma_alt*d));
 g=@(a,s) exp(s)./(exp(s)+a);        % value at s
 u=@(a,x) log((x.*a)./(1-x));        % value at s
-
-% Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
 
 
 %% initializations
@@ -47,22 +40,6 @@ for k=1:maxIter
 
     fprintf('*');
     
-%     % probabilities of trip acceptance at the limits
-%     m.amin=1-Points(5+m.w);
-%     m.amax=1-Points(4+m.w);
-%     
-%     % limits to price
-%     m.pmin=q(c,m.amax);
-%     m.pmax=q(c,m.amin);
-
-%     % probabilities of trip acceptance at the limits
-%     m.amin=g(1,u(1,W)-0.5);
-%     m.amax=g(1,u(1,W)+0.5);
-%     
-%     % limits to price
-%     m.pmin=q(c,m.amax);
-%     m.pmax=q(c,m.amin);
-
     % limits to price
     m.pmin=Surcharges-0.5;
     m.pmax=Surcharges+0.5;
@@ -80,24 +57,8 @@ for k=1:maxIter
     
     Surcharges=prices(1:n)+prices(n+1:n*2)';
     m.pvec=prices';
-%     Surcharges(1:n+1:end)=0;
-%     
-%     % detect if there are prices at the edges
-%     moves=(round(Surcharges,3)>=round(m.pmax,3))-(round(Surcharges,3)<=round(m.pmin,3));
-% 
-%     if sum(moves(:)~=0)>0
-%         m.w=m.w+moves;
-%     else
-%         break;
-%     end
-
-%     W=s(c,Surcharges);
 
 end
-
-% other functions
-% f=@(a,s) log(s.*a./(1-s));          % inverse
-% d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
 
 return
 
@@ -119,9 +80,12 @@ m.gamma_alt=0.25;
 m.gamma_d=bestp((1:50)',m.gamma_r,m.gamma_alt);
 [prices,k,m,reloc]=NLPricing2(m)
 
-Surcharges=prices(1:3)+prices(4:6)';
+%%
 
-Fare=m.gamma_d(m.c+eye(3)).*m.c;
+n=size(m.c,1);
+Surcharges=prices(1:n)+prices(n+1:2*n)';
+
+Fare=(m.gamma_d(m.c+eye(n))).*m.c;
 Aeff0=( exp(-Fare)./(exp(-Fare)+exp(-m.gamma_alt*m.c))  ).*m.a
 Aeff0.*Fare
 
@@ -129,36 +93,24 @@ p1=Fare+Surcharges;
 Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a
 Aeff.*p1
 
+sum(sum(Aeff0.*Fare-m.gamma_r*m.c))
+sum(sum(Aeff.*p1-m.gamma_r*m.c))
+
 s=m.v+sum(Aeff)'-sum(Aeff,2);
 r=sum(reloc)'-sum(reloc,2);
 
 s+r
 
-%%
+%% check inputs
 
-if 0
-    
-    
-    %% check inputs
-    
-    j=3;
-    figure
-    hold on
-    line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
-    p=-2:0.1:2;
-    plot(p,  g(  exp(-m.gamma_alt*m.c(j))  ,   -m.gamma_d(m.c(j))*m.c(j)-p)  ,'k:')
-    
-    %%
-    
-    
-    [MinSorted,Ind1]=sort(m.pmin(:));
-    plot([MinSorted,m.pmax(Ind1)])
-    
-    
-    
-end
+j=3;
+figure
+hold on
+line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
+p=-2:0.1:2;
+plot(p,  g(  exp(-m.gamma_alt*m.c(j))  ,   -m.gamma_d(m.c(j))*m.c(j)-p)  ,'k:')
 
+%% other
 
-
-
-% launch pricing optimization for this iteration
+[MinSorted,Ind1]=sort(m.pmin(:));
+plot([MinSorted,m.pmax(Ind1)])
