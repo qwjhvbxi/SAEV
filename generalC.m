@@ -82,6 +82,7 @@ Tr=max(1,round(T/P.e));   % distance matrix in steps
 Tr(1:n+1:end)=0;
 ac=P.Tech.chargekw/P.Tech.battery/60*P.e;    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;    % discharge rate per time step (normalized)
+aggregateratio=1;         % charge rate at aggregate level optimization
 mthor=round(P.EnergyLayer.mthor/P.beta);
 
 % main variables
@@ -206,7 +207,7 @@ if strcmp(P.enlayeralg,'aggregate')
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
-    E.maxchargeminute=P.Tech.chargekw/60;                   % energy exchangeable per minute per vehicle [kWh]
+    E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
     E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
 
     % matrix of optimal control variables for energy layer
@@ -280,6 +281,13 @@ else
             prices=ones(ceil(tsim/tp)+1,nc*2)*ParPricing.gamma_p;
             ParPricing.gamma_d=bestp((1:120)',ParPricing.gamma_r,ParPricing.gamma_alt);
             PerDistanceTariff=ParPricing.gamma_d(max(1,Trs)).*ParPricing.c;
+            
+        case 3
+            
+            ParPricing.gamma_d=bestp((1:120)',ParPricing.gamma_r,ParPricing.gamma_alt);
+            prices=ParPricing.gamma_d(max(1,Trs));
+            Multiplier1=ProbAcc(prices,0);
+            Multiplier2=ProbAcc(prices,0);
 
     end
     
@@ -299,6 +307,9 @@ if isfield(P,'FCR') && ~isempty(P.FCR)
     ReshapeFactor=size(f,1)/1440*P.e;
     f=average2(f(:,P.gridday),ReshapeFactor);
     af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
+    if isfield(P.FCR,'aggregatechargeratio')
+        aggregateratio=P.FCR.aggregatechargeratio;
+    end
 else
     FCR=false;
 end
@@ -353,13 +364,13 @@ for i=1:tsim
             case 'no'
                 
                 % charge as much as possible
-                zmacro(1,t)=1;
+                zmacro(:,t)=[1;0;1;0];
                 
             case 'night'
                 
                 % charge as much as possible only between midnight and 5am
                 if i*P.e<60*5
-                    zmacro(1,t)=1;
+                    zmacro(:,t)=[1;0;1;0];
                 else
                     zmacro(1,t)=0;
                 end
@@ -388,8 +399,8 @@ for i=1:tsim
                     end
 
                     % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                    zmacro(:,t:t+mthor-1)=[ ELayerResults.charging./maxc , ...
-                                            ELayerResults.discharging./maxc , ...
+                    zmacro(:,t:t+mthor-1)=[ ELayerResults.charging , ...
+                                            ELayerResults.discharging , ...
                                             maxc , ...
                                             E.etrip]';
                     zmacro(isnan(zmacro))=0;
@@ -414,7 +425,7 @@ for i=1:tsim
     end
     
     v2gallowed=q(i,:)>P.Operations.v2gminsoc;
-    chargevector=(ones(1,P.m)*zmacro(1,t)-v2gallowed*zmacro(2,t))*ac;
+    chargevector=(ones(1,P.m)*(zmacro(1,t)/zmacro(3,t))-v2gallowed*(zmacro(2,t)/zmacro(3,t)))*ac;
     
                 
     %% pricing optimization
@@ -423,8 +434,9 @@ for i=1:tsim
     kp=ceil(i/tp);
 
     if P.modechoice
-
-        if dynamicpricing>0 && mod(i-1,tp)==0 %(i==1 || mod(i-(ts+tr+1),tp)==0)
+        
+        if dynamicpricing>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
+%         if dynamicpricing>0 && mod(i-1,tp)==0 %(i==1 || mod(i-(ts+tr+1),tp)==0)
 
             % current pricing calculation
             PricingStep=ceil((i-1)/tp)+1;
@@ -436,7 +448,7 @@ for i=1:tsim
 
             % number of vehicles at each station (including vehicles directed there)
             ParPricing.v=histc(Clusters(ui),1:nc);
-            
+            a_tp(1:nc+1:end)=0;
             ParPricing.a=a_tp;
 
             if dynamicpricing==1
@@ -545,20 +557,20 @@ for i=1:tsim
         % TODO: fix pooling option 
         
         % calculate pricing
-        if dynamicpricing>0
-            if dynamicpricing==1
+        switch dynamicpricing
+            case 0
+                pp=TripDistances(trips)*prices;
+            case 1
                 SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
                 pricesNow=prices(:,:,kp);
                 pp=pricesNow(SelectorClusters).*TripDistances(trips);
-            elseif dynamicpricing==2
+            case 2
                 Surcharge=prices(kp,As(trips,1))+prices(kp,nc+As(trips,2));
-                pp=(ParPricing.gamma_d(Distances).*TripDistances(trips)'+Surcharge)';
-            end
-        else
-            pp=TripDistances(trips)*prices;
+                pp=(   ParPricing.gamma_d(TripDistances(trips)).*(TripDistances(trips)')  +  Surcharge  )';
+            case 3
+                pp=ParPricing.gamma_d(TripDistances(trips))'.*TripDistances(trips);
         end
-        Selector=sub2ind(size(Tr),A(trips,1),A(trips,2));
-        alte=exp(-Tr(Selector)*P.e*ParPricing.gamma_alt);
+        alte=exp(-TripDistances(trips)*ParPricing.gamma_alt);
         offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc connected]
@@ -604,19 +616,54 @@ for i=1:tsim
         acv=ac;
     end
     
-    e(i,:)=s(2,:).*max(-acv,min(acv,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
     
     if FCR
-        FcrNeed=af*min(1,max(-1,(1-(f(i)-P.FCR.limits(1))/(P.FCR.limits(2)-P.FCR.limits(1))*2))); % needed FCR
-        AvailableCharge=max(0,min(ac-e(i,:),s(2,:).*(1-q(i,:)))); % EXAMPLE!!
-        AvailableDischarge=max(0,min(ac+e(i,:),s(2,:).*(q(i,:)))); % EXAMPLE!!
-        ef(i,:)=min(1,max(0,FcrNeed)/sum(AvailableDischarge)).*AvailableDischarge ...
-               -min(1,-min(0,FcrNeed)/sum(AvailableCharge)).*AvailableCharge;
+        
+        % setpoint based
+        SetPointUp=(zmacro(1,t))/P.beta*P.e;  % set point of aggregate fleet (kWh)
+        SetPointDown=(zmacro(2,t))/P.beta*P.e;  % set point of aggregate fleet (kWh)
+        CapUp=s(2,:).*min(acv,P.Operations.maxsoc-q(i,:)); % charge
+        v2gallowed=q(i,:)>P.Operations.v2gminsoc;
+        CapDown=s(2,:).*v2gallowed.*min(acv,q(i,:)-P.Operations.minsoc); % discharge
+        if sum(CapUp)>0
+            eRatioUp=min(1,SetPointUp/(sum(CapUp)*P.Tech.battery));
+        else
+            eRatioUp=0;
+        end
+        if sum(CapDown)>0
+            eRatioDown=min(1,SetPointDown/(sum(CapDown)*P.Tech.battery));
+        else
+            eRatioDown=0;
+        end
+        e(i,:)=CapUp*eRatioUp-CapDown*eRatioDown;
+        
+        FCRNeed=(f(i)-50)/(P.FCR.limits(2)-P.FCR.limits(1))*2;
+        FCRNeedUp=af*min(1,max(0,FCRNeed)); % charge
+        FCRNeedDown=af*min(1,max(0,-FCRNeed)); % discharge
+        AvailableUp=s(2,:).*min(ac-max(0,e(i,:)),1-(q(i,:)+e(i,:))); % charge
+        AvailableDown=s(2,:).*min(ac-max(0,-e(i,:)),(q(i,:)+e(i,:))-P.Operations.minsoc); % discharge
+        if sum(AvailableUp)>0
+            FCRRatioUp=min(1,FCRNeedUp/sum(AvailableUp));
+        else
+            FCRRatioUp=0;
+        end
+        if sum(AvailableDown)>0
+            FCRRatioDown=min(1,FCRNeedDown/sum(AvailableDown));
+        else
+            FCRRatioDown=0;
+        end
+        ef(i,:)=AvailableUp.*FCRRatioUp-AvailableDown.*FCRRatioDown;
+           
+    else
+        
+        % capacity based
+        e(i,:)=s(2,:).*max(-acv,min(acv,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
+        
     end
 
     % update SOC 
     %     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
-    q(i+1,:)=q(i,:)+e(i,:)-ef(i,:)-(di>0).*ad;
+    q(i+1,:)=q(i,:)+e(i,:)+ef(i,:)-(di>0).*ad;
 
     % update position
     u(i+1,:)=ui;%(i,:);
