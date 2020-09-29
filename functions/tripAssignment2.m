@@ -58,10 +58,16 @@ if ~isempty(Bin)
     
     for tripID=1:m
         
+        %if sum(~isnan(X(tripID,:)))
         % best vehicle
         [Delay,uids]=min(X(tripID,:));
         
-        WaitingTime=floor(Delay)*Par.e;
+        % if there is a possible vehicle
+        if ~isnan(Delay)
+            WaitingTime=floor(Delay)*Par.e;
+        else
+            WaitingTime=60;
+        end
 
         % avoid changing chosen mode after deciding
         if chosenmode(tripID)==0
@@ -91,7 +97,7 @@ if ~isempty(Bin)
         if chosenmode(tripID)==1
             
             % if the best vehicle is at the station
-            if WaitingTime<=Par.maxwait
+            if WaitingTime<=Par.maxwait && WaitingTime<60
                 
                 waiting(tripID)=WaitingTime;
                 
@@ -145,6 +151,8 @@ if ~isempty(Bin)
     
     V=[ui , di , Used];
     B=[chosenmode , waiting , dropped , waitingestimated ];
+    
+    B;
     
 else
     
