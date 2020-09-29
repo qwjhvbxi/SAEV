@@ -70,13 +70,16 @@ A=[A;Al;-Al];
 b=[b;m.pmax(:);-m.pmin(:)];
 
 % constraint on demand
+Aeq=[];
+beq=[];
 M=q(:).*beta(:);
-Aeq=[sparse(n^2,n^2) , speye(n^2) , repmat(eye(n),n,1).*M , -repmat(eye(n),n,1).*M , repelem(eye(n),n,1).*M , -repelem(eye(n),n,1).*M ];
-beq=q(:).*alpha(:);
+A=[A;[sparse(n^2,n^2) , speye(n^2) , repmat(eye(n),n,1).*M , -repmat(eye(n),n,1).*M , repelem(eye(n),n,1).*M , -repelem(eye(n),n,1).*M ]];
+b=[b;q(:).*alpha(:)];
 
 % bounds
 lb=zeros(2*n^2+n*4,1);
 ub=[repmat(m.v,n,1); q(:); ones(n*4,1)*5];
+%ub=[repmat(m.v,n,1); q(:); ones(n*2,1)*5 ; zeros(n*2,1)];
 ub(1:n+1:n^2)=0; % no relocation in same node
 
 if isfield(m,'fixedprice') && ~isempty(m.fixedprice)
@@ -93,18 +96,18 @@ M=1;
 H0=sparse(2*n^2+n*4,2*n^2+n*4);
 H0(n^2+1:2*n^2,2*n^2+1:end)=[  -repmat(speye(n),n,1).*M , repmat(speye(n),n,1).*M , -repelem(speye(n),n,1).*M , repelem(speye(n),n,1).*M  ];
 
-H0(2*n^2+1:2*n^2+n,2*n^2+n+1:2*n^2+2*n)=speye(n);
-H0(2*n^2+2*n+1:2*n^2+3*n , 2*n^2+3*n+1:2*n^2+4*n)=speye(n);
-H0(2*n^2+1:2*n^2+n,2*n^2+2*n+1:2*n^2+3*n)=speye(n);
-H0(2*n^2+n+1:2*n^2+2*n , 2*n^2+3*n+1:2*n^2+4*n)=speye(n);
+% H0(2*n^2+1:2*n^2+n,2*n^2+n+1:2*n^2+2*n)=speye(n);
+% H0(2*n^2+2*n+1:2*n^2+3*n , 2*n^2+3*n+1:2*n^2+4*n)=speye(n);
+% H0(2*n^2+1:2*n^2+n,2*n^2+2*n+1:2*n^2+3*n)=speye(n);
+% H0(2*n^2+n+1:2*n^2+2*n , 2*n^2+3*n+1:2*n^2+4*n)=speye(n);
 
-H=0.5*(H0+H0');
-f=[ d(:)*m.gamma_r ; ...
-    -d(:).*(Tariff(:)-m.gamma_r); ...
+H=(H0+H0');
+f=[ d(:)*m.gamma_r ; ... relocation
+    -d(:).*(Tariff(:)-m.gamma_r); ... demand
     ones(n*4,1)*0.0001];
 
-if 1
-    options=optimoptions('fmincon','display','none','MaxFunctionEvaluations',5e4); 
+if 0
+    options=optimoptions('fmincon','display','iter','MaxFunctionEvaluations',5e4); 
     myobjfun = @(x)parameterfun(x,H,f);
     x0=[zeros(1,2*n^2),max(0,m.pvec(1:n)),-min(0,m.pvec(1:n)),max(0,m.pvec(n+1:2*n)),-min(0,m.pvec(n+1:2*n))];
     [X0,fval,Exitflag] = fmincon(myobjfun, x0, A, b, Aeq, beq, lb, ub,[],options);%, @myg)
