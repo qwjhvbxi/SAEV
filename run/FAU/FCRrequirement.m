@@ -2,20 +2,23 @@
 addpath functions utilities plots
 DataFolder=setDataFolder();
 P=cpar('Munich_clustered');
-P.Operations.maxsoc=0.9;
+
+P.Operations.maxsoc=0.8;
 
 FCR.limits=[49.8,50.2]; % frequency band
 FCR.contracted=5;      % MW
 FCR.slowchargeratio=0.8;
-FCR.fastchargesoc=0.5;
+FCR.fastchargesoc=0.4;
+FCR.aggregatechargeratio=0.5;
 P.FCR=FCR;
 
+%% test
 
 P.FCR.filename='frequency_30s2015';
-Res1=generalC(P);
+Res1=generalC(P,-1,2);
 
 
-%% requirements
+%% real time requirements
 
 Res=Res1;
 P0=P;
@@ -51,7 +54,7 @@ ylabel('power connected (MW)')
 % legend({'m=3000','m=4000','m=5000'})
 grid on
 set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
-print([DataFolder 'figures/FAU/required_power'],Format,Resolution);
+% print([DataFolder 'figures/FAU/required_power'],Format,Resolution);
 
 figure('Units','centimeters','Position',[10,7,10,7])
 hold on
@@ -69,7 +72,7 @@ ylabel('max. duration (min)')
 % legend({'m=3000','m=4000','m=5000'})
 grid on
 set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
-print([DataFolder 'figures/FAU/required_energy'],Format,Resolution);
+% print([DataFolder 'figures/FAU/required_energy'],Format,Resolution);
 
 
 %% test frequency file
@@ -82,14 +85,25 @@ end
 
 %% launch test
 
+addpath run/FAU
+
 P.FCR=FCR;
 P.FCR.filename='frequency_test';
 P.m=3000;
 P.gridday=17*4+96; % positive from 18:00
+% P.gridday=17*4; % negative from 18:00
+% P.gridday=16*4+96; % positive from 17:00
 Res1=generalC(P,-1,2);
 
 figure
 plot(sum(Res1.Sim.ef,2))
+
+figure
+hold on
+plot(sum(Res1.Sim.e+double(Res1.Sim.ef),2),'k-')
+plot(sum(Res1.Sim.e,2),'--')
+plot(sum(Res1.Sim.ef,2),'r:')
+
 
 [FailMinutes,DeltaPower]=testFCR(P,Res1)
 
