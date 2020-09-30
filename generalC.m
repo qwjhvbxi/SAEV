@@ -149,7 +149,7 @@ end
 
 %% setup relocation module
 
-if ~isempty(P.TransportLayer)
+if ~strcmp(P.trlayeralg,'no') && ~isempty(P.TransportLayer)
     ts=round(P.TransportLayer.ts/P.e);
     tr=round(P.TransportLayer.tr/P.e);
     tx=round(P.TransportLayer.tx/P.e);
@@ -157,6 +157,8 @@ if ~isempty(P.TransportLayer)
     b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
     AutoRelo=1;
 else
+    ts=0;
+    tr=0;
     b=NaN;
     AutoRelo=0;
 end
@@ -249,6 +251,7 @@ else
 end
 
 ParPricing.c=Trs*P.e;
+ParPricing.relocation=AutoRelo;
 
 % function to calculate probability of acceptance given a certain price for each OD pair
 ProbAcc=@(p,s) exp(-p.*ParPricing.c-s)./(exp(-p.*ParPricing.c-s)+exp(-ParPricing.gamma_alt*ParPricing.c));
