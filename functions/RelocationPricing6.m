@@ -22,7 +22,7 @@ end
 n=size(m.c,1);    % nodes
 
 if isfield(m,'relocation')
-    Relocation=m.relocation;
+    Relocation=double(logical(m.relocation));
 else
     Relocation=1;
 end
@@ -78,7 +78,7 @@ b=[b;q(:).*alpha(:)];
 
 % bounds
 lb=zeros(2*n^2+n*4,1);
-ub=[repmat(m.v,n,1); q(:); ones(n*4,1)*5];
+ub=[repmat(m.v*Relocation,n,1); q(:); ones(n*4,1)*5];
 %ub=[repmat(m.v,n,1); q(:); ones(n*2,1)*5 ; zeros(n*2,1)];
 ub(1:n+1:n^2)=0; % no relocation in same node
 
@@ -112,7 +112,7 @@ if 0
     x0=[zeros(1,2*n^2),max(0,m.pvec(1:n)),-min(0,m.pvec(1:n)),max(0,m.pvec(n+1:2*n)),-min(0,m.pvec(n+1:2*n))];
     [X0,fval,Exitflag] = fmincon(myobjfun, x0, A, b, Aeq, beq, lb, ub,[],options);%, @myg)
 else
-    options=optimoptions('quadprog','display','iter');
+    options=optimoptions('quadprog','display','none');
     % optimization
     [X0,fval,Exitflag]=quadprog(H,f,A,b,Aeq,beq,lb,ub,[],options);
 end
@@ -122,9 +122,9 @@ if Exitflag>=0
 
     X1=round(X0(:),3);
     X=reshape(X1(1:n^2),n,n);
-    pricevec=X1(2*n^2+1:end)
+    pricevec=X1(2*n^2+1:end);
     prices=[pricevec(1:n)-pricevec(n+1:2*n) ; pricevec(2*n+1:3*n)-pricevec(3*n+1:4*n)];
-    demand=reshape(X1(n^2+1:2*n^2),n,n)
+    demand=reshape(X1(n^2+1:2*n^2),n,n);
     % there are no relocation actions
     if sum(X(:))==0
         X=[];
