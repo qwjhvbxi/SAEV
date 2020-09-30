@@ -180,7 +180,23 @@ AtChargingStation=sum(u(1,:)==chargingStations);
     
 % update statuses
 s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
-    
+
+
+%% frequency control reserve
+
+if isfield(P,'FCR') && ~isempty(P.FCR)
+    FCR=true;
+    load([DataFolder 'grid/' P.FCR.filename],'f');
+    ReshapeFactor=size(f,1)/1440*P.e;
+    f=average2(f(:,P.gridday),ReshapeFactor);
+    af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
+    if isfield(P.FCR,'aggregatechargeratio')
+        aggregateratio=P.FCR.aggregatechargeratio;
+    end
+else
+    FCR=false;
+end
+
 
 %% setup charging module
 
@@ -300,22 +316,6 @@ end
 % parameters for trip assignment
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
     'maxwait',P.Operations.maxwait,'VOT',ParPricing.VOT,'WaitingCostToggle',ParPricing.pricingwaiting);
-
-
-%% frequency control reserve
-
-if isfield(P,'FCR') && ~isempty(P.FCR)
-    FCR=true;
-    load([DataFolder 'grid/' P.FCR.filename],'f');
-    ReshapeFactor=size(f,1)/1440*P.e;
-    f=average2(f(:,P.gridday),ReshapeFactor);
-    af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
-    if isfield(P.FCR,'aggregatechargeratio')
-        aggregateratio=P.FCR.aggregatechargeratio;
-    end
-else
-    FCR=false;
-end
 
 
 %% variables for progress display and display initializations
@@ -620,14 +620,29 @@ for i=1:tsim
     end
     
     
-    if FCR
+    if FCR  % setpoint based
         
-        % setpoint based
-        SetPointUp=(zmacro(1,t))/P.beta*P.e;  % set point of aggregate fleet (kWh)
-        SetPointDown=(zmacro(2,t))/P.beta*P.e;  % set point of aggregate fleet (kWh)
-        CapUp=s(2,:).*min(acv,P.Operations.maxsoc-q(i,:)); % charge
+        %% create set points at beginning of charging period
+        
+        if rem(i,P.beta/P.e)==1
+            SetPointUpPeriod=(zmacro(1,t));  % set point of aggregate fleet (kWh)
+            SetPointDownPeriod=(zmacro(2,t));  % set point of aggregate fleet (kWh)
+            CapUpPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,P.Operations.maxsoc-q(i,:))*P.Tech.battery); % charge
+            CapDownPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,q(i,:)-P.Operations.v2gminsoc)*P.Tech.battery); % discharge
+            SetPointUp=min(SetPointUpPeriod,sum(CapUpPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
+            SetPointDown=min(SetPointDownPeriod,sum(CapDownPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
+        end
+        
+        
+        %% charging 
+        
+        % available power from fleet
+        maxsoceff=1; % maxsoceff=P.Operations.maxsoc;
         v2gallowed=q(i,:)>P.Operations.v2gminsoc;
+        CapUp=s(2,:).*min(acv,maxsoceff-q(i,:)); % charge
         CapDown=s(2,:).*v2gallowed.*min(acv,q(i,:)-P.Operations.minsoc); % discharge
+        
+        % calculate ratios
         if sum(CapUp)>0
             eRatioUp=min(1,SetPointUp/(sum(CapUp)*P.Tech.battery));
         else
@@ -638,13 +653,23 @@ for i=1:tsim
         else
             eRatioDown=0;
         end
+        
+        % calculate charging for each vehicle
         e(i,:)=CapUp*eRatioUp-CapDown*eRatioDown;
         
+        
+        %% FCR provision
+        
+        % needed FCR power
         FCRNeed=(f(i)-50)/(P.FCR.limits(2)-P.FCR.limits(1))*2;
         FCRNeedUp=af*min(1,max(0,FCRNeed)); % charge
         FCRNeedDown=af*min(1,max(0,-FCRNeed)); % discharge
+        
+        % available power from fleet
         AvailableUp=s(2,:).*min(ac-max(0,e(i,:)),1-(q(i,:)+e(i,:))); % charge
         AvailableDown=s(2,:).*min(ac-max(0,-e(i,:)),(q(i,:)+e(i,:))-P.Operations.minsoc); % discharge
+        
+        % calculate ratios
         if sum(AvailableUp)>0
             FCRRatioUp=min(1,FCRNeedUp/sum(AvailableUp));
         else
@@ -655,6 +680,8 @@ for i=1:tsim
         else
             FCRRatioDown=0;
         end
+        
+        % calculate FCR power contributions
         ef(i,:)=AvailableUp.*FCRRatioUp-AvailableDown.*FCRRatioDown;
            
     else
