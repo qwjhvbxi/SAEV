@@ -33,7 +33,7 @@ switch PlotType
     case 'power'
         
         if isfield(Res.Sim,'ef')
-            ef=sum(Res.Sim.ef,2);
+            ef=double(sum(Res.Sim.ef,2));
         else
             ef=zeros(size(Res.Sim.e,1),1);
         end
