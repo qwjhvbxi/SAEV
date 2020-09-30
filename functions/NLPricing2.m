@@ -32,7 +32,6 @@ maxIter=4;      % max number of iterations
 % probability at 0 surcharge
 Surcharges=zeros(n);
 m.pvec=zeros(1,n*2);
-% W=s(c,Surcharges);
 
 fprintf('\n iterations: ')
 
@@ -50,14 +49,16 @@ for k=1:maxIter
     m.amin(1:n+1:end)=0.5;
     m.amax(1:n+1:end)=0.5;
 
-    
-%     [reloc,prices,~]=RelocationPricing4(m);
-%     [reloc,prices]=RelocationPricing5(m);
     [reloc,prices]=RelocationPricing6(m);
     
-    Surcharges=prices(1:n)+prices(n+1:n*2)';
-    m.pvec=prices';
-
+    if ~isempty(prices)
+        Surcharges=prices(1:n)+prices(n+1:n*2)';
+        m.pvec=prices';
+    else
+        prices=m.pvec';
+        break
+    end
+    
 end
 
 return
