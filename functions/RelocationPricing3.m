@@ -11,7 +11,7 @@
 %
 % see also generalC
 
-function [X,prices]=RelocationPricing3(m)
+function [X,prices,fval]=RelocationPricing3(m)
 
 InputCheck=((m.pmax>=m.pmin).*(m.amax>=m.amin));
 if prod(InputCheck(:))==0
@@ -30,6 +30,7 @@ amin=m.amin(:);
 amax=m.amax(:);
 Da=m.amax-m.amin;
 Dp=m.pmax-m.pmin;
+Dp(Da==0)=1;
 
 
 %% demand function
@@ -47,6 +48,11 @@ h=h0(:);
 % dapprox=a(j)*(s(j)-h(j)*p)
 % dreal=a(j)*exp(-p*m.c(j))./(exp(-p*m.c(j))+exp(-0.25*m.c(j)))
 
+if isfield(m,'relocation')
+    Relocation=m.relocation;
+else
+    Relocation=1;
+end
 
 %% constraints
 
@@ -69,7 +75,7 @@ b=[b;m.v];
 
 % bounds
 lb=[zeros(n^2,1);    pmin];
-ub=[repmat(m.v,n,1); pmax];
+ub=[repmat(m.v,n,1)*Relocation; pmax];
 ub(1:n+1:n^2)=0; % no relocation in same node
 
 if isfield(m,'fixedprice') && ~isempty(m.fixedprice)
