@@ -128,6 +128,15 @@ switch Scenario
         P.Tech.chargekw=22;
         P.m=5000;
         P.e=1;
+    case 'Munich_clustered_week'
+        P.tripfolder='Munich_1week';
+        P.gridfile='Germany_DA_2019';
+        P.Operations.maxwait=Inf;
+        P.Tech.chargekw=22;
+        P.m=5000;
+        P.e=1;
+        P.tripday=1;
+        P.gridday=1;
 end
 
 end
