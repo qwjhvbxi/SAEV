@@ -5,6 +5,8 @@
 % - 'NYC2018'
 % - 'NYC2016-small'
 % - 'Tokyo189'
+% - 'Munich_clustered'
+% - 'Munich_clustered_week'
 % 
 % see also GENERALC
 
