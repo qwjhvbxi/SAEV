@@ -1,7 +1,7 @@
 %% [prices,k,m]=NLPricing(m)
 % Non-linear pricing
 % 
-% m is a struct with variables: c,v,a,gamma_r,fixedprice
+% m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
 % demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
@@ -53,7 +53,7 @@ for k=1:maxIter
     %     end
     
     % launch pricing optimization for this iteration
-    [~,prices]=RelocationPricing3(m);
+    [reloc,prices]=RelocationPricing3(m);
 
     % detect if there are prices at the edges
     moves=(round(prices,3)==round(m.pmax,3))-(round(prices,3)==round(m.pmin,3));
@@ -70,5 +70,20 @@ end
 % f=@(a,s) log(s.*a./(1-s));          % inverse
 % d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
 
+return
+
+
+%% debug
+
+m.v=[0 0 10]';
+m.c=[0 2 3
+     2 0 4
+     3 4 0];
+m.a=[0 10 0
+     5  0 2
+     0  0 0];
+m.gamma_r=0.1;
+m.gamma_alt=0.25;
+[prices,k,m]=NLPricing(m)
 
 
