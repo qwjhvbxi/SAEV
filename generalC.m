@@ -210,7 +210,12 @@ if strcmp(P.enlayeralg,'aggregate')
     if isfield(P,'tripfolder')
         P2=P;
         P2.tripday=P.tripday+1;
-        [A2,Atimes2,~,~]=loadTrips(P2);
+        try 
+            [A2,Atimes2,~,~]=loadTrips(P2);
+        catch 
+            P2.tripday=1;
+            [A2,Atimes2,~,~]=loadTrips(P2);
+        end
         EMDFileName=[TripName '-' num2str(P2.tripday)];
         [Trips2,~,~]=generateEMD(A2,Atimes2,T,etsim,EMDFileName);
         Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
@@ -456,7 +461,7 @@ for i=1:tsim
 
             if dynamicpricing==1
             
-                [pricesNow,~,~]=NLPricing(ParPricing); % OD-pair-based pricing
+                [pricesNow,~,~]=NLPricing4(ParPricing); % OD-pair-based pricing
                 
                 prices(:,:,PricingStep)=pricesNow;
             
@@ -625,10 +630,13 @@ for i=1:tsim
         %% create set points at beginning of charging period
         
         if rem(i,P.beta/P.e)==1
+            % aggregate set point (kWh)
             SetPointUpPeriod=(zmacro(1,t));  % set point of aggregate fleet (kWh)
             SetPointDownPeriod=(zmacro(2,t));  % set point of aggregate fleet (kWh)
+            % expected total vehicle capacity in the period (kWh)
             CapUpPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,P.Operations.maxsoc-q(i,:))*P.Tech.battery); % charge
             CapDownPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,q(i,:)-P.Operations.v2gminsoc)*P.Tech.battery); % discharge
+            % set point for each vehicle for each time step (kWh)
             SetPointUp=min(SetPointUpPeriod,sum(CapUpPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
             SetPointDown=min(SetPointDownPeriod,sum(CapDownPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
         end
@@ -639,6 +647,7 @@ for i=1:tsim
         % available power from fleet
         maxsoceff=1; % maxsoceff=P.Operations.maxsoc;
         v2gallowed=q(i,:)>P.Operations.v2gminsoc;
+        % actual capacity in this time step
         CapUp=s(2,:).*min(acv,maxsoceff-q(i,:)); % charge
         CapDown=s(2,:).*v2gallowed.*min(acv,q(i,:)-P.Operations.minsoc); % discharge
         
