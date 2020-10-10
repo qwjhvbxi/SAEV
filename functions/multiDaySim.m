@@ -53,6 +53,9 @@ Summary.peakwait=zeros(length(Period),1);
 Summary.avgwait=zeros(length(Period),1);
 Summary.emissions=zeros(length(Period),1);
 Summary.cputime=zeros(length(Period),1);
+if isfield(P,'FCR')
+Summary.FCRfails=zeros(length(Period),1);
+end
 Summary.waiting=[];
 Summary.soc=[];
 
@@ -63,15 +66,27 @@ totminutes=0;
 
 % launch or retrieve simulations
 for j=1:length(Period)
+    
+    % input variables
     k=Period(j);
     P.tripday=k;
     P.gridday=k+GridOffset;
     P.Operations.initialsoc=SOC(j,:);
     P.Operations.uinit=Uinit(j,:);
+    
+    % launch today's simulation
     Res=generalC(P,1,-j);
+    
+    % next day input variables
     SOC(j+1,:)=Res.Sim.q(end,:);
     Uinit(j+1,:)=max(1, min( n , ...
         double(Res.Sim.u(end,:)) ) );
+    
+    % general stats
+    totreq=totreq+length(Res.Sim.waiting);
+    totdropped=totdropped+full(sum(Res.Sim.dropped));
+    totwait=totwait+full(sum(Res.Sim.waiting));
+    totminutes=totminutes+sum(Res.Sim.tripdist);
     
     % create Summary
     Summary.cost(j)=Res.cost;
@@ -80,17 +95,16 @@ for j=1:length(Period)
     Summary.avgwait(j)=Res.avgwait;
     Summary.emissions(j)=Res.Sim.emissions;
     Summary.cputime(j)=Res.cputime;
-    
-    totreq=totreq+length(Res.Sim.waiting);
-    totdropped=totdropped+full(sum(Res.Sim.dropped));
-    totwait=totwait+full(sum(Res.Sim.waiting));
-    totminutes=totminutes+sum(Res.Sim.tripdist);
     Summary.waiting=[Summary.waiting;Res.Sim.waiting];
     Summary.soc=[Summary.soc;mean(Res.Sim.q,2)];
     
+    if isfield(P,'FCR')
+        [FailMinutes,~]=testFCR(P,Res);
+        Summary.FCRfails(j)=FailMinutes;
+    end
+    
     if ResultsOut
         R(j)=Res;
-%         Pmat(j)=P;
     end
 end
 
