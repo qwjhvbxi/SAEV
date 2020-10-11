@@ -66,7 +66,7 @@ if ~isempty(Bin)
         if ~isnan(Delay)
             WaitingTime=floor(Delay)*Par.e;
         else
-            WaitingTime=60;
+            WaitingTime=NaN;
         end
 
         % avoid changing chosen mode after deciding
@@ -74,13 +74,21 @@ if ~isempty(Bin)
 
             if Par.modechoice
 
-                % Tariff=distancetomove(tripID)*Par.e*Bin(tripID,4);
-                Tariff=Bin(tripID,4);
+                if isnan(WaitingTime)
+                    
+                    AcceptProbability=0;
+                    
+                else
+                    
+                    % Tariff=distancetomove(tripID)*Par.e*Bin(tripID,4);
+                    Tariff=Bin(tripID,4);
+
+                    UtilitySAEV=-Tariff-WaitingTime*Par.VOT/60*Par.WaitingCostToggle;
+
+                    AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+Bin(tripID,5));
+                    
+                end
                 
-                UtilitySAEV=-Tariff-WaitingTime*Par.VOT/60*Par.WaitingCostToggle;
-
-                AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+Bin(tripID,5));
-
             else
 
                 AcceptProbability=1;
@@ -97,7 +105,7 @@ if ~isempty(Bin)
         if chosenmode(tripID)==1
             
             % if the best vehicle is at the station
-            if WaitingTime<=Par.maxwait && WaitingTime<60
+            if WaitingTime<=Par.maxwait && ~isnan(WaitingTime)
                 
                 waiting(tripID)=WaitingTime;
                 
