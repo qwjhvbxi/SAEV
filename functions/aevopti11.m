@@ -95,7 +95,7 @@ fmge=zeros(4*Q.T,1); % cost of energy generation
 fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice/10^6 ; zeros(Q.T,1) ]; 
 
 % soc boost
-fsoc=[ -ones(Q.T,1) ; ones(Q.T,1) ; zeros(Q.T*2+4*numgenerators,1) ];
+fsoc=[ -ones(Q.T,1) ; ones(Q.T,1)/Q.eta ; zeros(Q.T*2+4*numgenerators,1) ];
 
 % constraints for generators & cost function constructors
 for i=1:numgenerators
