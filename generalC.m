@@ -84,6 +84,11 @@ ac=P.Tech.chargekw/P.Tech.battery/60*P.e;    % charge rate per time step (normal
 ad=P.Tech.consumption/P.Tech.battery*P.e;    % discharge rate per time step (normalized)
 aggregateratio=1;         % charge rate at aggregate level optimization
 mthor=round(P.EnergyLayer.mthor/P.beta);
+if isfield(P.Tech,'efficiency')
+    Efficiency=P.Tech.efficiency;
+else
+    Efficiency=1;
+end
 
 % main variables
 q=zeros(tsim,P.m,'double'); % SOC
@@ -225,10 +230,10 @@ if strcmp(P.enlayeralg,'aggregate')
 
     % energy layer variable: static values
     E.v2g=P.Operations.v2g; % use V2G?
-    E.eta=1;                % 
+    E.eta=Efficiency;       % roundtrip (discharge) efficiency
     E.selling=1;            % can sell to the grid?
-%     E.minfinalsoc=0.9;%0.9      % final SOC. This only works for optimization horizon of ~24h
-    E.socboost=10000;
+    % E.minfinalsoc=1;      % final SOC. This only works for optimization horizon of ~24h
+    E.socboost=1e4;         % soft constraint for final soc
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
@@ -279,7 +284,6 @@ ParPricing.relocation=AutoRelo;
 % function to calculate probability of acceptance given a certain price for each OD pair
 ProbAcc=@(p,s) exp(-p.*ParPricing.c-s)./(exp(-p.*ParPricing.c-s)+exp(-ParPricing.gamma_alt*ParPricing.c));
     
-
 if P.modechoice==0
     
     Multiplier1=1;
@@ -320,7 +324,8 @@ else
 end
 
 
-% parameters for trip assignment
+%% parameters for trip assignment
+
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
     'maxwait',P.Operations.maxwait,'VOT',ParPricing.VOT,'WaitingCostToggle',ParPricing.pricingwaiting,'LimitFCR',LimitFCR);
 
@@ -528,6 +533,7 @@ for i=1:tsim
         ParRel.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
         ParRel.Trs=Trs;
         ParRel.bmin=bmin;
+        ParRel.LimitFCR=LimitFCR;
         
         [Vout,bkt]=Relocation(Vin,ParRel);
         
@@ -619,15 +625,10 @@ for i=1:tsim
     
     %% simulation variables update
     
-    if FCR
+    if FCR  % setpoint based
+        
         % power exchanged for vehicles charging
         acv=(q(i,:)<P.FCR.fastchargesoc)*ac+(q(i,:)>=P.FCR.fastchargesoc)*ac*P.FCR.slowchargeratio;
-    else
-        acv=ac;
-    end
-    
-    
-    if FCR  % setpoint based
         
         %% create set points at beginning of charging period
         
@@ -637,7 +638,7 @@ for i=1:tsim
             SetPointDownPeriod=(zmacro(2,t));  % set point of aggregate fleet (kWh)
             % expected total vehicle capacity in the period (kWh)
             CapUpPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,P.Operations.maxsoc-q(i,:))*P.Tech.battery); % charge
-            CapDownPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,q(i,:)-P.Operations.v2gminsoc)*P.Tech.battery); % discharge
+            CapDownPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,(q(i,:)-P.Operations.v2gminsoc)*Efficiency)*P.Tech.battery); % discharge
             % set point for each vehicle for each time step (kWh)
             SetPointUp=min(SetPointUpPeriod,sum(CapUpPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
             SetPointDown=min(SetPointDownPeriod,sum(CapDownPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
@@ -651,7 +652,7 @@ for i=1:tsim
         v2gallowed=q(i,:)>P.Operations.v2gminsoc;
         % actual capacity in this time step
         CapUp=s(2,:).*min(acv,maxsoceff-q(i,:)); % charge
-        CapDown=s(2,:).*v2gallowed.*min(acv,q(i,:)-P.Operations.minsoc); % discharge
+        CapDown=s(2,:).*v2gallowed.*min(acv,(q(i,:)-P.Operations.minsoc)*Efficiency); % discharge
         
         % calculate ratios
         if sum(CapUp)>0
@@ -698,13 +699,13 @@ for i=1:tsim
     else
         
         % capacity based
-        e(i,:)=s(2,:).*max(-acv,min(acv,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
+        e(i,:)=s(2,:).*max(-ac,min(ac,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
         
     end
 
     % update SOC 
     %     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
-    q(i+1,:)=q(i,:)+e(i,:)+ef(i,:)-(di>0).*ad;
+    q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/Efficiency-(di>0).*ad;
 
     % update position
     u(i+1,:)=ui;%(i,:);
