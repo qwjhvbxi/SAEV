@@ -1,23 +1,36 @@
-function [Res]=testFCRreq(P,R,plotta)
+function [Res]=testFCRreq(P,var1,var2,var3)
+
+if nargin==3
+    R=var1;
+    Connected=R.Internals.sc;
+    Soc=R.Sim.q(1:end-1,:);
+    plotta=var2;
+else
+    Connected=var1;
+    Soc=var2;
+    plotta=var3;
+end
+tsim=size(Connected,1);
+chargekw=P.Tech.chargekw;
+battery=P.Tech.battery;
+Contract=P.FCR.contracted;
+
 
 %% real time requirements
 
-Contract=P.FCR.contracted;
-tsim=R.Params.tsim;
-
-NumIdle=(sum(R.Internals.sc(1:tsim,:),2));
-Power=NumIdle*P.Tech.chargekw;
+NumIdle=(sum(Connected,2));
+Power=NumIdle*chargekw;
 
 % positive FCR, 0% min soc
-Energy=sum(min(P.Tech.chargekw,R.Sim.q(1:R.Params.tsim,:).*R.Internals.sc*P.Tech.battery),2)/1000;
+Energy=sum(min(chargekw,Soc.*Connected*battery),2)/1000;
 MinutesDis=Energy/Contract*60; % kWh 
 
 % positive FCR, 20% min soc
-Energy20pct=sum(max(0,min(P.Tech.chargekw,(R.Sim.q(1:R.Params.tsim,:).*R.Internals.sc-0.2)*P.Tech.battery)),2)/1000;
+Energy20pct=sum(max(0,min(chargekw,(Soc.*Connected-0.2)*battery)),2)/1000;
 MinutesDis20pct=Energy20pct/Contract*60; % kWh 
 
 % negative FCR
-Storage=sum(min(P.Tech.chargekw,(1-R.Sim.q(1:R.Params.tsim,:).*R.Internals.sc)*P.Tech.battery),2)/1000;
+Storage=sum(min(chargekw,(1-Soc.*Connected)*battery),2)/1000;
 MinutesCh=Storage/Contract*60; % kWh 
 
 if nargin>2 && plotta
