@@ -40,11 +40,11 @@ switch PlotType
         
         % power exchanged
         figure('Units','centimeters','Position',[10,7,10,7])
-        plot(x,full(sum(Res.Sim.e,2)+ef)/1000)
+        stairs(x,full(sum(Res.Sim.e,2)+ef)/1000)
         ylabel('power (MW)')
         hold on
         yyaxis right
-        plot(x,Res.Params.elep(1:tsim),'r-')
+        stairs(x,Res.Params.elep(1:tsim),'r-')
         xlim([0,24])
         xticks(xt)
         xlabel('hours')
