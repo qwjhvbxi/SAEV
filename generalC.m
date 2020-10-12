@@ -193,8 +193,10 @@ if isfield(P,'FCR') && ~isempty(P.FCR)
     if isfield(P.FCR,'aggregatechargeratio')
         aggregateratio=P.FCR.aggregatechargeratio;
     end
+    LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
 else
     FCR=false;
+    LimitFCR=0;
 end
 
 
@@ -320,7 +322,7 @@ end
 
 % parameters for trip assignment
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
-    'maxwait',P.Operations.maxwait,'VOT',ParPricing.VOT,'WaitingCostToggle',ParPricing.pricingwaiting);
+    'maxwait',P.Operations.maxwait,'VOT',ParPricing.VOT,'WaitingCostToggle',ParPricing.pricingwaiting,'LimitFCR',LimitFCR);
 
 
 %% variables for progress display and display initializations

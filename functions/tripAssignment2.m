@@ -3,7 +3,7 @@
 % 
 % input
 % Vin: vehicles information in the form:
-% [station delay soc]
+% [station delay soc connected]
 % Bin: passengers info in the form:
 % [O D waiting]
 % Par: parameters:
@@ -35,6 +35,12 @@ if ~isempty(Bin)
     ui=Vin(:,1);
     di=Vin(:,2);
     Used=zeros(length(ui),1);
+    Connected=logical(Vin(:,4));
+    if isfield(Par,'LimitFCR')
+        LimitFCR=Par.LimitFCR;
+    else
+        LimitFCR=0;
+    end
     
     waiting=Bin(:,3);
     chosenmode=(waiting>0);
@@ -124,6 +130,12 @@ if ~isempty(Bin)
                 X(:,uids)=(Par.Tr(Bin(:,1),ui(uids))+di(uids)).*(EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
                 X(X(:,uids)==0,uids)=NaN;
                 
+                % remove vehicles that are needed for FCR
+                Connected(uids)=0;
+                if sum(Connected)<=LimitFCR
+                    X(:,Connected)=NaN;
+                end
+                
                 Used(uids)=1;
                 
             else
@@ -146,21 +158,14 @@ if ~isempty(Bin)
             % walking
 
         end
-
         
     end
-    
-    %% alternative assignment
-    
-    % assignmentoptimal(X);
     
     
     %% report results
     
     V=[ui , di , Used];
     B=[chosenmode , waiting , dropped , waitingestimated ];
-    
-    B;
     
 else
     
