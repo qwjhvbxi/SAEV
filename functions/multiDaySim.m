@@ -53,11 +53,12 @@ Summary.peakwait=zeros(length(Period),1);
 Summary.avgwait=zeros(length(Period),1);
 Summary.emissions=zeros(length(Period),1);
 Summary.cputime=zeros(length(Period),1);
-if isfield(P,'FCR')
 Summary.FCRfails=zeros(length(Period),1);
-end
 Summary.waiting=[];
 Summary.soc=[];
+
+Summary.socv=[];
+Summary.sc=[];
 
 totreq=0;
 totdropped=0;
@@ -98,9 +99,13 @@ for j=1:length(Period)
     Summary.waiting=[Summary.waiting;Res.Sim.waiting];
     Summary.soc=[Summary.soc;mean(Res.Sim.q,2)];
     
+    
+    Summary.socv=[Summary.socv;Res.Sim.q(1:end-1,:)];
+    Summary.sc=[Summary.sc;Res.Internals.sc];
+    
     if isfield(P,'FCR')
-        [FailMinutes,~]=testFCR(P,Res);
-        Summary.FCRfails(j)=FailMinutes;
+        FCRres=testFCR(P,Res);
+        Summary.FCRfails(j)=FCRres.FailMinutes;
     end
     
     if ResultsOut
