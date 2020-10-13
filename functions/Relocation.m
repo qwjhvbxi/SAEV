@@ -9,8 +9,14 @@ nv=size(Vin,1);
 position=Vin(:,1);
 delay=Vin(:,2);
 soc=Vin(:,3);
+charging=Vin(:,4);
 relocating=Vin(:,5);
 used=zeros(nv,1);
+if isfield(Par,'LimitFCR')
+    LimitFCR=Par.LimitFCR;
+else
+    LimitFCR=0;
+end
 
 % vehicles at clusters
 uci=position.*(delay==0); % idle
@@ -38,23 +44,30 @@ if ~isempty(x)
     [Fs,Rs,Vr]=find(x);
 
     % distance of relocation
-    arri=Par.Trs(sub2ind(size(Par.Trs),Fs,Rs)); 
+    ReloDistance=Par.Trs(sub2ind(size(Par.Trs),Fs,Rs)); 
 
     % duplicate fluxes with multiple vehicles
     Fs=repelem(Fs,Vr);
     Rs=repelem(Rs,Vr);
-    arri=repelem(arri,Vr);
+    ReloDistance=repelem(ReloDistance,Vr);
 
     % satisfy longer relocation tasks first
-    [arris,dstnid]=sort(arri,'descend');
+    [ReloDistanceSorted,dstnid]=sort(ReloDistance,'descend');
 
-    for ka=1:length(arris)
+    % for each single task (1 vehicle)
+    for ka=1:length(ReloDistanceSorted)
 
-        % find candidate vehicles for the task with enough soc and idle
-        candidates=soc.*(position==Fs(dstnid(ka))).*(soc/Par.ad >= arris(ka)).*(relocating==0); 
+        % find candidate vehicles for the task with enough soc and idle, give
+        % priority to non-charging vehicles
+        candidates=(soc-charging).*(position==Fs(dstnid(ka))).*(soc/Par.ad >= ReloDistanceSorted(ka)).*(relocating==0); 
 
         % remove unavailable vehicles
         candidates(candidates==0)=NaN;
+        
+        % remove charging vehicles if exceeding the LimitFCR
+        if sum(candidates<0)<=LimitFCR
+            candidates(candidates<0)=NaN;
+        end
 
         % sort candidate vehicles by SOC
         [ur,ui]=max(candidates);
