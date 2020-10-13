@@ -89,6 +89,7 @@ if isfield(P.Tech,'efficiency')
 else
     Efficiency=1;
 end
+DayCharge=0;
 
 % main variables
 q=zeros(tsim,P.m,'double'); % SOC
@@ -386,8 +387,10 @@ for i=1:tsim
                 % charge as much as possible only between midnight and 5am
                 if i*P.e<60*5
                     zmacro(:,t)=[1;0;1;0];
+                    DayCharge=0;
                 else
-                    zmacro(1,t)=0;
+                    zmacro(:,t)=[0;0;1;0];%[(q(i,:)<0.3);0;1;0];
+                    DayCharge=1;
                 end
             
             case 'aggregate'
@@ -440,7 +443,8 @@ for i=1:tsim
     end
     
     v2gallowed=q(i,:)>P.Operations.v2gminsoc;
-    chargevector=(ones(1,P.m)*(zmacro(1,t)/zmacro(3,t))-v2gallowed*(zmacro(2,t)/zmacro(3,t)))*ac;
+    LowSocRefill=(q(i,:)<0.6)*DayCharge;
+    chargevector=(ones(1,P.m)*(zmacro(1,t)/zmacro(3,t))-v2gallowed*(zmacro(2,t)/zmacro(3,t))+LowSocRefill)*ac;
     
                 
     %% pricing optimization
@@ -699,7 +703,11 @@ for i=1:tsim
     else
         
         % capacity based
-        e(i,:)=s(2,:).*max(-ac,min(ac,(min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+chargevector))-q(i,:))));
+        CapUp=s(2,:).*min(ac,P.Operations.maxsoc-q(i,:)); % charge
+        CapDown=s(2,:).*min(ac,(q(i,:)-P.Operations.minsoc)*Efficiency); % discharge
+        
+        e(i,:)=min(CapUp,max(0,chargevector))+max(-CapDown,min(0,chargevector));
+%         e(i,:)=s(2,:).*max(-ac,min(ac,(min(P.Operations.maxsoc,max( P.Operations.minsoc , q(i,:)+chargevector ) )-q(i,:))));
         
     end
 

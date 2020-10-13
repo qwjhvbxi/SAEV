@@ -61,6 +61,10 @@ if ~isempty(Bin)
          .*(EnergyReq<ones(m,1)*Vin(:,3)'); % requirement for enough SOC
      
      X(X==0)=NaN;
+     
+    if sum(Connected)<=LimitFCR
+        X(:,Connected)=NaN;
+    end
     
     for tripID=1:m
         
