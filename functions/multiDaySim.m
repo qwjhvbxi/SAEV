@@ -54,6 +54,7 @@ Summary.avgwait=zeros(length(Period),1);
 Summary.emissions=zeros(length(Period),1);
 Summary.cputime=zeros(length(Period),1);
 Summary.FCRfails=zeros(length(Period),1);
+Summary.FCRenergy=zeros(length(Period),2);
 Summary.waiting=[];
 Summary.soc=[];
 
@@ -106,6 +107,7 @@ for j=1:length(Period)
     if isfield(P,'FCR')
         FCRres=testFCR(P,Res);
         Summary.FCRfails(j)=FCRres.FailMinutes;
+        Summary.FCRenergy(j,:)=FCRres.Totals;
     end
     
     if ResultsOut
