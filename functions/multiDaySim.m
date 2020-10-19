@@ -8,7 +8,7 @@
 % Summary is a struct with a summary of the results
 % R is the optional full results struct if ResultsOut==true
 
-function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut)
+function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut,varargin)
 
 if prod(Period(2:end)-Period(1:end-1)==1)==0
     warning('Days in ''Period'' must be consecutive');
@@ -75,6 +75,13 @@ for j=1:length(Period)
     P.gridday=k+GridOffset;
     P.Operations.initialsoc=SOC(j,:);
     P.Operations.uinit=Uinit(j,:);
+    
+    % variable input
+    if numel(varargin)>0
+        NewInput={varargin{1},varargin{2}(j)};
+        Pmat=changeStruct(P,NewInput);
+        P=Pmat{1};
+    end
     
     % launch today's simulation
     Res=generalC(P,1,-j);
