@@ -27,7 +27,7 @@ if ci==0
     m1=m-min(y);
     m2=max(y)-m;
 end
-if ci==1
+if ci==1 %|| size(y,2)==1
     [CI,m]=confidenceInterval(y,[0.025,0.975]);
     m1=m-min(CI);
     m2=max(CI)-m;
@@ -38,7 +38,7 @@ if size(y,2)>1
     p2=[];
 else
     hold on
-    p1=line(x([1,end])'*ones(1,2),ones(2,1)*[CI]','LineWidth',lw,'LineStyle',':','Color',c); 
+    p1=line(x([1,end])'*ones(1,2),ones(2,1)*[m-m1,m+m2],'LineWidth',lw,'LineStyle',':','Color',c); 
     p2=line(x([1,end])'',ones(2,1)*m,'LineWidth',lw,'Color',c,'LineStyle',s); 
 end
 
