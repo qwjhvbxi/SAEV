@@ -24,6 +24,7 @@ function [V,B,tripdist,relodist,queue]=tripAssignment2(Vin,Bin,Par)
 tripdist=0;
 relodist=0;
 queue=zeros(100,1);
+ql=0;
 
 % if there are trips
 if ~isempty(Bin)
@@ -115,35 +116,49 @@ if ~isempty(Bin)
         if chosenmode(tripID)==1
             
             % if the best vehicle is at the station
-            if WaitingTime<=Par.maxwait && ~isnan(WaitingTime)
-                
-                waiting(tripID)=WaitingTime;
-                
-                % update travelled distance
-                tripdist=tripdist+distancetomove(tripID);
-                
-                % update additional travel distance to pickup
-                pickupdist=Par.Tr(ui(uids),Bin(tripID,1));
-                relodist=relodist+pickupdist;
-                
-                % accept request and update vehicle position
-                ui(uids)=Bin(tripID,2); % position
-                di(uids)=di(uids)+pickupdist+distancetomove(tripID); % delay
-                
-                % update X
-                X(:,uids)=(Par.Tr(Bin(:,1),ui(uids))+di(uids)).*(EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
-                X(X(:,uids)==0,uids)=NaN;
-                
-                % remove vehicles that are needed for FCR
-                Connected(uids)=0;
-                if sum(Connected)<=LimitFCR
-                    X(:,Connected)=NaN;
+            if (waiting(tripID)<=Par.maxwait && isnan(WaitingTime)) || (waiting(tripID)+WaitingTime<Par.maxwait)
+            % if (waiting(tripID)+WaitingTime)<=Par.maxwait
+            
+                if ~isnan(WaitingTime)
+
+                    waiting(tripID)=waiting(tripID)+WaitingTime;
+
+                    % update travelled distance
+                    tripdist=tripdist+distancetomove(tripID);
+
+                    % update additional travel distance to pickup
+                    pickupdist=Par.Tr(ui(uids),Bin(tripID,1));
+                    relodist=relodist+pickupdist;
+
+                    % accept request and update vehicle position
+                    ui(uids)=Bin(tripID,2); % position
+                    di(uids)=di(uids)+pickupdist+distancetomove(tripID); % delay
+
+                    % update X
+                    X(:,uids)=(Par.Tr(Bin(:,1),ui(uids))+di(uids)).*(EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
+                    X(X(:,uids)==0,uids)=NaN;
+
+                    % remove vehicles that are needed for FCR
+                    Connected(uids)=0;
+                    if sum(Connected)<=LimitFCR
+                        X(:,Connected)=NaN;
+                    end
+
+                    Used(uids)=1;
+
+                else
+
+                    % increase waiting time (minutes) for this trip
+                    waiting(tripID)=waiting(tripID)+Par.e;
+
+                    % add this trip to the queue
+                    ql=ql+1;  % current trip
+                    queue(ql)=tripID;
+
                 end
                 
-                Used(uids)=1;
-                
             else
-
+                
                 % TODO: fix pooling
 
                 % if max waiting exceeded, request dropped
@@ -155,7 +170,7 @@ if ~isempty(Bin)
 
                 % register this as a dropped request
                 dropped(tripsdropped)=1;
-                
+
             end
         else
 
