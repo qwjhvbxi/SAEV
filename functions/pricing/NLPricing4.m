@@ -1,12 +1,12 @@
-%% [prices,k,m]=NLPricing(m)
-% Non-linear pricing
+%% [prices,k,m]=NLPricing4(m)
+% Non-linear pricing with continuous approximation
 % 
 % m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
 % demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
-function [prices,k,m,reloc]=NLPricing4(m)
+function [prices,k,m,reloc,revenues]=NLPricing4(m)
 
 %% useful functions
 
@@ -24,13 +24,21 @@ c=m.c;          % distance matrix
 n=size(c,1);    % nodes
 c(1:n+1:end)=1; % remove distance between same nodes
 % m.w=zeros(n,n); % position of price linearization (between -3 and 3)
-maxIter=20;      % max number of iterations
+if isfield(m,'maxIter')
+    maxIter=m.maxIter;      % max number of iterations
+else
+    maxIter=10;      % max number of iterations
+end
 prices=ones(n,n)*m.gamma_alt;
 
+% revenues=zeros(maxIter+1,1);
+% ThisRevenue=CalcRevenue(m,prices);
+% revenues(1)=ThisRevenue;
 
 %% iterations
 
 delta=zeros(n^2,maxIter);
+priceshist=zeros(n^2,maxIter);
 
 fprintf('\n iterations: ')
 
@@ -45,9 +53,12 @@ for k=1:maxIter
     p1=(1-C)./D;
     p0=-C./D;
     
-    m.pmin=prices-(prices-p1)/k; % p1
+%     m.pmin=p1;
+    m.pmin=prices-(prices-p1)/k; % should be used
+%     m.pmin=ones(n,n)*m.gamma_alt;
+%     m.pmin=max(0,p1);
     m.pmax=p0;
-%     m.pmax=prices+(p0-prices)/k; % p0
+%     m.pmax=prices+(p0-prices)/k; 
     
     m.amin=D.*m.pmax+C;%g(exp(-m.gamma_alt.*m.c),-m.pmax.*m.c);
     m.amax=D.*m.pmin+C;%g(exp(-m.gamma_alt.*m.c),-m.pmin.*m.c);
@@ -58,27 +69,31 @@ for k=1:maxIter
     m.pmin(Empty)=0;
     m.pmax(Empty)=0;
 
-%     if 0
-%         % check inputs
-%         j=3;
-%         figure
-%         hold on
-%         line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
-%         p=0:0.01:1;
-%         plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
-%     end
+    if 0
+        % check inputs
+        j=3;
+        figure
+        hold on
+        line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
+        p=0:0.01:1;
+        plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
+    end
     
     % launch pricing optimization for this iteration
     [reloc,newprices,fval]=RelocationPricing3(m);
     
     delta(:,k)=(newprices(:)-prices(:));
+    priceshist(:,k)=newprices(:);
     
     prices=newprices;
     
-    % fprintf('*');
-    fprintf('\n %f',mean(delta(:,k)));
+    fprintf('*');
+    % fprintf('\n %f',mean(delta(:,k)));
     % fprintf('\n %f',fval);
-
+    ThisRevenue=CalcRevenue(m,prices,reloc);
+    fprintf('\n %f',ThisRevenue);
+    revenues(k)=ThisRevenue;
+    
 end
 
 % delta1=delta(sum(delta,2)>0,:);
@@ -87,10 +102,21 @@ end
 % figure
 % plot(delta1')
 
-return
+end
+
+function ThisRevenue=CalcRevenue(m,prices,reloc)
+    p1=prices.*m.c;
+    Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a;
+    if ~isempty(reloc)
+        relocation=sum(sum(reloc.*m.c))*m.gamma_r;
+    else 
+        relocation=0;
+    end
+    ThisRevenue=full(sum(sum(Aeff.*(p1-m.gamma_r*m.c))))-relocation;
+end
 
 
-%% debug
+function debug1
 
 m.v=[0 0 0]';
 m.c=[0 2 3
@@ -124,4 +150,5 @@ r=sum(reloc)'-sum(reloc,2);
 
 s+r
 
+end
 
