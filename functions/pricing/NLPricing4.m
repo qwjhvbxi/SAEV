@@ -54,7 +54,8 @@ for k=1:maxIter
     p0=-C./D;
     
 %     m.pmin=p1;
-    m.pmin=prices-(prices-p1)/k; % should be used
+%     m.pmin=prices-(prices-p1)/k; % should be used
+    m.pmin=prices-0.5./m.c; 
 %     m.pmin=ones(n,n)*m.gamma_alt;
 %     m.pmin=max(0,p1);
     m.pmax=p0;
