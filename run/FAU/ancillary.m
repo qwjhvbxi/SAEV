@@ -175,6 +175,7 @@ figure('Units','centimeters','Position',[10,7,10,7])
 v=linspace(0,24*7,7*size(f,1));
 plot(v,reshape(f(:,12:18),7*size(f,1),1))
 xlim([0,24*7])
+ylim([49.9,50.1])
 xlabel('hour');
 ylabel('frequency (Hz)')
 box on

@@ -38,9 +38,12 @@
 
 %% 1 week
 
+addpath functions utilities plots
 DataFolder=setDataFolder();
-Days=18:24;
+% Days=18:24;
+Days=25:31;
 m=30;
+scenario='NYC2016-small';
 
 % optimal
 Transport.thor=8;          % horizon (time steps)
@@ -49,23 +52,35 @@ Transport.rho2=0.01;        % weight of charging objective for electricity price
 Transport.rho3=0.01;        % weight of charging objective for SOC
 Transport.rho4=0.000001;    % weight for fixed charge
 
-Trips={'NYC2016-small_150','NYC2016-small_100','NYC2016-small_75','NYC2016-small_50'};
+Trips={'NYC2016-small_200','NYC2016-small_150','NYC2016-small_100','NYC2016-small_75','NYC2016-small_50'};
+
+
+% load or create start variables to avoid saving files in parallel
+% computing
+load([DataFolder 'scenarios/' scenario],'T');
+n=size(T,1);
+StartFile=[DataFolder 'temp/StartFile_' num2str(n) '-' num2str(m) '.mat'];
+if exist(StartFile,'file')
+    load(StartFile,'StartSoc','StartPos');
+else
+    StartSoc=ones(1,P.m)*0.7;
+    StartPos=randi(n,1,P.m);
+    save(StartFile,'StartSoc','StartPos');
+end
+
+% Transport2.tx=10;  % minutes
+% Transport2.ts=24; 
+% Transport2.tr=20; 
+% Transport2.bmin=0;
 
 % create P cell
 K=length(Trips);
 for k=1:K
     
-%     load([DataFolder 'trips/' Trips{k} '/d' Days(1)],'A');
-%     StartSoc=ones(1,m)*0.7;
-%     StartPos=A(1:Pmat{k}.m,1);
-%     StartFile=[DataFolder 'temp/StartFile_' num2str(n) '-' num2str(P.m) '.mat'];
-%     save(StartFile,'StartSoc','StartPos');
-
     % common parameters
-    Pmat{k}=cpar('NYC2016-small');
+    Pmat{k}=cpar(scenario);
     Pmat{k}.m=m;
     Pmat{k}.Operations.maxwait=Inf;
-    %Pmat{k}.Operations.uinit=A(1:Pmat{k}.m,1);
     Pmat{k}.trlayeralg='opti';
     Pmat{k}.TransportLayer=Transport;
     Pmat{k}.gridfile='NY_DA_2016';
@@ -73,12 +88,12 @@ for k=1:K
     
     
     % simplified
-    Pmat{K+k}=cpar('NYC2016-small');
+    Pmat{K+k}=cpar(scenario);
     Pmat{K+k}.m=m;
-    Pmat{K+k}.e=1;
+    Pmat{K+k}.e=2;
     Pmat{K+k}.Operations.maxwait=Inf;
-    %Pmat{K+k}.Operations.uinit=A(1:Pmat{k}.m,1);
     Pmat{K+k}.trlayeralg='simplified';
+    % Pmat{K+k}.TransportLayer=Transport2;
     Pmat{K+k}.gridfile='NY_DA_2016';
     Pmat{K+k}.tripfolder=Trips{k};
     
@@ -91,17 +106,91 @@ parfor k=1:length(Pmat)
 end
 
 
-for k=1:3%length(Pmat)
+for k=1:length(Pmat)
     [S1,R1]=multiDaySim(Days,Pmat{k},gridoffset)
     S(k)=S1;
 %     R(k)=R1;
 end
 
-% simplified
-    
+
+%% tests
+
+[S1,R1]=multiDaySim(Days(1),Pmat{4},gridoffset,1)
+[S2,R2]=multiDaySim(Days(1),Pmat{8},gridoffset,1)
+
+figure
+hold on
+plot(sum(R1.Sim.e,2))
+plot(sum(R2.Sim.e,2))
+plotta(R1,'power')
+plotta(R2,'power')
+
+%% plot cputime
+
+linevect={'x-','s-','v-','^-','d-','>--','<--','o--','x--'};
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+plot(x,sum([S(1:4).cputime]),linevect{2})
+plot(x,sum([S(5:8).cputime]),'^--')
+% semilogy(x,[sum([S(1:4).cputime])'  sum([S(5:8).cputime])'],'x-');
+set(gca, 'YScale', 'log')
+grid on
+ylabel('CPU time (s)')
+xticks(x)
+xlabel('total trips (1 week)')
+lgnd=legend({'exact','aggregated'},'Orientation','vertical','Location','East');
+% lgnd.BoxFace.ColorType='truecoloralpha';
+% lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/Energy/comparison_cputime'],'-depsc2');
+
+%% plot wait cost
+
+linevect={'x-','s-','v-','^-','d-','>--','<--','o--','x--'};
+N=cellfun('length',{S.waiting});
+x=N(1:4);
+
+z=linspace(0,24,721);
+
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+L1=plot(x,max([S(1:4).cost]),linevect{2});
+L2=plot(x,max([S(5:8).cost]),linevect{7});
+ylabel('charging cost ($)')
+
+yyaxis right
+L3=plot(x,max([S(1:4).peakwait]),linevect{1});
+L4=plot(x,max([S(5:8).peakwait]),linevect{6});
+% plot(x,max([S(1:4).avgwait]),linevect{1});
+% plot(x,max([S(5:8).avgwait]),linevect{6});
+ylabel('peak wait time (min)')
+ylim([0,13])
 
 
+xticks(x)
+xlabel('total trips (1 week)')
+lgnd=legend([L1,L2,L3,L4],{'cost (exact)','cost (aggregated)','peak wait (exact)','peak wait (aggregated)'},'Orientation','vertical','Location','SouthEast');
+lgnd.BoxFace.ColorType='truecoloralpha';
+lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/Energy/comparison_costpeak'],'-depsc2');
 
+%%
+
+% figure
+% plot(reshape([S.totavgwait],4,2))
+% figure
+% semilogy(reshape([S.totavgwait],4,2))
+% 
+% figure
+% plot([S(1:4).soc])
+% 
+% figure
+% plot([S(5:8).soc])
+
+% [Pz,Rz]=generateplotline3(scenario,[],'Operations.maxwait',Inf,'gridfile',"NY_DA_2016",'tripfolder',"NYC2016-small_50",'m',30:5:120,'tripday,gridday',30)
+
+%%
 
 if 0
 
@@ -165,9 +254,9 @@ if 0
     xlim([0,24])
     xlabel('hour')
     ylabel('power (MW)')
-    lgnd=legend({'exact','aggregated','price'},'Orientation','vertical','Location','NorthWest');
-    lgnd.BoxFace.ColorType='truecoloralpha';
-    lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
+    lgnd=legend({'exact','aggregated','price'},'Orientation','vertical','Location','North');
+%     lgnd.BoxFace.ColorType='truecoloralpha';
+%     lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
     set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
     print([DataFolder 'figures/Energy/comparison'],'-depsc2');
     
@@ -180,9 +269,9 @@ if 0
     xlim([0,24])
     xlabel('hour')
     ylabel('SOC')
-    lgnd=legend({'exact','aggregated'},'Orientation','vertical','Location','NorthWest');
-    lgnd.BoxFace.ColorType='truecoloralpha';
-    lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
+    lgnd=legend({'exact','aggregated'},'Orientation','vertical','Location','South');
+%     lgnd.BoxFace.ColorType='truecoloralpha';
+%     lgnd.BoxFace.ColorData=uint8(255*[1 1 1 0.6]');
     set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
     print([DataFolder 'figures/Energy/comparison_soc'],'-depsc2');
 

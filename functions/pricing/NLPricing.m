@@ -6,7 +6,7 @@
 % demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
-function [prices,k,m]=NLPricing(m)
+function [prices,k,m,reloc,revenues]=NLPricing(m)
 
 %% useful functions
 
@@ -58,6 +58,9 @@ for k=1:maxIter
     % detect if there are prices at the edges
     moves=(round(prices,3)==round(m.pmax,3))-(round(prices,3)==round(m.pmin,3));
 
+    ThisRevenue=CalcRevenue(m,prices,reloc);
+    revenues(k)=ThisRevenue;
+    
     if sum(moves(:)~=0)>0
         m.w=m.w+moves;
     else

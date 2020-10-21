@@ -1,28 +1,59 @@
 
 
-P=cpar('NYC2016-10clusters');
-% P=cpar('NYC2018');
+% P=cpar('NYC2016-10clusters');
+P=cpar('NYC2018');
 P.Operations.maxwait=Inf;
-P.m=5000;
+P.m=2000;
 P.enlayeralg='no';
-P.tripday=3;
+P.tripday=1;
 P.modechoice=true;
 P.e=1;
 
-Pricing.tp=30;  
+Pricing.tp=30;
 Pricing.relocationcost=0.1;
 Pricing.basetariff=0.25;
 Pricing.alternative=0.25;
 Pricing.VOT=15; % value of time
 Pricing.pricingwaiting=0;
-
 P.Pricing=Pricing;
 
 P.Pricing.dynamic=0;
 Res1=generalC(P,1,2)
 
+P.Pricing.dynamic=1;
+Res2=generalC(P,1,2)
+
+%%
+
+P=cpar('NYC2018');
+P.Operations.maxwait=20;
+P.m=5000;
+P.enlayeralg='no';
+P.tripday=1;
+P.modechoice=true;
+P.e=1;
+
+Pricing.tp=30;
+Pricing.relocationcost=0.1;
+Pricing.basetariff=0.25;
+Pricing.alternative=0.25;
+Pricing.VOT=15; % value of time
+Pricing.pricingwaiting=0;
+P.Pricing=Pricing;
+
+P.Pricing.dynamic=0;
+P.trlayeralg='no';
+Res1=generalC(P,-1,2)
+
 P.Pricing.dynamic=2;
+P.trlayeralg='no';
 Res2=generalC(P,-1,2)
+
+P.Pricing.dynamic=3;
+P.trlayeralg='no';
+Res3=generalC(P,-1,2)
+
+%%
 
 [   Res1.Sim.revenues;
     Res2.Sim.revenues]
@@ -42,7 +73,11 @@ figure
 plot(0:0.01:0.5,histc(Res2.Sim.offeredprices,0:0.01:0.5))
 
 figure
-plot(0:0.1:10,histc(Res2.Sim.offeredprices,0:0.1:10))
+x=0:0.2:10;
+plot(x,histc(Res2.Sim.offeredprices,x))
+
+
+return
 
 %%
 
