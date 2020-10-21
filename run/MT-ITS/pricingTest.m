@@ -6,6 +6,7 @@
 
 %% generate scenario
 
+DataFolder=setDataFolder();
 addpath functions/pricing
 addpath run/MT-ITS
 P=cpar('NYC2018');
@@ -21,7 +22,7 @@ a_tp(1:n+1:end)=0;
 
 %% parameters
 
-N=1;
+N=10;
 V=1000; % number of vehicles
 Iter=10;
 
@@ -72,10 +73,11 @@ end
 %% comparison
 
 
-DataFolder=setDataFolder();
 figure('Units','centimeters','Position',[10,7,10,7])
-errbarmedian((1:Iter),revenues2,1,1)
+hold on
 errbarmedian((1:Iter),revenues1',1,1,'b')
+errbarmedian((1:Iter),revenues2,1,1,'k')
+% errbarmedian((1:Iter),revenues3,1,1)
 xlim([1,Iter]);
 xticks(1:Iter)
 xlabel('iterations')
@@ -83,13 +85,31 @@ ylabel('net revenues')
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 
 
+
+%% comparison and zoom
+
+figure('Units','centimeters','Position',[10,7,10,7])
+hold on
+subplot(2,1,1)
+[p1,p2]=errbarmedian((1:Iter),revenues1',1,1,'b')
+errbarmedian((1:Iter),revenues2,1,1,'k')
+box on
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+% xticklabels({})
+xticks([])
+ylabel('net revenues')
+subplot(2,1,2)
+errbarmedian((1:Iter),revenues2,1,1,'k')
+% errbarmedian((1:Iter),revenues3,1,1)
+xlim([1,Iter]);
+xticks(1:Iter)
+xlabel('iterations')
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+print([DataFolder 'figures/Pricing/iterations'],'-depsc2');
+
 %% plot example
 
-
-
-figure(1)
-hold on
-figure(2)
+figure
 hold on
 
 prices=[0.25,0.4,0.5,0.55];
@@ -124,17 +144,12 @@ for k=1:length(prices)
 %     m.pmin(Empty)=0;
 %     m.pmax(Empty)=0;
 
-    figure(1)
     j=1;
     line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
     p=0:0.01:1;
     plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
     plot(prices(k),D*prices(k)+C,'o')
     plot(prices(k+1),D*prices(k+1)+C,'x')
-    
-
-%   figure(2)
-%     plot(k,m.pmin,'x')
     
 end
 
