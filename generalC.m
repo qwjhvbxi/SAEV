@@ -188,24 +188,6 @@ AtChargingStation=sum(u(1,:)==chargingStations);
 s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
 
 
-%% frequency control reserve
-
-if isfield(P,'FCR') && ~isempty(P.FCR)
-    FCR=true;
-    load([DataFolder 'grid/' P.FCR.filename],'f');
-    ReshapeFactor=size(f,1)/1440*P.e;
-    f=average2(f(:,P.gridday),ReshapeFactor);
-    af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
-    if isfield(P.FCR,'aggregatechargeratio')
-        aggregateratio=P.FCR.aggregatechargeratio;
-    end
-    LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
-else
-    FCR=false;
-    LimitFCR=0;
-end
-
-
 %% setup charging module
 
 if strcmp(P.enlayeralg,'aggregate') 
@@ -238,7 +220,6 @@ if strcmp(P.enlayeralg,'aggregate')
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
-    E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
     E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
 
     % matrix of optimal control variables for energy layer
@@ -249,6 +230,49 @@ else
     Trips=[];
     zmacro=zeros(4,etsim);
     
+end
+
+
+%% frequency control reserve
+
+if isfield(P,'FCR') && ~isempty(P.FCR)
+    FCR=true;
+    if isfield(P.FCR,'aggregatechargeratio')
+        aggregateratio=P.FCR.aggregatechargeratio;
+    end
+    load([DataFolder 'grid/' P.FCR.filename],'f');
+    ReshapeFactor=size(f,1)/1440*P.e;
+    f=average2(f(:,P.gridday),ReshapeFactor);
+    
+    if isempty(P.FCR.contracted)
+        
+%         % dynamic variables
+%         
+%         E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
+%         actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(1,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+%         E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
+%         dktripnow=Trips.dktrip(1:mthor);    % minutes spent traveling during this horizon
+%         E.einit=sum(q(1,:))*P.Tech.battery;     % total initial energy [kWh]
+%         E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
+%         E.dkav=max(0,P.m*P.beta-dktripnow);         % minutes of availability of cars
+%         E.electricityprice=melep(1:mthor)/1000; % convert to [$/kWh]
+%         E.emissionsGridProfile=mco2(1:mthor); % [g/kWh]
+%         
+%         maxc=E.dkav*E.maxchargeminute/aggregateratio; % max exchangeable energy per time step [kWh]
+% 
+%         ELayerResults=aevopti11(E);
+% 
+%         contracted=FCRbid(ELayerResults,maxc)
+        
+    else
+        contracted=P.FCR.contracted;
+    end 
+    
+    af=contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
+    LimitFCR=ceil(contracted*1000/P.Tech.chargekw);
+else
+    FCR=false;
+    LimitFCR=0;
 end
 
 
@@ -396,6 +420,7 @@ for i=1:tsim
             case 'aggregate'
                 
                 % dynamic variables
+                E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
                 actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
                 E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
 
