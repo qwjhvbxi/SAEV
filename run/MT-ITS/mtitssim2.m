@@ -166,7 +166,7 @@ xlim([0,24])
 xlabel('hour')
 ylabel('average wait time (minutes)')
 legend({'constant';'dynamic'},'Location','NorthWest')
-
+box on
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
 print([DataFolder 'figures/Pricing/waittimes'],'-depsc2');
 
@@ -245,26 +245,32 @@ scatter(T(changedprices),Prices(changedprices),'.')
 h=9;
 Prices=Res.Sim.prices(:,:,h*60/10);
 changedprices=logical((Prices(:)~=0.25).*(Prices(:)~=0));
-scatter(T(changedprices)+50,Prices(changedprices),'.')
+scatter(T(changedprices)+60,Prices(changedprices),'.')
 
 h=19;
 Prices=Res.Sim.prices(:,:,h*60/10);
 changedprices=logical((Prices(:)~=0.25).*(Prices(:)~=0));
-scatter(T(changedprices)+100,Prices(changedprices),'.')
+scatter(T(changedprices)+120,Prices(changedprices),'.')
 
 % theoretical optimal price points
-for i=1:50
+for i=1:60
     optiprices(i)=bestp(i,0.1,0.25);
 end
-x=4:50;
+x=4:60;
 p1=plot(x,optiprices(x),'k-');
+plot(x+60,optiprices(x),'k-');
+plot(x+120,optiprices(x),'k-');
 
-xlim([0,150])
+xlim([0,180])
+xticks([0:20:180])
+xticklabels(num2str([0,20,40,0,20,40,0,20,40,60]'))
 ylabel('price per minute ($)')
 xlabel('OD pair distance (min)')
 text(20,0.5,'4:00 am')
 text(20+50,0.5,'9:00 am')
 text(20+100,0.5,'7:00 pm')
-set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+box on
+grid on
 legend(p1,{'theoretical best price'})
-% print([DataFolder 'figures/Pricing/pricevariation2'],'-depsc2');
+set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
+% print([DataFolder 'figures/Pricing/pricevariation'],'-depsc2');
