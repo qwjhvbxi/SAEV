@@ -136,7 +136,7 @@ mean([S1.revenues]-[S1.relocationcosts]) mean([S2.revenues]-[S2.relocationcosts]
 mean([S2.relocationcosts])/mean([S1.relocationcosts])
 
 CPUt=[mean([R1.cputime]) mean([R2.cputime])]
-(mean([R2.cputime])-mean([R1.cputime]))/24
+(mean([R2.cputime])-mean([R1.cputime]))/144
 
 % % share of people waiting more than 1 hour
 % sum(vertcat(S1.waiting)>60)/length(vertcat(S1.waiting))
@@ -153,9 +153,8 @@ DataFolder=setDataFolder();
 k=1;
 [A,Atimes,AbuckC,Distances]=loadTrips(P1{k});
 
-
-wait1=accumarray(Atimes(:,1),full(R1(k).Sim.waiting))./histc(Atimes(logical(R1(k).Sim.chosenmode),1),1:max(Atimes(logical(R1(k).Sim.chosenmode),1)));
-wait2=accumarray(Atimes(:,1),full(R2(k).Sim.waiting))./histc(Atimes(logical(R2(k).Sim.chosenmode),1),1:max(Atimes(logical(R2(k).Sim.chosenmode),1)));
+wait1=accumarray(Atimes(:,1),full(R1(k).Sim.waiting))./histc(Atimes(logical(R1(k).Sim.chosenmode),1),1:max(Atimes(:,1)));
+wait2=accumarray(Atimes(:,1),full(R2(k).Sim.waiting))./histc(Atimes(logical(R2(k).Sim.chosenmode),1),1:max(Atimes(:,1)));
 
 x=linspace(0,24,length(wait1));
 figure('Units','centimeters','Position',[10,7,10,7])
@@ -219,15 +218,15 @@ print([DataFolder 'figures/Pricing/results'],'-depsc2');
 
 %%
 
-Res2=generalC(Pmat{12},1,2);
 
-% Res=R2(k);
-% P0=P2{k};
-Res=Res2;
-P0=P;
+% Res=generalC(Pmat{12},1,2);
+k=2;
+Res=R2(k);
+P0=P2{k};
+% Res=Res2;
+% P0=P;
 
 DataFolder=setDataFolder();
-k=1;
 load([DataFolder 'scenarios/' P0.scenario],'T')
 g=@(a,s) exp(s)./(exp(s)+a);        % value at s
 d=@(a,s) a*exp(s)./((a+exp(s)).^2); % derivative at s
@@ -260,17 +259,19 @@ x=4:60;
 p1=plot(x,optiprices(x),'k-');
 plot(x+60,optiprices(x),'k-');
 plot(x+120,optiprices(x),'k-');
+line([60,60;120,120]',[0,1;0,1]','Color','k')
 
 xlim([0,180])
+ylim([0.1,0.6])
 xticks([0:20:180])
 xticklabels(num2str([0,20,40,0,20,40,0,20,40,60]'))
 ylabel('price per minute ($)')
 xlabel('OD pair distance (min)')
 text(20,0.5,'4:00 am')
-text(20+50,0.5,'9:00 am')
-text(20+100,0.5,'7:00 pm')
+text(20+60,0.5,'9:00 am')
+text(20+120,0.5,'7:00 pm')
 box on
 grid on
-legend(p1,{'theoretical best price'})
+legend(p1,{'theoretical best price'},'Location','SouthWest')
 set(gca,'FontUnits','points','FontWeight','normal','FontSize',11,'FontName','Times');
-% print([DataFolder 'figures/Pricing/pricevariation'],'-depsc2');
+print([DataFolder 'figures/Pricing/pricevariation'],'-depsc2');
