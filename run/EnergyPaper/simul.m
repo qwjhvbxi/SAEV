@@ -20,6 +20,17 @@ P.Operations.maxwait=Inf; %20
 P.e=1;
 P.m=10000;
 
+
+%% count total trips
+
+temp1.tripfolder='NYC2016-nodes';
+for i=1:length(Period)
+temp1.tripday=Period(i);
+[A,~,~,~]=loadTrips(temp1);
+TotalTrips(i)=length(A);
+end
+
+
 %% create Pmat
 
 P.gridfile=gridfiles{1};
