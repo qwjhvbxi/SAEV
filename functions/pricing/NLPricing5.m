@@ -55,12 +55,13 @@ for k=1:maxIter
     
 %     m.pmin=p1;
 %     m.pmin=prices-(prices-p1)/k; % should be used
-    m.pmin=prices-0.5./m.c; 
+    m.pmin=prices-0.5./m.c; % ORIGINAL
 %     m.pmin=ones(n,n)*m.gamma_alt;
 %     m.pmin=max(0,p1);
-%     m.pmax=p0;
-    m.pmax=prices+0.5./m.c; 
-%     m.pmax=prices+(p0-prices)/k; 
+
+
+    m.pmax=p0;
+%     m.pmax=prices+0.5./m.c; % ORIGINAL
     
     m.amin=D.*m.pmax+C;%g(exp(-m.gamma_alt.*m.c),-m.pmax.*m.c);
     m.amax=D.*m.pmin+C;%g(exp(-m.gamma_alt.*m.c),-m.pmin.*m.c);
@@ -83,7 +84,8 @@ for k=1:maxIter
     
     % launch pricing optimization for this iteration
 %     [reloc,newprices,fval]=RelocationPricing7(m);
-    [reloc,newprices,fval]=RelocationPricing8(m);
+%     [reloc,newprices,fval]=RelocationPricing8(m); % ORIGINAL
+    [reloc,newprices,fval]=RelocationPricing9(m);
     
     delta(:,k)=(newprices(:)-prices(:));
     priceshist(:,k)=newprices(:);
