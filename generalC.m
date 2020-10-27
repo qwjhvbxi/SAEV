@@ -10,6 +10,10 @@
 % d: delay at beginning of time step
 % sc: status during time step: connected/not connected
 % sm: status during time step: moving/not moving
+%
+% dynamicpricing: 
+% 0: none; 1: OD-based; 
+% not fully implemented: [2: node-based; 3: optimal distance-based pricing] 
 % 
 % see also CPAR
 
@@ -244,29 +248,7 @@ if isfield(P,'FCR') && ~isempty(P.FCR)
     ReshapeFactor=size(f,1)/1440*P.e;
     f=average2(f(:,P.gridday),ReshapeFactor);
     
-    if isempty(P.FCR.contracted)
-        
-%         % dynamic variables
-%         
-%         E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
-%         actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(1,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
-%         E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
-%         dktripnow=Trips.dktrip(1:mthor);    % minutes spent traveling during this horizon
-%         E.einit=sum(q(1,:))*P.Tech.battery;     % total initial energy [kWh]
-%         E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
-%         E.dkav=max(0,P.m*P.beta-dktripnow);         % minutes of availability of cars
-%         E.electricityprice=melep(1:mthor)/1000; % convert to [$/kWh]
-%         E.emissionsGridProfile=mco2(1:mthor); % [g/kWh]
-%         
-%         maxc=E.dkav*E.maxchargeminute/aggregateratio; % max exchangeable energy per time step [kWh]
-% 
-%         ELayerResults=aevopti11(E);
-% 
-%         contracted=FCRbid(ELayerResults,maxc)
-        
-    else
-        contracted=P.FCR.contracted;
-    end 
+    contracted=P.FCR.contracted;
     
     af=contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
     LimitFCR=ceil(contracted*1000/P.Tech.chargekw);
@@ -290,6 +272,14 @@ if isfield(P,'Pricing') && ~isempty(P.Pricing)
     ParPricing.gamma_alt=P.Pricing.alternative;
     ParPricing.VOT=P.Pricing.VOT;
     ParPricing.pricingwaiting=P.Pricing.pricingwaiting;
+    if isfield(P.Pricing,'horizon')
+        tpH=round(P.Pricing.horizon/P.e);
+    else
+        tpH=round(30/P.e);
+    end
+    if isfield(P.Pricing,'maxiter')
+        ParPricing.maxIter=P.Pricing.maxiter;
+    end
     
 else
     
@@ -479,30 +469,36 @@ for i=1:tsim
 
     if P.modechoice
         
-        if dynamicpricing>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
-%         if dynamicpricing>0 && mod(i-1,tp)==0 %(i==1 || mod(i-(ts+tr+1),tp)==0)
-
+        if dynamicpricing>0 && dynamicpricing<3 && mod(i-1,tp)==0
+%         if dynamicpricing>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
+            
             % current pricing calculation
-            PricingStep=ceil((i-1)/tp)+1;
+            % PricingStep=ceil((i-1)/tp)+1;
+            PricingStep=kp;
+
+%             % expected trips
+%             StartTime=(PricingStep-1)*tp+1;
+%             Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
+%             a_tp=sparse(As(Selection0,1),As(Selection0,2),1,nc,nc);%+q_t;
 
             % expected trips
-            StartTime=(PricingStep-1)*tp+1;
-            Selection0=AbuckC(StartTime)+1:AbuckC(min(length(AbuckC),StartTime+tp-1));
+            Selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
             a_tp=sparse(As(Selection0,1),As(Selection0,2),1,nc,nc);%+q_t;
-
+            
             % number of vehicles at each station (including vehicles directed there)
             ParPricing.v=histc(Clusters(ui),1:nc);
+            
             a_tp(1:nc+1:end)=0;
             ParPricing.a=a_tp;
 
             if dynamicpricing==1
             
-                [pricesNow,~,~]=NLPricing4(ParPricing); % OD-pair-based pricing
+                [pricesNow,~,~]=NLPricing5(ParPricing); % OD-pair-based pricing
                 
                 prices(:,:,PricingStep)=pricesNow;
-            
+                
                 Multiplier1=(ProbAcc(prices(:,:,kp),0));
-                Multiplier2=(ProbAcc(prices(:,:,kp+1),0));
+%                 Multiplier2=(ProbAcc(prices(:,:,kp+1),0));
                 
             elseif dynamicpricing==2
                 
@@ -540,19 +536,26 @@ for i=1:tsim
         else 
             dw=zeros(nc,1);
         end
-
+        
         % expected trips
-        NextPricing=min(kp*tp+1,length(AbuckC));
+        Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts));
+        a_ts=(Multiplier1.*sparse(As(Selection1,1),As(Selection1,2),1,nc,nc));
 
-        Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts)));
-        Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts));
-        a_ts=(Multiplier1.*sparse(As(Selection1a,1),As(Selection1a,2),1,nc,nc))+...
-             (Multiplier2.*sparse(As(Selection1b,1),As(Selection1b,2),1,nc,nc));
+        Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts+tr));
+        a_to=(Multiplier1.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
 
-        Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts+tr)));
-        Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts+tr));
-        a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
-             (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
+%         % expected trips
+%         NextPricing=min(kp*tp+1,length(AbuckC));
+% 
+%         Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts)));
+%         Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts));
+%         a_ts=(Multiplier1.*sparse(As(Selection1a,1),As(Selection1a,2),1,nc,nc))+...
+%              (Multiplier2.*sparse(As(Selection1b,1),As(Selection1b,2),1,nc,nc));
+% 
+%         Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts+tr)));
+%         Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts+tr));
+%         a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
+%              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[Clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
