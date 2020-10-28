@@ -483,14 +483,20 @@ for i=1:tsim
 
             % expected trips
             Selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
-            a_tp=sparse(As(Selection0,1),As(Selection0,2),1,nc,nc);%+q_t;
+            AsNow=As(Selection0,:);
+            a_tp=sparse(AsNow(:,1),AsNow(:,2),1,nc,nc);%+q_t;
             
             % number of vehicles at each station (including vehicles directed there)
             ParPricing.v=histc(Clusters(ui),1:nc);
             
             a_tp(1:nc+1:end)=0;
             ParPricing.a=a_tp;
-            %ParPricing.alt=
+            
+            if numel(ParPricing.gamma_alt)>1
+                altpNow=ParPricing.gamma_alt(Selection0);
+                [a,b,~]=unique(AsNow,'rows','stable');
+                ParPricing.altp=sparse(a(:,1),a(:,2),altpNow(b));
+            end
 
             if dynamicpricing==1
             
@@ -515,11 +521,7 @@ for i=1:tsim
                 Multiplier2=(ProbAcc(PerDistanceTariff,Surcharges2));
                 
             end
-
-            % plot(0:0.01:0.5,histc(normalizedprices(:)*2*m.gamma_p,0:0.01:0.5))
-            
         end
-        
     end
     
 
