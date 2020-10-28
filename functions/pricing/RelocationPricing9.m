@@ -69,14 +69,15 @@ Ap(logical(a_ij))=Ap(logical(a_ij))-a.*h;
 A=[Ar , Ap];
 b=sum(m.a.*s)'-sum(m.a.*s,2);
 
-% % constraints on relocation vehicles
-% Av=[repmat(eye(n),1,n) sparse(n,n^2)];
-% A=[A;Av];
-% b=[b;m.v];
-Av=[ones(1,n^2) , -(a.*h)'];
-bv=-sum(a.*s(:))+V;
-A=[A;Av];
-b=[b;bv];
+if isfield(m,'fixedfleet') && m.fixedfleet
+
+    % constraints on fleet size
+    Av=[ones(1,n^2) , -(a.*h)'];
+    bv=-sum(a.*s(:))+V;
+    A=[A;Av];
+    b=[b;bv];
+    
+end
 
 % bounds
 lb=[zeros(n^2,1);    pmin];

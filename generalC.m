@@ -490,6 +490,7 @@ for i=1:tsim
             
             a_tp(1:nc+1:end)=0;
             ParPricing.a=a_tp;
+            %ParPricing.alt=
 
             if dynamicpricing==1
             
@@ -502,7 +503,7 @@ for i=1:tsim
                 
             elseif dynamicpricing==2
                 
-                [pricesNow,~,~]=NLPricing2(ParPricing); % node-based pricing
+                [pricesNow,~,~]=NLPricingNodes(ParPricing); % node-based pricing
                 
                 prices(PricingStep,:)=pricesNow';
                 % prices(PricingStep,:)=[pricesNow(1:nc)-pricesNow(nc+1:nc*2) ; pricesNow(nc*2+1:nc*3)-pricesNow(nc*3+1:nc*4)]';

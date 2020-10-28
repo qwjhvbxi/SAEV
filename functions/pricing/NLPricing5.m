@@ -1,4 +1,4 @@
-%% [prices,k,m]=NLPricing4(m)
+%% [prices,k,m]=NLPricing5(m)
 % Non-linear pricing with continuous approximation
 % 
 % m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
@@ -8,32 +8,37 @@
 
 function [prices,k,m,reloc,revenues]=NLPricing5(m)
 
-%% useful functions
-
-% price at certain probability: given a trip distance d, find the price at
-% which the probability of acceptance is x
-q=@(d,x) -(log(  (  x.*exp(-m.gamma_alt*d)  )./(1-x)  ))./d;
-g=@(a,s) exp(s)./(exp(s)+a);        % value at s
-d=@(a,z,c) -(a.*c.*exp(z.*c))./((1+a.*exp(z.*c)).^2); % derivative at s
-Points=g(exp(0),-4.5:4.5);          % probability linearization intervals (7 intervals, 8 limits)
-PL=length(Points)/2;
 
 %% initializations
 
-c=m.c;          % distance matrix
-n=size(c,1);    % nodes
-c(1:n+1:end)=1; % remove distance between same nodes
-% m.w=zeros(n,n); % position of price linearization (between -3 and 3)
+m.c=max(1,m.c);
+n=size(m.c,1);    % nodes
 if isfield(m,'maxIter')
     maxIter=m.maxIter;      % max number of iterations
 else
     maxIter=5;      % max number of iterations
 end
-prices=ones(n,n)*m.gamma_alt;
+
+if ~isfield(m,'altp')
+    m.altp=m.gamma_alt.*m.c;
+end
+
+prices=m.altp./m.c;
 
 % revenues=zeros(maxIter+1,1);
 % ThisRevenue=CalcRevenue(m,prices);
 % revenues(1)=ThisRevenue;
+
+%% useful functions
+
+% price at certain probability: given a trip distance d, find the price at
+% which the probability of acceptance is x
+q=@(d,x) -(log(  (  x.*exp(-m.altp)  )./(1-x)  ))./d;
+g=@(a,s) exp(s)./(exp(s)+a);        % value at s
+d=@(a,z,c) -(a.*c.*exp(z.*c))./((1+a.*exp(z.*c)).^2); % derivative at s
+Points=g(exp(0),-4.5:4.5);          % probability linearization intervals (7 intervals, 8 limits)
+PL=length(Points)/2;
+
 
 %% iterations
 
@@ -45,8 +50,8 @@ fprintf('\n iterations: ')
 for k=1:maxIter
 
     % coefficients of y=Dx+C
-    D=d(exp(-m.gamma_alt.*m.c),prices,m.c);
-    C=g(exp(-m.gamma_alt.*m.c),-prices.*m.c)-D.*prices;
+    D=d(exp(-m.altp),prices,m.c);
+    C=g(exp(-m.altp),-prices.*m.c)-D.*prices;
     
     % alternative
     
@@ -56,15 +61,12 @@ for k=1:maxIter
 %     m.pmin=p1;
 %     m.pmin=prices-(prices-p1)/k; % should be used
     m.pmin=prices-0.5./m.c; % ORIGINAL
-%     m.pmin=ones(n,n)*m.gamma_alt;
-%     m.pmin=max(0,p1);
-
 
     m.pmax=p0;
 %     m.pmax=prices+0.5./m.c; % ORIGINAL
     
-    m.amin=D.*m.pmax+C;%g(exp(-m.gamma_alt.*m.c),-m.pmax.*m.c);
-    m.amax=D.*m.pmin+C;%g(exp(-m.gamma_alt.*m.c),-m.pmin.*m.c);
+    m.amin=D.*m.pmax+C;%g(exp(-m.altp),-m.pmax.*m.c);
+    m.amax=D.*m.pmin+C;%g(exp(-m.altp),-m.pmin.*m.c);
     
     Empty=(m.a==0);
     m.amin(Empty)=0;
@@ -79,7 +81,7 @@ for k=1:maxIter
         hold on
         line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
         p=0:0.01:1;
-        plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
+        plot(p,g(exp(-m.altp(j)),-p*m.c(j)),'k:')
     end
     
     % launch pricing optimization for this iteration
@@ -111,7 +113,7 @@ end
 
 function ThisRevenue=CalcRevenue(m,prices,reloc)
     p1=prices.*m.c;
-    Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a;
+    Aeff=( exp(-p1)./(exp(-p1)+exp(-m.altp))  ).*m.a;
     if ~isempty(reloc)
         relocation=sum(sum(reloc.*m.c))*m.gamma_r;
     else 

@@ -1,5 +1,5 @@
-%% [prices,k,m]=NLPricing(m)
-% Non-linear pricing
+%% [prices,k,m,reloc,revenues]=NLPricing(m)
+% Non-linear pricing by OD, with fixed linearization intervals
 % 
 % m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
@@ -8,22 +8,31 @@
 
 function [prices,k,m,reloc,revenues]=NLPricing(m)
 
-%% useful functions
-
-% price at certain probability: given a trip distance d, find the price at
-% which the probability of acceptance is x
-q=@(d,x) -(log(  (  x.*exp(-m.gamma_alt*d)  )./(1-x)  ))./d;
-g=@(a,s) exp(s)./(exp(s)+a);        % value at s
-Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
-
-
 %% initializations
 
 c=m.c;          % distance matrix
 n=size(c,1);    % nodes
 c(1:n+1:end)=1; % remove distance between same nodes
 m.w=zeros(n,n); % position of price linearization (between -3 and 3)
-maxIter=4;      % max number of iterations
+if isfield(m,'maxIter')
+    maxIter=m.maxIter;      % max number of iterations
+else
+    maxIter=4;      % max number of iterations
+end
+
+if ~isfield(m,'altp')
+    m.altp=m.gamma_alt.*m.c;
+end
+
+
+%% useful functions
+
+% price at certain probability: given a trip distance d, find the price at
+% which the probability of acceptance is x
+q=@(d,x) -(log(  (  x.*exp(-m.altp)  )./(1-x)  ))./d;
+g=@(a,s) exp(s)./(exp(s)+a);        % value at s
+Points=g(exp(0),-3.5:3.5);          % probability linearization intervals (7 intervals, 8 limits)
+PL=length(Points)/2;
 
 
 %% iterations
@@ -35,22 +44,12 @@ for k=1:maxIter
     fprintf('*');
     
     % probabilities of trip acceptance at the limits
-    m.amin=1-Points(5+m.w);
-    m.amax=1-Points(4+m.w);
+    m.amin=1-Points(PL+1+m.w);
+    m.amax=1-Points(PL+m.w);
     
     % limits to price
     m.pmin=q(c,m.amax);
     m.pmax=q(c,m.amin);
-
-    %     if 0
-    %         % check inputs
-    %         j=3;
-    %         figure
-    %         hold on
-    %         line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
-    %         p=0:0.01:1;
-    %         plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
-    %     end
     
     % launch pricing optimization for this iteration
     [reloc,prices]=RelocationPricing3(m);
@@ -88,5 +87,14 @@ m.a=[0 10 0
 m.gamma_r=0.1;
 m.gamma_alt=0.25;
 [prices,k,m]=NLPricing(m)
+
+%% check inputs
+
+j=3;
+figure
+hold on
+line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
+p=0:0.01:1;
+plot(p,g(exp(-m.gamma_alt*m.c(j)),-p*m.c(j)),'k:')
 
 

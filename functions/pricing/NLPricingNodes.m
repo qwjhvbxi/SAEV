@@ -1,22 +1,12 @@
 %% [prices,k,m]=NLPricing(m)
-% Non-linear pricing
+% Non-linear pricing at nodes
 % 
 % m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
 % demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
-function [prices,k,m,reloc]=NLPricing2(m)
-
-%% useful functions
-
-% price at certain probability: given a trip distance d, find the
-% additional surcharge at which the probability of acceptance is x
-q=@(d,x) -log(  (  x.*exp(-m.gamma_alt*d)  )./(1-x)  ) - m.gamma_d(d).*d;
-s=@(d,S) exp(-m.gamma_d(d).*d-S)./(exp(-m.gamma_d(d).*d-S)+exp(-m.gamma_alt*d));
-g=@(a,s) exp(s)./(exp(s)+a);        % value at s
-u=@(a,x) log((x.*a)./(1-x));        % value at s
-
+function [prices,k,m,reloc]=NLPricingNodes(m)
 
 %% initializations
 
@@ -24,7 +14,25 @@ c=m.c;          % distance matrix
 n=size(c,1);    % nodes
 c(1:n+1:end)=1; % remove distance between same nodes
 m.w=zeros(n,n); % position of price linearization (between -3 and 3)
-maxIter=4;      % max number of iterations
+if isfield(m,'maxIter')
+    maxIter=m.maxIter;      % max number of iterations
+else
+    maxIter=4;      % max number of iterations
+end
+
+if ~isfield(m,'altp')
+    m.altp=m.gamma_alt.*m.c;
+end
+
+
+%% useful functions
+
+% price at certain probability: given a trip distance d, find the
+% additional surcharge at which the probability of acceptance is x
+q=@(d,x) -log(  (  x.*exp(-m.altp)  )./(1-x)  ) - m.gamma_d(d).*d;
+s=@(d,S) exp(-m.gamma_d(d).*d-S)./(exp(-m.gamma_d(d).*d-S)+exp(-m.altp));
+g=@(a,s) exp(s)./(exp(s)+a);        % value at s
+u=@(a,x) log((x.*a)./(1-x));        % value at s
 
 
 %% iterations
@@ -62,6 +70,10 @@ for k=1:maxIter
 end
 
 return
+
+
+
+
 
 
 %% debug
