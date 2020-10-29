@@ -1,9 +1,9 @@
 %% [prices,k,m]=NLPricing5(m)
 % Non-linear pricing with continuous approximation
 % 
-% m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
+% m is a struct with variables: c,v,a,relocationcost,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
-% demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
+% demand matrix; relocationcost is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
 function [prices,k,m,reloc,revenues]=NLPricing5(m)
@@ -13,10 +13,10 @@ function [prices,k,m,reloc,revenues]=NLPricing5(m)
 
 m.c=max(1,m.c);
 n=size(m.c,1);    % nodes
-if isfield(m,'maxIter')
-    maxIter=m.maxIter;      % max number of iterations
+if isfield(m,'maxiter')
+    maxiter=m.maxiter;      % max number of iterations
 else
-    maxIter=5;      % max number of iterations
+    maxiter=5;      % max number of iterations
 end
 
 if ~isfield(m,'altp')
@@ -25,7 +25,7 @@ end
 
 prices=m.altp./m.c;
 
-% revenues=zeros(maxIter+1,1);
+% revenues=zeros(maxiter+1,1);
 % ThisRevenue=CalcRevenue(m,prices);
 % revenues(1)=ThisRevenue;
 
@@ -42,12 +42,12 @@ PL=length(Points)/2;
 
 %% iterations
 
-delta=zeros(n^2,maxIter);
-priceshist=zeros(n^2,maxIter);
+delta=zeros(n^2,maxiter);
+priceshist=zeros(n^2,maxiter);
 
 fprintf('\n iterations: ')
 
-for k=1:maxIter
+for k=1:maxiter
 
     % coefficients of y=Dx+C
     D=d(exp(-m.altp),prices,m.c);
@@ -106,11 +106,11 @@ function ThisRevenue=CalcRevenue(m,prices,reloc)
     p1=prices.*m.c;
     Aeff=( exp(-p1)./(exp(-p1)+exp(-m.altp))  ).*m.a;
     if ~isempty(reloc)
-        relocation=sum(sum(reloc.*m.c))*m.gamma_r;
+        relocation=sum(sum(reloc.*m.c))*m.relocationcost;
     else 
         relocation=0;
     end
-    ThisRevenue=full(sum(sum(Aeff.*(p1-m.gamma_r*m.c))))-relocation;
+    ThisRevenue=full(sum(sum(Aeff.*(p1-m.relocationcost*m.c))))-relocation;
 end
 
 
@@ -123,7 +123,7 @@ m.c=[0 2 3
 m.a=[0 10 0
      5  0 0
      0  2 0];
-m.gamma_r=0.1;
+m.relocationcost=0.1;
 m.gamma_alt=0.25;
 m.relocation=0;
 [prices,k,m,reloc]=NLPricing4(m)
@@ -140,8 +140,8 @@ p1=prices.*m.c;
 Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a
 Aeff.*p1
 
-sum(sum(Aeff0.*(Fare-m.gamma_r*m.c)))
-sum(sum(Aeff.*(p1-m.gamma_r*m.c)))
+sum(sum(Aeff0.*(Fare-m.relocationcost*m.c)))
+sum(sum(Aeff.*(p1-m.relocationcost*m.c)))
 
 s=m.v+sum(Aeff)'-sum(Aeff,2);
 r=sum(reloc)'-sum(reloc,2);

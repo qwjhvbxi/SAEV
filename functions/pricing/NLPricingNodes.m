@@ -14,10 +14,10 @@ c=m.c;          % distance matrix
 n=size(c,1);    % nodes
 c(1:n+1:end)=1; % remove distance between same nodes
 m.w=zeros(n,n); % position of price linearization (between -3 and 3)
-if isfield(m,'maxIter')
-    maxIter=m.maxIter;      % max number of iterations
+if isfield(m,'maxiter')
+    maxiter=m.maxiter;      % max number of iterations
 else
-    maxIter=4;      % max number of iterations
+    maxiter=4;      % max number of iterations
 end
 
 if ~isfield(m,'altp')
@@ -43,7 +43,7 @@ m.pvec=zeros(1,n*2);
 
 fprintf('\n iterations: ')
 
-for k=1:maxIter
+for k=1:maxiter
 
     fprintf('*');
     

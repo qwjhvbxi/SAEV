@@ -94,7 +94,7 @@ end
 
 % cost function
 H=2*diag([zeros(n^2,1);a.*c.*h]);
-f=[  c*m.gamma_r ;   -a.*c.*(  s(:) + h*m.gamma_r  )  ];
+f=[  c*m.relocationcost ;   -a.*c.*(  s(:) + h*m.relocationcost  )  ];
 
 options=optimoptions('quadprog','display','none');
 
