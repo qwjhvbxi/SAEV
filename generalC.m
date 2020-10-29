@@ -269,66 +269,51 @@ if isfield(P,'Pricing') && ~isempty(P.Pricing)
     dynamicpricing=P.Pricing.dynamic;
 	nodebased=isfield(P.Pricing,'nodebased') && P.Pricing.nodebased;
     
-    ParPricing=P.Pricing;
+    Pricing=P.Pricing;
     
 else
     
     tp=1;
     dynamicpricing=0;
-    ParPricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1);
+    Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1);
 
 end
 
-ParPricing.c=Trs*P.e;
-ParPricing.relocation=AutoRelo;
+Pricing.c=Trs*P.e;
+Pricing.relocation=AutoRelo;
 
 % function to calculate probability of acceptance given a certain price for each OD pair
-ProbAcc=@(p,s,altp) exp(-p.*ParPricing.c-s)./(exp(-p.*ParPricing.c-s)+exp(-altp));
+ProbAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
     
 if P.modechoice==0
     
-    prices=0;
+    DynamicPricing=NaN;
     Multiplier1=1;
     
 else
     
-    if numel(P.Pricing.alternative)>1
-        
-        Aaltp=P.Pricing.alternative; % alternative price is given for each user
-        
-    else
-        
-        Aaltp=P.Pricing.alternative.*TripDistances; % alternative price for each user
-        ParPricing.altp=P.Pricing.alternative.*ParPricing.c; % alternative price for each OD
-        
+    % initialize matrix of fare per minute
+    PerDistanceTariff=ones(nc,nc).*Pricing.basetariff;
+    Surcharges=zeros(nc,nc);
+    DynamicPricing=NaN;
+    
+    % initialization for dynamic pricing
+    if dynamicpricing
+        if ~nodebased
+            % initialize matrix of real prices offered
+            DynamicPricing=ones(nc,nc,ceil(tsim/tp)+1)*Pricing.basetariff;
+        else
+            % initialize matrix of surcharges
+            DynamicPricing=zeros(ceil(tsim/tp)+1,nc*2);
+        end
     end
     
-    if dynamicpricing
-
-        if ~nodebased
-
-            % initialize matrix of real prices offered
-            prices=ones(nc,nc,ceil(tsim/tp)+1)*ParPricing.basetariff;
-
-        else
-
-            % initialize matrix of surcharges
-            prices=zeros(ceil(tsim/tp)+1,nc*2);
-            
-            % initialize matrix of fare per minute
-            PerDistanceTariff=ones(nc,nc).*ParPricing.basetariff;
-            
-        end
-        
+    % price of alternative option
+    if numel(P.Pricing.alternative)>1
+        Aaltp=P.Pricing.alternative; % alternative price is given for each user
     else
-        
-        % initialize matrix of fare per minute
-        PerDistanceTariff=ones(nc,nc).*ParPricing.basetariff;
-        
-        Surcharges1=zeros(nc,nc);
-        
-        prices=ParPricing.basetariff;
-        
+        Aaltp=P.Pricing.alternative.*TripDistances; % alternative price for each user
+        Pricing.altp=P.Pricing.alternative.*Pricing.c; % alternative price for each OD
     end
 end
 
@@ -336,7 +321,7 @@ end
 %% parameters for trip assignment
 
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
-    'maxwait',P.Operations.maxwait,'VOT',ParPricing.VOT,'WaitingCostToggle',ParPricing.pricingwaiting,'LimitFCR',LimitFCR);
+    'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,'LimitFCR',LimitFCR);
 
 
 %% variables for progress display and display initializations
@@ -474,35 +459,34 @@ for i=1:tsim
                 a_tp=sparse(AsNow(:,1),AsNow(:,2),1,nc,nc);%+q_t;
 
                 % number of vehicles at each station (including vehicles directed there)
-                ParPricing.v=histc(Clusters(ui),1:nc);
+                Pricing.v=histc(Clusters(ui),1:nc);
                 
                 a_tp(1:nc+1:end)=0;
-                ParPricing.a=a_tp;
+                Pricing.a=a_tp;
                 
                 if numel(P.Pricing.alternative)>1
                     altpNow=Aaltp(Selection0);
                     [a,Ib,~]=unique(AsNow,'rows','stable');
-                    ParPricing.altp=sparse(a(:,1),a(:,2),altpNow(Ib),nc,nc);
+                    Pricing.altp=sparse(a(:,1),a(:,2),altpNow(Ib),nc,nc);
                 else
-                    ParPricing.altp=altpmat;
+                    Pricing.altp=altpmat;
                 end
                 
                 if ~nodebased
             
-                    [pricesNow,~,~]=NLPricing5(ParPricing); % OD-pair-based pricing
+                    [ODpricesNow,~,~]=NLPricing5(Pricing); % OD-pair-based pricing
 
-                    prices(:,:,kp)=pricesNow;
+                    DynamicPricing(:,:,kp)=ODpricesNow;
 
-                    PerDistanceTariff=prices(:,:,kp);
-                    Surcharges1=zeros(nc,nc);
+                    PerDistanceTariff=DynamicPricing(:,:,kp);
                     
                 else 
                     
-                    [pricesNow,~,~]=NLPricingNodes(ParPricing); % node-based pricing
+                    [NodeSurchargeNow,~,~]=NLPricingNodes(Pricing); % node-based pricing
 
-                    prices(kp,:)=pricesNow';
+                    DynamicPricing(kp,:)=NodeSurchargeNow';
 
-                    Surcharges1=prices(kp,1:nc)+prices(kp,nc+1:2*nc)';
+                    Surcharges=DynamicPricing(kp,1:nc)+DynamicPricing(kp,nc+1:2*nc)';
                 
                 end
             end  
@@ -514,14 +498,14 @@ for i=1:tsim
             if numel(P.Pricing.alternative)>1
                 altpNow=Aaltp(Selection0);
                 [a,Ib,~]=unique(AsNow,'rows','stable');
-                ParPricing.altp=sparse(a(:,1),a(:,2),altpNow(Ib),nc,nc);
+                Pricing.altp=sparse(a(:,1),a(:,2),altpNow(Ib),nc,nc);
             else
-                ParPricing.altp=altpmat;
+                Pricing.altp=altpmat;
             end
             
         end
         
-        Multiplier1=(ProbAcc(PerDistanceTariff,Surcharges1,ParPricing.altp));
+        Multiplier1=(ProbAcc(PerDistanceTariff,Surcharges,Pricing.altp));
         % Multiplier2=(ProbAcc(PerDistanceTariff,Surcharges2,ParPricing.altp));
     end
     
@@ -597,7 +581,7 @@ for i=1:tsim
         % calculate pricing    
         SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         pp=PerDistanceTariff(SelectorClusters).*TripDistances(trips)+...
-            Surcharges1(SelectorClusters);
+            Surcharges(SelectorClusters);
         alte=exp(-Aaltp(trips));
         
         % offered prices
@@ -757,15 +741,8 @@ end
 
 %% final results
 
-% main Sim struct
-% if dispiter<0
-%     % if 
-%     uChanges=u.*logical(u(1:end,:)~=[zeros(1,size(u,2));u(1:end-1,:)]);
-%     [I,J,V]=find(uChanges);
-%     Sim.uSummary=uint16([I,J,V]);
-% else
+% vehicle related
 Sim.u=uint16(u); % final destination of vehicles (station) [tsim x m]
-% end
 Sim.q=single(q); % state of charge 
 Sim.e=sparse(e/ac*P.Tech.chargekw);
 if FCR
@@ -773,22 +750,24 @@ if FCR
 else
     Sim.ef=sparse(ef);
 end
+
+% passenger related
 Sim.waiting=sparse(waiting); % waiting times
 Sim.dropped=sparse(dropped); % dropped requests
 Sim.chosenmode=chosenmode; % chosen mode
 Sim.waitingestimated=sparse(waitingestimated); % estimated waiting time (only mode choice)
+
+% general info
 Sim.relodist=relodist*P.e; % relocation minutes
 Sim.tripdist=tripdist*P.e; % trip minutes
 Sim.emissions=(sum(Sim.e/60*P.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
-% add pricing info
+% pricing info
 if isfield(P,'Pricing')
-    
-    Sim.revenues=sum((offeredprices-ParPricing.relocationcost.*TripDistances).*chosenmode.*(1-dropped));
-    Sim.relocationcosts=sum(relodist)*P.e*ParPricing.relocationcost;
+    Sim.revenues=sum((offeredprices-Pricing.relocationcost.*TripDistances).*chosenmode.*(1-dropped));
+    Sim.relocationcosts=sum(relodist)*P.e*Pricing.relocationcost;
     Sim.offeredprices=offeredprices;
-    Sim.prices=prices;
-    
+    Sim.prices=DynamicPricing;
 end
 
 % Internals struct
@@ -829,11 +808,10 @@ end
 
 %% end display
 
-meanqnow=mean(q(i,:));
 if dispiter<0
     fprintf('sim #%d ',-dispiter)
 end
-fprintf('successfully completed - avg soc: %0.2f - total time: %d:%0.2d - \n',meanqnow,floor(elapsed/60),round(rem(elapsed,60)));
+fprintf('successfully completed - avg soc: %0.2f - total time: %d:%0.2d - \n',mean(q(i,:)),floor(elapsed/60),round(rem(elapsed,60)));
 
 end
 
