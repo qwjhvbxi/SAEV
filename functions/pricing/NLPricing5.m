@@ -58,12 +58,15 @@ for k=1:maxIter
     p1=(1-C)./D;
     p0=-C./D;
     
-%     m.pmin=p1;
-%     m.pmin=prices-(prices-p1)/k; % should be used
-    m.pmin=prices-0.5./m.c; % ORIGINAL
+    % m.pmin=p1;
+    % m.pmin=prices-(prices-p1)/k;
+    m.pmin=prices-0.5./m.c; 
 
-    m.pmax=p0;
-%     m.pmax=prices+0.5./m.c; % ORIGINAL
+    if isfield(m,'fixedfleet') && m.fixedfleet
+        m.pmax=p0;
+    else
+        m.pmax=prices+0.5./m.c;
+    end
     
     m.amin=D.*m.pmax+C;%g(exp(-m.altp),-m.pmax.*m.c);
     m.amax=D.*m.pmin+C;%g(exp(-m.altp),-m.pmin.*m.c);
@@ -74,19 +77,7 @@ for k=1:maxIter
     m.pmin(Empty)=0;
     m.pmax(Empty)=0;
 
-    if 0
-        % check inputs
-        j=3;
-        figure
-        hold on
-        line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
-        p=0:0.01:1;
-        plot(p,g(exp(-m.altp(j)),-p*m.c(j)),'k:')
-    end
-    
     % launch pricing optimization for this iteration
-%     [reloc,newprices,fval]=RelocationPricing7(m);
-%     [reloc,newprices,fval]=RelocationPricing8(m); % ORIGINAL
     [reloc,newprices,fval]=RelocationPricing9(m);
     
     delta(:,k)=(newprices(:)-prices(:));
@@ -97,9 +88,9 @@ for k=1:maxIter
     fprintf('*');
     % fprintf('\n %f',mean(delta(:,k)));
     % fprintf('\n %f',fval);
-    ThisRevenue=CalcRevenue(m,prices,reloc);
-    fprintf('\n %f',ThisRevenue);
-    revenues(k)=ThisRevenue;
+    % ThisRevenue=CalcRevenue(m,prices,reloc);
+    % fprintf('\n %f',ThisRevenue);
+    % revenues(k)=ThisRevenue;
     
 end
 
@@ -156,6 +147,15 @@ s=m.v+sum(Aeff)'-sum(Aeff,2);
 r=sum(reloc)'-sum(reloc,2);
 
 s+r
+
+
+% check inputs
+j=3;
+figure
+hold on
+line([m.pmin(j),m.pmax(j)],[m.amax(j),m.amin(j)]);
+p=0:0.01:1;
+plot(p,g(exp(-m.altp(j)),-p*m.c(j)),'k:')
 
 end
 
