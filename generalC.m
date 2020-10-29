@@ -275,13 +275,7 @@ else
     
     tp=1;
     dynamicpricing=0;
-    
-%     ParPricing=struct(
-    ParPricing.relocationcost=0; % relocation cost per minute
-    ParPricing.basetariff=0; % base tariff per minute
-    ParPricing.altp=0;
-    ParPricing.VOT=0;
-    ParPricing.pricingwaiting=1;
+    ParPricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1);
 
 end
 
@@ -300,16 +294,12 @@ else
     
     if numel(P.Pricing.alternative)>1
         
-        % alternative price is given for each user
-        Aaltp=P.Pricing.alternative;
+        Aaltp=P.Pricing.alternative; % alternative price is given for each user
         
     else
         
-        % calculate alternative price for each user
-        Aaltp=P.Pricing.alternative.*TripDistances;
-        
-        % calculate alternative price for each OD
-        ParPricing.altp=P.Pricing.alternative.*ParPricing.c;
+        Aaltp=P.Pricing.alternative.*TripDistances; % alternative price for each user
+        ParPricing.altp=P.Pricing.alternative.*ParPricing.c; % alternative price for each OD
         
     end
     
@@ -558,19 +548,6 @@ for i=1:tsim
         Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts+tr));
         a_to=(Multiplier1.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
 
-%         % expected trips
-%         NextPricing=min(kp*tp+1,length(AbuckC));
-% 
-%         Selection1a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts)));
-%         Selection1b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts));
-%         a_ts=(Multiplier1.*sparse(As(Selection1a,1),As(Selection1a,2),1,nc,nc))+...
-%              (Multiplier2.*sparse(As(Selection1b,1),As(Selection1b,2),1,nc,nc));
-% 
-%         Selection2a=AbuckC(i)+1:AbuckC(min(length(AbuckC),min(NextPricing-1,i+ts+tr)));
-%         Selection2b=AbuckC(NextPricing)+1:AbuckC(min(length(AbuckC),i+ts+tr));
-%         a_to=(Multiplier1.*sparse(As(Selection2a,1),As(Selection2a,2),1,nc,nc))+...
-%              (Multiplier2.*sparse(As(Selection2b,1),As(Selection2b,2),1,nc,nc));
-        
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[Clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
         ParRel.ad=ad;
@@ -615,18 +592,15 @@ for i=1:tsim
     
     if ~isempty(trips) 
     
-        % TODO: fix the case for mode choice without pricing, harmonize code
         % TODO: fix pooling option 
         
-        % calculate pricing
-            
-            SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
-            
-            pp=PerDistanceTariff(SelectorClusters).*TripDistances(trips)+...
-                Surcharges1(SelectorClusters);
-            
-           
+        % calculate pricing    
+        SelectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
+        pp=PerDistanceTariff(SelectorClusters).*TripDistances(trips)+...
+            Surcharges1(SelectorClusters);
         alte=exp(-Aaltp(trips));
+        
+        % offered prices
         offeredprices(trips)=pp;
         
         % Vin: vehicles information in the form: [station delay soc connected]
