@@ -110,8 +110,8 @@ switch Scenario
         P.tripfolder='NYC2018_10wed-nodes';
         P.tripday=1;     % which day of the trip file
     case 'NYC2016-small'
-        % P.tripfile='NYC2016-small_13Jan';
-        P.tripfolder='NYC2016-small_100';
+        P.tripfile='NYC2016-small_13Jan';
+%         P.tripfolder='NYC2016-small_100';
         P.tripday=1;     % which day of the trip file
         P.m=30; 
     case 'NYC2016-small2'
