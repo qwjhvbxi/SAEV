@@ -275,7 +275,7 @@ else
     
     tp=1;
     dynamicpricing=0;
-    Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1);
+    Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1,'alternative',0);
 
 end
 
@@ -285,17 +285,14 @@ Pricing.relocation=AutoRelo;
 % function to calculate probability of acceptance given a certain price for each OD pair
 ProbAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
     
-if P.modechoice==0
-    
-    DynamicPricing=NaN;
-    Multiplier1=1;
-    
-else
-    
-    % initialize matrix of fare per minute
-    PerDistanceTariff=ones(nc,nc).*Pricing.basetariff;
-    Surcharges=zeros(nc,nc);
-    DynamicPricing=NaN;
+% initialize matrix of fare per minute
+PerDistanceTariff=ones(nc,nc).*Pricing.basetariff;
+Surcharges=zeros(nc,nc);
+DynamicPricing=NaN;
+Aaltp=Pricing.alternative.*TripDistances; % alternative price for each user
+Multiplier1=1;
+
+if P.modechoice==1
     
     % initialization for dynamic pricing
     if dynamicpricing
@@ -309,10 +306,9 @@ else
     end
     
     % price of alternative option
-    if numel(P.Pricing.alternative)>1
-        Aaltp=P.Pricing.alternative; % alternative price is given for each user
+    if numel(Pricing.alternative)>1
+        Aaltp=Pricing.alternative; % alternative price is given for each user
     else
-        Aaltp=P.Pricing.alternative.*TripDistances; % alternative price for each user
         Pricing.altp=P.Pricing.alternative.*Pricing.c; % alternative price for each OD
     end
 end
@@ -440,7 +436,7 @@ for i=1:tsim
     LowSocRefill=(q(i,:)<0.6)*DayCharge;
     chargevector=(ones(1,P.m)*(zmacro(1,t)/zmacro(3,t))-v2gallowed*(zmacro(2,t)/zmacro(3,t))+LowSocRefill)*ac;
     
-                
+    
     %% pricing optimization
 
     % current pricing number
@@ -776,6 +772,7 @@ Internals.sc=logical(sc);
 Internals.sm=logical(sm);
 Internals.d=uint8(d);
 Internals.zmacro=zmacro;
+
 
 %% create Res struct and save results
 
