@@ -10,10 +10,6 @@
 % d: delay at beginning of time step
 % sc: status during time step: connected/not connected
 % sm: status during time step: moving/not moving
-%
-% dynamicpricing: 
-% 0: none; 1: OD-based; 
-% not fully implemented: [2: node-based; 3: optimal distance-based pricing] 
 % 
 % see also CPAR
 
@@ -92,6 +88,11 @@ if isfield(P.Tech,'efficiency')
     Efficiency=P.Tech.efficiency;
 else
     Efficiency=1;
+end
+if isfield(P,'Pricing') && ~isempty(P.Pricing)
+    Pricing=P.Pricing;
+else
+    Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
 end
 DayCharge=0;
 
@@ -260,58 +261,53 @@ end
 
 %% setup pricing module 
 
-if isfield(P,'Pricing') && ~isempty(P.Pricing)
-    
-    addpath functions/pricing
-    
-    tp=round(P.Pricing.tp/P.e);
-    tpH=round(P.Pricing.horizon/P.e);
-    dynamicpricing=P.Pricing.dynamic;
-	nodebased=isfield(P.Pricing,'nodebased') && P.Pricing.nodebased;
-    
-    Pricing=P.Pricing;
-    
-else
-    
-    tp=1;
-    dynamicpricing=0;
-    Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1,'alternative',0);
-
-end
-
+% add info to Pricing struct
 Pricing.c=Trs*P.e;
 Pricing.relocation=AutoRelo;
 
-% function to calculate probability of acceptance given a certain price for each OD pair
-ProbAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
-    
 % initialize matrix of fare per minute
 PerDistanceTariff=ones(nc,nc).*Pricing.basetariff;
-Surcharges=zeros(nc,nc);
-DynamicPricing=NaN;
-Aaltp=Pricing.alternative.*TripDistances; % alternative price for each user
-Multiplier1=1;
 
-if P.modechoice==1
+% initialize surcharges per stations
+Surcharges=zeros(nc,nc);
+
+% price of alternative option 
+if numel(Pricing.alternative)>1
+    Aaltp=Pricing.alternative; % alternative price for each user is given as input 
+else
+    Aaltp=Pricing.alternative*TripDistances; % alternative price for each user
+    Pricing.altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
+end
+
+% initialize multiplier for relocation
+Multiplier=1;
+
+if Pricing.dynamic
+    addpath functions/pricing
+    tp=round(Pricing.tp/P.e);       % pricing interval
+    tpH=round(Pricing.horizon/P.e); % pricing horizon
+    nodebased=isfield(Pricing,'nodebased') && Pricing.nodebased;
     
     % initialization for dynamic pricing
-    if dynamicpricing
-        if ~nodebased
-            % initialize matrix of real prices offered
-            DynamicPricing=ones(nc,nc,ceil(tsim/tp)+1)*Pricing.basetariff;
-        else
-            % initialize matrix of surcharges
-            DynamicPricing=zeros(ceil(tsim/tp)+1,nc*2);
-        end
+    if ~nodebased
+        % initialize matrix of real prices offered
+        DynamicPricing=ones(nc,nc,ceil(tsim/tp)+1)*Pricing.basetariff;
+    else
+        % initialize matrix of surcharges
+        DynamicPricing=zeros(ceil(tsim/tp)+1,nc*2);
     end
     
-    % price of alternative option
-    if numel(Pricing.alternative)>1
-        Aaltp=Pricing.alternative; % alternative price is given for each user
-    else
-        Pricing.altp=P.Pricing.alternative.*Pricing.c; % alternative price for each OD
+    % dynamic calculation is ignored if modechoice is not selected
+    if ~P.modechoice
+        warning('modechoice option is disabled, ignoring price optimization.')
     end
+else 
+    tp=1;
+    DynamicPricing=NaN;
 end
+
+% function to calculate probability of acceptance given a certain price for each OD pair
+ProbAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
 
 
 %% parameters for trip assignment
@@ -444,8 +440,8 @@ for i=1:tsim
 
     if P.modechoice
         
-        % if dynamicpricing>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
-        if dynamicpricing
+        % if Pricing.dynamic>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
+        if Pricing.dynamic
             
             if mod(i-1,tp)==0
         
@@ -501,8 +497,8 @@ for i=1:tsim
             
         end
         
-        Multiplier1=(ProbAcc(PerDistanceTariff,Surcharges,Pricing.altp));
-        % Multiplier2=(ProbAcc(PerDistanceTariff,Surcharges2,ParPricing.altp));
+        Multiplier=(ProbAcc(PerDistanceTariff,Surcharges,Pricing.altp));
+        
     end
     
 
@@ -523,10 +519,10 @@ for i=1:tsim
         
         % expected trips
         Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts));
-        a_ts=(Multiplier1.*sparse(As(Selection1,1),As(Selection1,2),1,nc,nc));
+        a_ts=(Multiplier.*sparse(As(Selection1,1),As(Selection1,2),1,nc,nc));
 
         Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts+tr));
-        a_to=(Multiplier1.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
+        a_to=(Multiplier.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
 
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[Clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
