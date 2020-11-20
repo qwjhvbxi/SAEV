@@ -1,5 +1,13 @@
 function setupFolders()
 
+if exist('functions/DataFolderAddress.mat','file')
+    load('functions/DataFolderAddress.mat','DataFolder');
+    if exist('DataFolder','var') && exist(DataFolder,'dir')
+        warning('data folder is already specified!')
+        return
+    end
+end
+
 fprintf('\n\n Where to create external folders?');
 
 try 
