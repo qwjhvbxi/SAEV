@@ -9,24 +9,33 @@ catch
 end
 
 if DataFolder==0
-    fprintf('Specify an absolute address in the form ''c:\\Users\\Documents\\'' \n or a relative address \n\n')
+    fprintf('\n\n Specify an absolute address in the form ''c:\\Users\\Documents\\ExtFolder'' \n or a relative address like ''ExtFolder'' ')
+    fprintf('\n\n Just press Enter without input to exit setup.\n\n')
     DataFolder=input(' Type in the address: ','s');
+end
+
+if ~isempty(DataFolder)
+    
+    if ~strcmp(DataFolder(end),'/') && ~strcmp(DataFolder(end),'\')
+        DataFolder=[DataFolder '\'];
+    end
+
+    save('functions/DataFolderAddress','DataFolder')
+
+    if ~exist(DataFolder,'dir')
+        mkdir(DataFolder);
+    end
+
+    mkdir(DataFolder,'trips')
+    mkdir(DataFolder,'scenarios')
+    mkdir(DataFolder,'out_saev')
+    mkdir(DataFolder,'figures')
+    mkdir(DataFolder,'eleprices')
+    mkdir(DataFolder,'grid')
+    mkdir(DataFolder,'par')
+    
+else
+    
+    fprintf('\n\n Setup cancelled. \n\n')
     
 end
-
-if ~strcmp(DataFolder(end),'/') && ~strcmp(DataFolder(end),'\')
-    DataFolder=[DataFolder '\'];
-end
-
-save('functions/DataFolderAddress','DataFolder')
-
-if ~exist(DataFolder,'dir')
-    mkdir(DataFolder);
-end
-
-mkdir(DataFolder,'trips')
-mkdir(DataFolder,'scenarios')
-mkdir(DataFolder,'out_saev')
-mkdir(DataFolder,'figures')
-mkdir(DataFolder,'eleprices')
-mkdir(DataFolder,'grid')
