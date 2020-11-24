@@ -8,3 +8,4 @@ functions/Copy_of_NLPricing.m
 *.fig
 *.png
 run/*
+*.csv
