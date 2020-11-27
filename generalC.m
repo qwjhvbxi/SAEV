@@ -45,15 +45,6 @@ if strcmp(P.trlayeralg,'opti')
 end
 
 
-%% parallel computing and input check
-
-if isfield(P,'tripfolder')
-    TripName=P.tripfolder;
-else
-    TripName=P.tripfile;
-end
-
-
 %% load external files: scenario, trips and energy
 
 % load distance matrix
@@ -198,7 +189,7 @@ s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
 if strcmp(P.enlayeralg,'aggregate') 
     
     % generate aggregate trip statistics
-    EMDFileName=[TripName '-' num2str(P.tripday)];
+    EMDFileName=[P.tripfolder '-' num2str(P.tripday)];
     Trips=generateEMD(A,Atimes,T,Beta,EMDFileName);
 
     % energy layer variable: static values
