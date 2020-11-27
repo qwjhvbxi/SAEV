@@ -1,35 +1,38 @@
 
-function [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,mtsim)
+function [dkemd,dkod,dktrip]=generatetripdataAlt(A,Atimes,T,Beta)
 
 n=size(T,1);
+t=double(max(Atimes(:,2)));
 
-% length of each interval
-tlen=round(1440/mtsim);
+% cleanup A
+Atimes(Atimes(:,1)==0,1)=1;
+Atimes(Atimes(:,2)==0,2)=1;
 
-dkod=sum(reshape(dk(1:1440),tlen,mtsim))';
+fo=zeros(t,n);
+fd=zeros(t,n);
+dk=zeros(t,1);
+
+for i=1:t
+    ThisMinute=logical(Atimes(:,1)==i);
+    fo(i,:)=accumarray([A(ThisMinute,1);n],[ones(sum(ThisMinute),1);0]);
+    fd(i,:)=accumarray([A(ThisMinute,2);n],[ones(sum(ThisMinute),1);0]);
+    dk(i)=sum(T(sub2ind(size(T),A(ThisMinute,1),A(ThisMinute,2))));
+end
+
+% fo=sparse(fo);
+% fd=sparse(fd);
+
+mtsim=round(t/Beta);
+
+dkod=sum(reshape(dk(1:t),Beta,mtsim))';
 dkemd=zeros(mtsim,1);
-
-b=zeros(mtsim,n);
 
 approx=(n>200);
 
 for kt=1:mtsim
     
-    ThisInterval=(kt-1)*tlen+1:kt*tlen;
- 
-    %     bmin=0;
-    %     uv=0;
-    %     dw=0;
-    %
-    %     % calculate imbalance
-    %     b(kt,:)=uv-dw ...  number of vehicles and passengers waiting at each station
-    %             +sum(fd(ThisInterval,:)) ...  expected arrivals between now and now+P.ts
-    %             -sum(fo(ThisInterval,:));   % expected requests between now and now+P.ts+t
-    %         
-    %     % identify feeder and receiver stations
-    %     F=(b(kt,:)-bmin).*(b(kt,:)>=bmin); % feeders
-    %     R=(-b(kt,:)+bmin).*(b(kt,:)<bmin); % receivers
-    
+    ThisInterval=(kt-1)*Beta+1:kt*Beta;
+     
     F=sum(fd(ThisInterval,:));
     R=sum(fo(ThisInterval,:));
 
@@ -45,9 +48,6 @@ for kt=1:mtsim
 end
 
 dktrip=dkemd+dkod;
-dktrip=repmat(dktrip,2,1);
-
-fk=0;
 
 
 

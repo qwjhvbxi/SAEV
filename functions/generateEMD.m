@@ -1,31 +1,17 @@
-%% [Trips,fo,fd]=generateEMD(A,Atimes,T,etsim,FileName)
-% generate number of arrivals at each station
-% generate EMD in case of aggregate energy layer
-% calculate from expected arrivals
-% etsim is the number of energy layer time steps in a day
+%% Trips=generateEMD(A,Atimes,T,etsim,FileName)
 % dkemd, dkod, dktrip are the number of minutes of travel for
 % relocation, serving trips, and total, respectively, for each
-% energy layer time step. fk
+% energy layer time step. 
 %
 % see also generalC
 
-function [Trips,fo,fd]=generateEMD(A,Atimes,T,etsim,FileName)
+function Trips=generateEMD(A,Atimes,T,Beta,FileName)
 
 DataFolder=setDataFolder();
-n=size(T,1);
 
-statsname=[DataFolder 'temp/tripstats-' FileName '-N' num2str(n) '.mat'];
-if exist(statsname,'file')
-    load(statsname,'fo','fd','dk');
-else
-    [~,fo,fd,dk]=tripstats2(A,Atimes,T);
-    save(statsname,'Atimes','fo','fd','dk');
-end
-
-
-emdname=[DataFolder 'temp/emd-' FileName '-' num2str(etsim) '.mat'];
+emdname=[DataFolder 'temp/emd-' FileName '-' num2str(Beta) '.mat'];
 if exist(emdname,'file')
-    load(emdname,'dkemd','dkod','dktrip','fk');
+    load(emdname,'dkemd','dkod','dktrip');
 else
 
     % is a probability distribution of trips available?
@@ -35,16 +21,15 @@ else
         % calculate from known distribution
         error('not implemented');
     else
-        [dkemd,dkod,dktrip,fk]=generatetripdataAlt(fo,fd,dk,T,etsim);
+        [dkemd,dkod,dktrip]=generatetripdataAlt(A,Atimes,T,Beta);
     end
-    save(emdname,'dkemd','dkod','dktrip','fk');
+    save(emdname,'dkemd','dkod','dktrip');
 
 end
 
 Trips.dkemd=dkemd;
 Trips.dkod=dkod;
 Trips.dktrip=dktrip;
-Trips.fk=fk;
 
 end
 

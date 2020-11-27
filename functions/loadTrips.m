@@ -13,20 +13,44 @@ DataFolder=setDataFolder();
 
 % determine file name
 if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
-    tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday) '.mat'];
-    TripName=P.tripfolder;
+    if isfield(P,'tripday') && ~isempty(P.tripday)
+        
+        % tripfolder represents a folder with days inside
+        tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday) '.mat'];
+        
+        % load files
+        [A,Atimes,Distances]=loadFile(tripFileLocation);
+        
+        tripFileLocation2=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday+1) '.mat'];
+        if exist(tripFileLocation2,'file')
+            [A2,Atimes2,~]=loadFile(tripFileLocation2);
+        else
+            A2=A;
+            Atimes2=Atimes;
+        end
+        
+    else
+        
+        % tripfolder is actually a file with a single day
+        tripFileLocation=[DataFolder 'trips/' P.tripfolder '.mat'];
+        
+        % load files
+        [A,Atimes,Distances]=loadFile(tripFileLocation);
+        
+        A2=A;
+        Atimes2=Atimes;
+        
+    end
 else
-    tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
-    TripName=P.tripfile;
+    
+    warning('need to specify trip folder!')
+    %tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
+    
 end
 
-% load files
-if exist(tripFileLocation,'file')
-    load(tripFileLocation,'A','Atimes','Distances');
-else
-    %error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
-    error('File ''%s'' does not exist.',tripFileLocation);
-end
+
+A=[A;A2];
+Atimes=[Atimes;(1440+Atimes2)];
 
 
 %% checks
@@ -63,3 +87,25 @@ if ~exist('Distances','var')
 end
 
 end
+
+
+
+
+
+function [A,Atimes,Distances]=loadFile(tripFileLocation)
+
+% load files
+if exist(tripFileLocation,'file')
+    load(tripFileLocation,'A','Atimes','Distances');
+else
+    %error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
+    %     A=NaN;
+    %     Atimes=NaN;
+    %     Distances=NaN;
+    error('File ''%s'' does not exist.',tripFileLocation);
+end
+
+end
+
+
+

@@ -47,8 +47,6 @@ end
 
 %% parallel computing and input check
 
-parcomp=is_in_parallel();
-
 if isfield(P,'tripfolder')
     TripName=P.tripfolder;
 else
@@ -63,7 +61,7 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 
 % load trips
 % TODO: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,AbuckC,Distances]=loadTrips(P);
+[A,Atimes,AbuckC,~]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
 % load electricity prices and carbon emissions
@@ -76,14 +74,16 @@ load([DataFolder 'eleprices/' P.gridfile '.mat'],'x','y');
 
 % parameters
 n=size(T,1);              % number of nodes
+r=length(A);              % number of requests
 tsim=1440/P.e;            % number of time steps
-etsim=floor(1440/P.beta); % number of charging decisions
+Beta=P.beta;
+etsim=floor(1440/Beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
 Tr(1:n+1:end)=0;
 ac=P.Tech.chargekw/P.Tech.battery/60*P.e;    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;    % discharge rate per time step (normalized)
 aggregateratio=1;         % charge rate at aggregate level optimization
-mthor=round(P.EnergyLayer.mthor/P.beta);
+mthor=round(P.EnergyLayer.mthor/Beta);
 if isfield(P.Tech,'efficiency')
     Efficiency=P.Tech.efficiency;
 else
@@ -110,12 +110,12 @@ sm=false(tsim,P.m); % moving status
 queue=zeros(100,1);         % temporary variable to store queued arrivals
 
 % results variables
-waiting=zeros(length(A),1);  % minutes waited for each request
-dropped=false(length(A),1);  % request is dropped?
-chosenmode=false(length(A),1);% which mode is chosen?
-pooling=zeros(length(A),1);  % pool ID of each user (if ride shared)
-waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
-offeredprices=zeros(length(A),1);  % price offered to each passenger
+waiting=zeros(r,1);  % minutes waited for each request
+dropped=false(r,1);  % request is dropped?
+chosenmode=false(r,1);% which mode is chosen?
+pooling=zeros(r,1);  % pool ID of each user (if ride shared)
+waitingestimated=zeros(r,1);  % estimated minutes to wait for each request
+offeredprices=zeros(r,1);  % price offered to each passenger
 relodist=zeros(tsim,1); % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1); % distances of trips (at moment of acceptance)
 
@@ -129,8 +129,8 @@ if exist('y','var') % carbon emissions profiles [g/kWh]
 else
     co2=zeros(tsim*2,1);
 end
-melep=average2(elep,P.beta/P.e);
-mco2=average2(co2,P.beta/P.e);
+melep=average2(elep,Beta/P.e);
+mco2=average2(co2,Beta/P.e);
 clear d1 d2 ReshapeFactor x y;
 
 % trip distances
@@ -199,22 +199,7 @@ if strcmp(P.enlayeralg,'aggregate')
     
     % generate aggregate trip statistics
     EMDFileName=[TripName '-' num2str(P.tripday)];
-    [Trips,~,~]=generateEMD(A,Atimes,T,etsim,EMDFileName);
-
-    % append values for next day
-    if isfield(P,'tripfolder')
-        P2=P;
-        P2.tripday=P.tripday+1;
-        try 
-            [A2,Atimes2,~,~]=loadTrips(P2);
-        catch 
-            P2.tripday=1;
-            [A2,Atimes2,~,~]=loadTrips(P2);
-        end
-        EMDFileName=[TripName '-' num2str(P2.tripday)];
-        [Trips2,~,~]=generateEMD(A2,Atimes2,T,etsim,EMDFileName);
-        Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
-    end
+    Trips=generateEMD(A,Atimes,T,Beta,EMDFileName);
 
     % energy layer variable: static values
     E.v2g=P.Operations.v2g; % use V2G?
@@ -352,13 +337,13 @@ for i=1:tsim
     
     %% charging optimization
     
-    if rem(i,P.beta/P.e)==1 % only cases with energy layer
+    if rem(i,Beta/P.e)==1 % only cases with energy layer
         
         % current time
         lasttimemacro=cputime;
         
         % index of energy layer
-        t=(i-1)/(P.beta/P.e)+1;
+        t=(i-1)/(Beta/P.e)+1;
         
         switch P.enlayeralg
             
@@ -388,7 +373,7 @@ for i=1:tsim
                 dktripnow=Trips.dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
                 E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
-                E.dkav=max(0,P.m*P.beta-dktripnow);         % minutes of availability of cars
+                E.dkav=max(0,P.m*Beta-dktripnow);         % minutes of availability of cars
                 E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
                 E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
                 maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
@@ -622,16 +607,16 @@ for i=1:tsim
         
         %% create set points at beginning of charging period
         
-        if rem(i,P.beta/P.e)==1
+        if rem(i,Beta/P.e)==1
             % aggregate set point (kWh)
             SetPointUpPeriod=(zmacro(1,t));  % set point of aggregate fleet (kWh)
             SetPointDownPeriod=(zmacro(2,t));  % set point of aggregate fleet (kWh)
             % expected total vehicle capacity in the period (kWh)
-            CapUpPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,P.Operations.maxsoc-q(i,:))*P.Tech.battery); % charge
-            CapDownPeriod=max(0,s(2,:).*min(acv*P.beta/P.e,(q(i,:)-P.Operations.v2gminsoc)*Efficiency)*P.Tech.battery); % discharge
+            CapUpPeriod=max(0,s(2,:).*min(acv*Beta/P.e,P.Operations.maxsoc-q(i,:))*P.Tech.battery); % charge
+            CapDownPeriod=max(0,s(2,:).*min(acv*Beta/P.e,(q(i,:)-P.Operations.v2gminsoc)*Efficiency)*P.Tech.battery); % discharge
             % set point for each vehicle for each time step (kWh)
-            SetPointUp=min(SetPointUpPeriod,sum(CapUpPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
-            SetPointDown=min(SetPointDownPeriod,sum(CapDownPeriod))/P.beta*P.e;  % set point of aggregate fleet (kWh)
+            SetPointUp=min(SetPointUpPeriod,sum(CapUpPeriod))/Beta*P.e;  % set point of aggregate fleet (kWh)
+            SetPointDown=min(SetPointDownPeriod,sum(CapDownPeriod))/Beta*P.e;  % set point of aggregate fleet (kWh)
         end
         
         
@@ -789,7 +774,7 @@ Res.Internals=Internals;
 Res.CPUtimes=S;
 Res.cputime=elapsed;
 Res.cost=(sum(Sim.e/60/1000*P.e,2)')*elep(1:tsim)+Sim.emissions*P.carbonprice;
-Res.dropped=sum(dropped)/length(A);
+Res.dropped=sum(dropped)/r;
 Res.peakwait=max(waiting);
 Res.avgwait=mean(waiting);
 
