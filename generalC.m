@@ -55,6 +55,9 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 [A,Atimes,AbuckC,~]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
 
+% load electricity prices and carbon emissions
+[elepMinute,co2Minute]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday);
+
 
 %% parameters of simulation
 
@@ -83,13 +86,20 @@ end
 DayCharge=0; % wether to charge during the day for unscheduled charging
 TripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % trip distances in minutes
 
+% electricity and emissions profiles
+elep=average2(elepMinute,P.e);
+co2=average2(co2Minute,P.e);
+melep=average2(elepMinute,Beta);
+mco2=average2(co2Minute,Beta);
+
 % main variables
-q=zeros(tsim,P.m,'double'); % SOC
+q=zeros(tsim,P.m); % SOC
 u=zeros(tsim,P.m,'uint16'); % vehicles in charging stations
 d=zeros(tsim,P.m,'uint16'); % delay
-e=zeros(tsim,P.m,'double'); % charging
-ef=zeros(tsim,P.m,'double'); % charging
+e=zeros(tsim,P.m); % charging
+ef=zeros(tsim,P.m); % FCR charging
 
+% working variables
 g=zeros(1,P.m); % current idle time
 s=false(3,P.m); % current status: [relocating, connected, moving to charging station]
 sc=false(tsim,P.m); % connected to charging station status
@@ -105,18 +115,6 @@ waitingestimated=zeros(r,1);  % estimated minutes to wait for each request
 offeredprices=zeros(r,1);  % price offered to each passenger
 relodist=zeros(tsim,1); % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1); % distances of trips (at moment of acceptance)
-
-
-%% electicity price and emissions profiles -- CHANGE
-
-% load electricity prices and carbon emissions
-[elepMinute,co2Minute]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday);
-
-elep=average2(elepMinute,P.e);
-co2=average2(co2Minute,P.e);
-
-melep=average2(elepMinute,Beta);
-mco2=average2(co2Minute,Beta);
 
 
 %% setup clustering
