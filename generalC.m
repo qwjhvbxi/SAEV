@@ -45,7 +45,7 @@ if strcmp(P.trlayeralg,'opti')
 end
 
 
-%% load external files: scenario, trips and energy
+%% load external files: scenario, trips 
 
 % load distance matrix
 load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
@@ -54,11 +54,6 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 % TODO: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,AbuckC,~]=loadTrips(P);
 AbuckC=AbuckC(1:P.e:end);
-
-% load electricity prices and carbon emissions
-% x and y are electricity prices and carbon emissions, respectively. They
-% are in matrix of shape N x days, with N the number of data points in a day
-load([DataFolder 'eleprices/' P.gridfile '.mat'],'x','y');
 
 
 %% parameters of simulation
@@ -85,7 +80,8 @@ if isfield(P,'Pricing') && ~isempty(P.Pricing)
 else
     Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
 end
-DayCharge=0;
+DayCharge=0; % wether to charge during the day for unscheduled charging
+TripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % trip distances in minutes
 
 % main variables
 q=zeros(tsim,P.m,'double'); % SOC
@@ -110,22 +106,17 @@ offeredprices=zeros(r,1);  % price offered to each passenger
 relodist=zeros(tsim,1); % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1); % distances of trips (at moment of acceptance)
 
-% electicity price and emissions profiles
-d1=P.gridday;
-d2=rem(P.gridday,size(x,2))+1;
-ReshapeFactor=tsim/size(x,1);
-elep=repelem( [ x(:,d1);x(:,d2) ] , ReshapeFactor ,1); % electricity price profiles in $/MWh 
-if exist('y','var') % carbon emissions profiles [g/kWh]
-    co2=repelem( [ y(:,d1);y(:,d2) ] , ReshapeFactor ,1);
-else
-    co2=zeros(tsim*2,1);
-end
-melep=average2(elep,Beta/P.e);
-mco2=average2(co2,Beta/P.e);
-clear d1 d2 ReshapeFactor x y;
 
-% trip distances
-TripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % minutes
+%% electicity price and emissions profiles -- CHANGE
+
+% load electricity prices and carbon emissions
+[elepMinute,co2Minute]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday);
+
+elep=average2(elepMinute,P.e);
+co2=average2(co2Minute,P.e);
+
+melep=average2(elepMinute,Beta);
+mco2=average2(co2Minute,Beta);
 
 
 %% setup clustering
@@ -159,9 +150,6 @@ if ~strcmp(P.trlayeralg,'no') && ~isempty(P.TransportLayer)
     b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
     AutoRelo=1;
 else
-    ts=0;
-    tr=0;
-    b=NaN;
     AutoRelo=0;
 end
 
@@ -196,8 +184,8 @@ if strcmp(P.enlayeralg,'aggregate')
     E.v2g=P.Operations.v2g; % use V2G?
     E.eta=Efficiency;       % roundtrip (discharge) efficiency
     E.selling=1;            % can sell to the grid?
-    % E.minfinalsoc=1;      % final SOC. This only works for optimization horizon of ~24h
-    E.socboost=1e4;         % soft constraint for final soc
+    % TODO: socboost should be calculated by optimization as function of inputs
+    E.socboost=1e4;         % soft constraint for final soc 
     E.T=mthor;% number of time steps in energy layer
     E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
     E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
