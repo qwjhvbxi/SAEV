@@ -203,18 +203,33 @@ end
 %% frequency control reserve
 
 if isfield(P,'FCR') && ~isempty(P.FCR)
+    
+    addpath functions/FCR
+    
     FCR=true;
     if isfield(P.FCR,'aggregatechargeratio')
         aggregateratio=P.FCR.aggregatechargeratio;
     end
+    
+    % TODO: use CSV as inputs
     load([DataFolder 'grid/' P.FCR.filename],'f');
     ReshapeFactor=size(f,1)/1440*P.e;
     f=average2(f(:,P.gridday),ReshapeFactor);
     
-    contracted=P.FCR.contracted;
+    LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
     
-    af=contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
-    LimitFCR=ceil(contracted*1000/P.Tech.chargekw);
+    ParC.ac=ac;
+    ParC.af=P.FCR.contracted*1000/P.Tech.battery/60*P.e;    % FCR rate per time step (normalized)
+    ParC.H=Beta/P.e;
+    ParC.limits=P.FCR.limits;
+    ParC.fastchargesoc=P.FCR.fastchargesoc;
+    ParC.slowchargeratio=P.FCR.slowchargeratio;
+    ParC.minsoc=P.Operations.minsoc;
+    ParC.maxsoc=P.Operations.maxsoc;
+    ParC.v2gminsoc=P.Operations.v2gminsoc;
+    ParC.battery=P.Tech.battery;
+    ParC.efficiency=Efficiency;
+    
 else
     FCR=false;
     LimitFCR=0;
@@ -314,7 +329,7 @@ for i=1:tsim
     
     %% charging optimization
     
-    if rem(i,Beta/P.e)==1 % only cases with energy layer
+    if rem(i,Beta/P.e)==1
         
         % current time
         lasttimemacro=cputime;
@@ -342,25 +357,25 @@ for i=1:tsim
             
             case 'aggregate'
                 
-                % dynamic variables
-                E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
                 actualminsoc=min(P.Operations.minsoc+P.EnergyLayer.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
-                E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
-
                 dktripnow=Trips.dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
+                
+                E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
+                E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
                 E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
                 E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
                 E.dkav=max(0,P.m*Beta-dktripnow);         % minutes of availability of cars
                 E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
                 E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
+                
                 maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
-
+                
                 ELayerResults=aevopti11(E);
-
+                
                 if ~isempty(ELayerResults)
                     
                     % make sure that there is no discharging when V2G is not allowed
-                    if P.Operations.v2g==0
+                    if ~P.Operations.v2g
                         ELayerResults.discharging(:)=0;
                     end
 
@@ -373,14 +388,14 @@ for i=1:tsim
                     
                 else
                     
-                    % charge as much as possible
+                    % in case there is no feasible solution, charge as much as possible
                     zmacro(:,t:t+mthor-1)=[ones(size(maxc,1),1),zeros(size(maxc,1),1),maxc,E.etrip]';
                     
                 end
 
             otherwise
             
-                error('energy layer must be either ''no'' or ''aggregate'' ');
+                error('energy layer must be either ''no'', ''night'' or ''aggregate'' ');
 
         end
         
@@ -579,74 +594,16 @@ for i=1:tsim
     
     if FCR  % setpoint based
         
-        % power exchanged for vehicles charging
-        acv=(q(i,:)<P.FCR.fastchargesoc)*ac+(q(i,:)>=P.FCR.fastchargesoc)*ac*P.FCR.slowchargeratio;
-        
-        %% create set points at beginning of charging period
-        
         if rem(i,Beta/P.e)==1
-            % aggregate set point (kWh)
-            SetPointUpPeriod=(zmacro(1,t));  % set point of aggregate fleet (kWh)
-            SetPointDownPeriod=(zmacro(2,t));  % set point of aggregate fleet (kWh)
-            % expected total vehicle capacity in the period (kWh)
-            CapUpPeriod=max(0,s(2,:).*min(acv*Beta/P.e,P.Operations.maxsoc-q(i,:))*P.Tech.battery); % charge
-            CapDownPeriod=max(0,s(2,:).*min(acv*Beta/P.e,(q(i,:)-P.Operations.v2gminsoc)*Efficiency)*P.Tech.battery); % discharge
-            % set point for each vehicle for each time step (kWh)
-            SetPointUp=min(SetPointUpPeriod,sum(CapUpPeriod))/Beta*P.e;  % set point of aggregate fleet (kWh)
-            SetPointDown=min(SetPointDownPeriod,sum(CapDownPeriod))/Beta*P.e;  % set point of aggregate fleet (kWh)
+            
+            [SetPoints]=SP(ParC,q(i,:),s(2,:),zmacro(1:2,t));
+            
         end
         
+        [ei,efi]=Charging(ParC,q(i,:),s(2,:),f(i),SetPoints);
         
-        %% charging 
-        
-        % available power from fleet
-        maxsoceff=1; % maxsoceff=P.Operations.maxsoc;
-        v2gallowed=q(i,:)>P.Operations.v2gminsoc;
-        % actual capacity in this time step
-        CapUp=s(2,:).*min(acv,maxsoceff-q(i,:)); % charge
-        CapDown=s(2,:).*v2gallowed.*min(acv,(q(i,:)-P.Operations.minsoc)*Efficiency); % discharge
-        
-        % calculate ratios
-        if sum(CapUp)>0
-            eRatioUp=min(1,SetPointUp/(sum(CapUp)*P.Tech.battery));
-        else
-            eRatioUp=0;
-        end
-        if sum(CapDown)>0
-            eRatioDown=min(1,SetPointDown/(sum(CapDown)*P.Tech.battery));
-        else
-            eRatioDown=0;
-        end
-        
-        % calculate charging for each vehicle
-        e(i,:)=CapUp*eRatioUp-CapDown*eRatioDown;
-        
-        
-        %% FCR provision
-        
-        % needed FCR power
-        FCRNeed=(f(i)-50)/(P.FCR.limits(2)-P.FCR.limits(1))*2;
-        FCRNeedUp=af*min(1,max(0,FCRNeed)); % charge
-        FCRNeedDown=af*min(1,max(0,-FCRNeed)); % discharge
-        
-        % available power from fleet
-        AvailableUp=s(2,:).*min(ac-max(0,e(i,:)),1-(q(i,:)+e(i,:))); % charge
-        AvailableDown=s(2,:).*min(ac-max(0,-e(i,:)),(q(i,:)+e(i,:))-P.Operations.minsoc); % discharge
-        
-        % calculate ratios
-        if sum(AvailableUp)>0
-            FCRRatioUp=min(1,FCRNeedUp/sum(AvailableUp));
-        else
-            FCRRatioUp=0;
-        end
-        if sum(AvailableDown)>0
-            FCRRatioDown=min(1,FCRNeedDown/sum(AvailableDown));
-        else
-            FCRRatioDown=0;
-        end
-        
-        % calculate FCR power contributions
-        ef(i,:)=AvailableUp.*FCRRatioUp-AvailableDown.*FCRRatioDown;
+        e(i,:)=ei;
+        ef(i,:)=efi;
            
     else
         
@@ -655,16 +612,14 @@ for i=1:tsim
         CapDown=s(2,:).*min(ac,(q(i,:)-P.Operations.minsoc)*Efficiency); % discharge
         
         e(i,:)=min(CapUp,max(0,chargevector))+max(-CapDown,min(0,chargevector));
-%         e(i,:)=s(2,:).*max(-ac,min(ac,(min(P.Operations.maxsoc,max( P.Operations.minsoc , q(i,:)+chargevector ) )-q(i,:))));
         
     end
 
     % update SOC 
-    %     q(i+1,:)=min(P.Operations.maxsoc,max(P.Operations.minsoc,q(i,:)+e(i,:)-(d(i,:)>0).*ad));
     q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/Efficiency-(di>0).*ad;
 
     % update position
-    u(i+1,:)=ui;%(i,:);
+    u(i+1,:)=ui;
     
     % update idle time
     g=(di==0).*(g+1);
