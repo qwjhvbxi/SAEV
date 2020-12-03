@@ -15,7 +15,7 @@
 
 function [Res]=generalC(P,extsave,dispiter)
 
-%% initializations
+%% initializations and input check
 
 addpath functions utilities 
 DataFolder=setDataFolder();
@@ -65,14 +65,11 @@ AbuckC=AbuckC(1:P.e:end);
 n=size(T,1);              % number of nodes
 r=length(A);              % number of requests
 tsim=1440/P.e;            % number of time steps
-Beta=P.beta;
-etsim=floor(1440/Beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
 Tr(1:n+1:end)=0;
 ac=P.Tech.chargekw/P.Tech.battery/60*P.e;    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.e;    % discharge rate per time step (normalized)
 aggregateratio=1;         % charge rate at aggregate level optimization
-mthor=round(P.EnergyLayer.mthor/Beta);
 if isfield(P.Tech,'efficiency')
     Efficiency=P.Tech.efficiency;
 else
@@ -89,8 +86,6 @@ TripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.e; % trip distances in minut
 % electricity and emissions profiles
 elep=average2(elepMinute,P.e);
 co2=average2(co2Minute,P.e);
-melep=average2(elepMinute,Beta);
-mco2=average2(co2Minute,Beta);
 
 % main variables
 q=zeros(tsim,P.m); % SOC
@@ -102,8 +97,6 @@ ef=zeros(tsim,P.m); % FCR charging
 % working variables
 g=zeros(1,P.m); % current idle time
 s=false(3,P.m); % current status: [relocating, connected, moving to charging station]
-sc=false(tsim,P.m); % connected to charging station status
-sm=false(tsim,P.m); % moving status
 queue=zeros(100,1);         % temporary variable to store queued arrivals
 
 % results variables
@@ -113,6 +106,8 @@ chosenmode=false(r,1);% which mode is chosen?
 pooling=zeros(r,1);  % pool ID of each user (if ride shared)
 waitingestimated=zeros(r,1);  % estimated minutes to wait for each request
 offeredprices=zeros(r,1);  % price offered to each passenger
+sc=false(tsim,P.m); % connected to charging station status
+sm=false(tsim,P.m); % moving status
 relodist=zeros(tsim,1); % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1); % distances of trips (at moment of acceptance)
 
@@ -152,27 +147,17 @@ else
 end
 
 
-%% initial states
-
-q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
-if isfield(P.Operations,'uinit')
-    u(1,:)=P.Operations.uinit;
-else
-    u(1,:)=chargingStations(randi(nc,1,P.m));                 % initial position of vehicles
-end
-if isfield(P.Operations,'dinit')
-    d(1,:)=P.Operations.dinit;
-end
-
-AtChargingStation=sum(u(1,:)==chargingStations);
-    
-% update statuses
-s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
-
-
 %% setup charging module
 
+% TODO: if there is no charging module, Beta should not be used
+Beta=P.beta;
+etsim=floor(1440/Beta); % number of charging decisions
+
 if strcmp(P.enlayeralg,'aggregate') 
+    
+    mthor=round(P.EnergyLayer.mthor/Beta);
+    melep=average2(elepMinute,Beta);
+    mco2=average2(co2Minute,Beta);
     
     % generate aggregate trip statistics
     EMDFileName=[P.tripfolder '-' num2str(P.tripday)];
@@ -200,7 +185,7 @@ else
 end
 
 
-%% frequency control reserve
+%% setup frequency control reserve module
 
 if isfield(P,'FCR') && ~isempty(P.FCR)
     
@@ -212,6 +197,8 @@ if isfield(P,'FCR') && ~isempty(P.FCR)
     end
     
     % TODO: use CSV as inputs
+%     [fminute,~]=ReadExtFile([DataFolder 'grid/' P.FCR.filename],P.gridday);
+%     f=average2(fminute,P.e);
     load([DataFolder 'grid/' P.FCR.filename],'f');
     ReshapeFactor=size(f,1)/1440*P.e;
     f=average2(f(:,P.gridday),ReshapeFactor);
@@ -287,18 +274,34 @@ end
 ProbAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
 
 
-%% parameters for trip assignment
+%% setup trip assignment module
 
 Par=struct('Tr',Tr,'ad',ad,'e',P.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
     'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,'LimitFCR',LimitFCR);
+
+
+%% initial states
+
+q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
+if isfield(P.Operations,'uinit')
+    u(1,:)=P.Operations.uinit;
+else
+    u(1,:)=chargingStations(randi(nc,1,P.m));                 % initial position of vehicles
+end
+if isfield(P.Operations,'dinit')
+    d(1,:)=P.Operations.dinit;
+end
+
+AtChargingStation=sum(u(1,:)==chargingStations);
+    
+% update statuses
+s(2,:)=logical(AtChargingStation.*(d(1,:)==0));
 
 
 %% variables for progress display and display initializations
 
 S.starttime=cputime;
 S.lasttime=S.starttime;
-S.trlayerCPUtime=zeros(tsim,1);
-S.enlayerCPUtime=zeros(etsim,1);
 S.comptime=[cputime;zeros(tsim,1)];
 
 
@@ -330,9 +333,6 @@ for i=1:tsim
     %% charging optimization
     
     if rem(i,Beta/P.e)==1
-        
-        % current time
-        lasttimemacro=cputime;
         
         % index of energy layer
         t=(i-1)/(Beta/P.e)+1;
@@ -400,7 +400,6 @@ for i=1:tsim
         end
         
         % record time
-        S.enlayerCPUtime(t)=cputime-lasttimemacro;
         S.lasttime=cputime;
         
     end
@@ -639,7 +638,6 @@ for i=1:tsim
     s(3,:)=(d(i+1,:)>0).*s(3,:);
     
     % record time
-    S.trlayerCPUtime(i)=cputime-S.lasttime;
     S.lasttime=cputime;
     
     % update cputime of this step
