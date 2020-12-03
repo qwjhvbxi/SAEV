@@ -82,10 +82,6 @@ end
 Abuck=histc(Atimes(:,1),1:1441); % number of trips in each minute
 AbuckC=[0;cumsum(Abuck)]; % total number of trips up to each minute
 
-if ~exist('Distances','var')
-    Distances=[];
-end
-
 end
 
 
@@ -97,6 +93,11 @@ function [A,Atimes,Distances]=loadFile(tripFileLocation)
 % load files
 if exist(tripFileLocation,'file')
     load(tripFileLocation,'A','Atimes','Distances');
+    
+    if ~exist('Distances','var')
+        Distances=[];
+    end
+    
 else
     %error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
     %     A=NaN;
