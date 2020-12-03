@@ -1,4 +1,4 @@
-%% [Summary,R]=multiDaySim(Period,P[,GridOffset,ResultsOut])
+%% [Summary,R]=multiDaySim(Period,P[,GridOffset,ResultsOut,varargin])
 % launch simulations over multiple days.
 % Period is the consecutive days
 % P is the parameter struct
@@ -9,6 +9,8 @@
 % R is the optional full results struct if ResultsOut==true
 
 function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut,varargin)
+
+Extended=false;
 
 if prod(Period(2:end)-Period(1:end-1)==1)==0
     warning('Days in ''Period'' must be consecutive');
@@ -57,9 +59,15 @@ Summary.FCRfails=zeros(length(Period),1);
 Summary.FCRenergy=zeros(length(Period),2);
 Summary.waiting=[];
 Summary.soc=[];
+Summary.e=[];
+Summary.elep=[];
+Summary.co2=[];
+Summary.zmacro=[];
 
-Summary.socv=[];
-Summary.sc=[];
+if Extended
+    Summary.socv=[];
+    Summary.sc=[];
+end
 
 totreq=0;
 totdropped=0;
@@ -97,6 +105,8 @@ for j=1:length(Period)
     totwait=totwait+full(sum(Res.Sim.waiting));
     totminutes=totminutes+sum(Res.Sim.tripdist);
     
+    etsim=48; % temporary
+    
     % create Summary
     Summary.cost(j)=Res.cost;
     Summary.dropped(j)=Res.dropped;
@@ -106,11 +116,18 @@ for j=1:length(Period)
     Summary.cputime(j)=Res.cputime;
     Summary.waiting=[Summary.waiting;Res.Sim.waiting];
     Summary.soc=[Summary.soc;mean(Res.Sim.q,2)];
+    Summary.e=[Summary.e;sum(Res.Sim.e,2)];
+    Summary.elep=[Summary.elep;Res.Params.elep(1:Res.Params.tsim)];
+    Summary.co2=[Summary.co2;Res.Params.co2(1:Res.Params.tsim)];
+    Summary.zmacro=[Summary.zmacro;Res.Internals.zmacro(:,1:etsim)'];
     
-    
-    Summary.socv=[Summary.socv;Res.Sim.q(1:end-1,:)];
-    Summary.sc=[Summary.sc;Res.Internals.sc];
-    
+    if Extended
+        Summary.socv=[Summary.socv;Res.Sim.q(1:end-1,:)];
+        if isfield(Res.Internals,'sc')
+            Summary.sc=[Summary.sc;Res.Internals.sc];
+        end
+    end
+
     if isfield(P,'FCR')
         FCRres=testFCR(P,Res);
         Summary.FCRfails(j)=FCRres.FailMinutes;
