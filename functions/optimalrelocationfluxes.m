@@ -69,8 +69,6 @@ function X=calculateflux(F,R,T,limite,approx)
     
     if approx
         intcon=[];
-        N
-        limite
     else
         % integer variables (all)
         intcon=1:N*N;

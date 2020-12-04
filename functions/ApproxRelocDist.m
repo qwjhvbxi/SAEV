@@ -1,5 +1,7 @@
+%% [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta)
+% calculate approximate relocation distance needed 
 
-function [dkemd,dkod,dktrip]=generatetripdataAlt(A,Atimes,T,Beta)
+function [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta)
 
 n=size(T,1);
 t=double(max(Atimes(:,2)));
@@ -29,7 +31,13 @@ dkemd=zeros(mtsim,1);
 
 approx=(n>200);
 
+fprintf('\n Calculating approximate relocation distance\n\n')
+
 for kt=1:mtsim
+    
+    % progress report
+    clc
+    fprintf('\n %d/%d\n\n',kt,mtsim)
     
     ThisInterval=(kt-1)*Beta+1:kt*Beta;
      
