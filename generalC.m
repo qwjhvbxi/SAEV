@@ -56,7 +56,7 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 AbuckC=AbuckC(1:P.e:end);
 
 % load electricity prices and carbon emissions
-[elepMinute,co2Minute]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday);
+[elepMinute,co2Minute,~]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
 
 %% parameters of simulation
@@ -197,11 +197,11 @@ if isfield(P,'FCR') && ~isempty(P.FCR)
     end
     
     % TODO: use CSV as inputs
-%     [fminute,~]=ReadExtFile([DataFolder 'grid/' P.FCR.filename],P.gridday);
-%     f=average2(fminute,P.e);
-    load([DataFolder 'grid/' P.FCR.filename],'f');
-    ReshapeFactor=size(f,1)/1440*P.e;
-    f=average2(f(:,P.gridday),ReshapeFactor);
+    [fraw,~,fresolution]=ReadExtFile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
+    f=average2(fraw,P.e/fresolution);
+%     load([DataFolder 'grid/' P.FCR.filename],'f');
+%     ReshapeFactor=size(f,1)/1440*P.e;
+%     f=average2(f(:,P.gridday),ReshapeFactor);
     
     LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
     

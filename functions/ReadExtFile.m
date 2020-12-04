@@ -1,8 +1,7 @@
-%% [elep,co2]=ReadExtFile(FileName,Day)
-% return electricity price and carbon intensity in each minute for the
-% specified day and the next.
+%% [Column1,Column2,Resolution]=ReadExtFile(FileName,Day)
+% return data in each minute for the specified day and the next.
 
-function [elep,co2]=ReadExtFile(FileName,Day)
+function [Column1,Column2,Resolution]=ReadExtFile(FileName,Day,MinuteSample)
 
 fileID=fopen(FileName,'r');
 H=textscan(fileID,'%q %f',1,'Delimiter',','); % retrieve resolution info
@@ -24,11 +23,14 @@ Interval=PointsPerDay*(Day-1)+1:PointsPerDay*(Day+1);
 % adjust for end of the dataset (the next day from last day is back to the first)
 IntervalAdjusted=rem(Interval-1,TotalDays*PointsPerDay)+1;
 
+if MinuteSample
 % repeat values to find per minute values
-elep=repelem(T{1}(IntervalAdjusted),Resolution,1);
-co2=repelem(T{2}(IntervalAdjusted),Resolution,1);
+Column1=repelem(T{1}(IntervalAdjusted),Resolution,1);
+Column2=repelem(T{2}(IntervalAdjusted),Resolution,1);
+Resolution=1;
+end
 
 % replace nan values with zeros
-co2(isnan(co2))=0;
+Column2(isnan(Column2))=0;
 
 
