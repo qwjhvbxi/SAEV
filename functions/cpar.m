@@ -1,4 +1,5 @@
 %% P=CPAR(Scenario[,trlayer])
+% [LEGACY FILE. DO NOT MODIFY] 
 % Create default P struct.
 % Scenarios currently available: 
 % - 'NYC2016'
