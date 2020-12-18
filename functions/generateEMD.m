@@ -21,7 +21,7 @@ else
         % calculate from known distribution
         error('not implemented');
     else
-        [dkemd,dkod,dktrip]=generatetripdataAlt(A,Atimes,T,Beta);
+        [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta);
     end
     save(emdname,'dkemd','dkod','dktrip');
 

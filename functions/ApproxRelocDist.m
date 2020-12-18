@@ -5,6 +5,8 @@ function [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta)
 
 n=size(T,1);
 t=double(max(Atimes(:,2)));
+mtsim=round(t/Beta);
+t=Beta*mtsim;
 
 % cleanup A
 Atimes(Atimes(:,1)==0,1)=1;
@@ -24,7 +26,6 @@ end
 % fo=sparse(fo);
 % fd=sparse(fd);
 
-mtsim=round(t/Beta);
 
 dkod=sum(reshape(dk(1:t),Beta,mtsim))';
 dkemd=zeros(mtsim,1);
