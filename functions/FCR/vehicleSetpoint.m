@@ -1,7 +1,7 @@
-%% [e,ef]=Charging(Par,q,f,s,SetPoints)
+%% [e,ef]=vehicleSetpoint(Par,q,f,s,SetPoints)
 % 
 
-function [e,ef]=Charging(Par,q,s,f,SetPoints)
+function [e,ef]=vehicleSetpoint(Par,q,s,f,SetPoints)
 
 % power exchanged for vehicles charging
 acv=(q<Par.fastchargesoc)*Par.ac+(q>=Par.fastchargesoc)*Par.ac*Par.slowchargeratio;
