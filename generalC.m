@@ -258,7 +258,8 @@ if numel(Pricing.alternative)>1
     Aaltp=Pricing.alternative; % alternative price for each user is given as input 
 else
     Aaltp=Pricing.alternative*TripDistances; % alternative price for each user
-    Pricing.altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
+    altpmat=Pricing.alternative.*Pricing.c; % alternative price for each OD
+%     Pricing.altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
 end
 
 % initialize multiplier for relocation
