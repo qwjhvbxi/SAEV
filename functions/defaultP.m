@@ -1,5 +1,7 @@
+function P=defaultP(Scenario)
+
 % scenario
-P.scenario='NYC2016';
+P.scenario=Scenario;%'NYC2016';
 P.tripfolder='NYC2016-nodes';
 P.tripday=13;     % which day of the trip file
 
@@ -11,7 +13,7 @@ P.modechoice=false;     % mode choice?
 P.carbonprice=0;        % $/ton
 
 % simulation options
-Sim.e=2;                  % time step length in minutes
+Sim.e=1;                  % time step length in minutes
 Sim.mpcpredict=true;      % perfect prediction?
 
 % technical parameters
@@ -56,66 +58,64 @@ P.Operations=Operations;
 P.Charging=Charging;
 P.Relocation=Relocation;
 
-clear Sim Tech Operations Charging Relocation
+% clear Sim Tech Operations Charging Relocation
 
-% % trip file associated with scenario & case-dependent adjustments
-% switch Scenario 
-%     case 'NYC2016'
-%         % P.tripfile='NYC2016_Jan13-Mar16_10days';
-%         % P.tripfolder='NYC2016';
-%         P.tripfolder='NYC2016-nodes';
-%         P.Operations.maxwait=Inf; % minutes
-%         P.tripday=13;     % which day of the trip file
-%     case 'NYC2016-10clusters'
-%         P.Operations.maxidle=5; % minutes
-%         P.tripfolder='NYC2016-nodes';
-%         P.Operations.maxwait=Inf; % minutes
-%         P.tripday=13;     % which day of the trip file
-%     case 'NYC2016-20clusters'
-%         P.Operations.maxidle=5; % minutes
-%         P.tripfolder='NYC2016-nodes';
-%         P.Operations.maxwait=Inf; % minutes
-%         P.tripday=13;     % which day of the trip file
-%     case 'NYC2016-50clusters'
-%         P.Operations.maxidle=5; % minutes
-%         P.tripfolder='NYC2016-nodes';
-%         P.Operations.maxwait=Inf; % minutes
-%         P.tripday=13;     % which day of the trip file
-%     case 'NYC2018'
-%         % P.tripfolder='NYC2018_10wed';
-%         % P.tripfile='NY_trips_10wed_0103-0307_minutes';
-%         P.tripfolder='NYC2018_10wed-nodes';
-%         P.tripday=1;     % which day of the trip file
-%     case 'NYC2016-small'
+% trip file associated with scenario & case-dependent adjustments
+switch Scenario 
+    case 'NYC2016'
+        % P.tripfile='NYC2016_Jan13-Mar16_10days';
+        % P.tripfolder='NYC2016';
+        P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
+    case 'NYC2016-10clusters'
+        P.Operations.maxidle=5; % minutes
+        P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
+    case 'NYC2016-20clusters'
+        P.Operations.maxidle=5; % minutes
+        P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
+    case 'NYC2016-50clusters'
+        P.Operations.maxidle=5; % minutes
+        P.tripfolder='NYC2016-nodes';
+        P.Operations.maxwait=Inf; % minutes
+        P.tripday=13;     % which day of the trip file
+    case 'NYC2018'
+        % P.tripfolder='NYC2018_10wed';
+        % P.tripfile='NY_trips_10wed_0103-0307_minutes';
+        P.tripfolder='NYC2018_10wed-nodes';
+        P.tripday=1;     % which day of the trip file
+    case 'NYC2016-small'
 %         P.tripfile='NYC2016-small_13Jan';
-% %         P.tripfolder='NYC2016-small_100';
-%         P.tripday=1;     % which day of the trip file
-%         P.m=30; 
-%     case 'NYC2016-small2'
-%         P.scenario='NYC2016-small';
-%         P.tripfile='NYC2016-small2_13Jan';
-%         P.m=5;
-%     case 'Tokyo189'
-%         P.tripfile='Tokyo2008_1day_48k-nodes';
-%         P.m=3500;
-%     case 'Munich'
-%         P.tripfile='Munich';
-%     case 'Munich_clustered'
-%         P.tripfile='Munich_clustered';
-%         P.gridfile='Germany_DA_2019';
-%         P.Operations.maxwait=Inf;
-%         P.Tech.chargekw=22;
-%         P.m=5000;
-%         P.e=1;
-%     case 'Munich_clustered_week'
-%         P.tripfolder='Munich_1week';
-%         P.gridfile='Germany_DA_2019';
-%         P.Operations.maxwait=Inf;
-%         P.Tech.chargekw=22;
-%         P.m=5000;
-%         P.e=1;
-%         P.tripday=1;
-%         P.gridday=1;
-% end
+        P.tripfolder='NYC2016-small_100';
+        P.tripday=1;     % which day of the trip file
+        P.m=30; 
+    case 'NYC2016-small2'
+        P.scenario='NYC2016-small';
+        P.tripfile='NYC2016-small2_13Jan';
+        P.m=5;
+    case 'Tokyo189'
+        P.tripfile='Tokyo2008_1day_48k-nodes';
+        P.m=3500;
+    case 'Munich'
+        P.tripfile='Munich';
+    case 'Munich_clustered'
+        P.tripfile='Munich_clustered';
+        P.gridfile='Germany_DA_2019';
+        P.Operations.maxwait=Inf;
+        P.Tech.chargekw=22;
+        P.m=5000;
+    case 'Munich_clustered_week'
+        P.tripfolder='Munich_1week';
+        P.gridfile='Germany_DA_2019';
+        P.Operations.maxwait=Inf;
+        P.Tech.chargekw=22;
+        P.m=5000;
+        P.tripday=1;
+        P.gridday=1;
+end
 
 
