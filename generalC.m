@@ -39,10 +39,10 @@ if extsave<2
     end
 end
 
-% if strcmp(P.trlayeralg,'opti')
-%     Res=generalOpti(P,extsave,dispiter);
-%     return
-% end
+if isfield(P,'trlayeralg') && strcmp(P.trlayeralg,'opti')
+    Res=generalOpti(P,extsave,dispiter);
+    return
+end
 
 
 %% load external files: scenario, trips 
@@ -55,6 +55,16 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 [A,Atimes,AbuckC,~]=loadTrips(P);
 AbuckC=AbuckC(1:P.Sim.e:end);
 
+if ~P.Sim.mpcpredict
+    temp1=strfind(P.tripfolder,'_');
+    Pb.tripfolder=P.tripfolder(1:temp1(end)-1);
+    Pb.tripday=P.tripday;
+    Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end));
+    [As2,~,AbuckC2,~]=loadTrips(Pb);
+    AbuckC2=AbuckC2(1:P.Sim.e:end);
+end
+    
+
 % load electricity prices and carbon emissions
 [elepMinute,co2Minute,~]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
@@ -63,7 +73,7 @@ AbuckC=AbuckC(1:P.Sim.e:end);
 
 % parameters
 n=size(T,1);              % number of nodes
-r=length(A);              % number of requests
+r=AbuckC(1441);              % number of requests
 tsim=1440/P.Sim.e;            % number of time steps
 Tr=max(1,round(T/P.Sim.e));   % distance matrix in steps
 Tr(1:n+1:end)=0;          % no distance between same node
@@ -495,12 +505,27 @@ for i=1:tsim
             dw=zeros(nc,1);
         end
         
-        % expected trips
-        Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts));
-        a_ts=(Multiplier.*sparse(As(Selection1,1),As(Selection1,2),1,nc,nc));
+        if P.Sim.mpcpredict
+        
+            % expected trips
+            Selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts));
+            a_ts=(Multiplier.*sparse(As(Selection1,1),As(Selection1,2),1,nc,nc));
 
-        Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts+tr));
-        a_to=(Multiplier.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
+            Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts+tr));
+            a_to=(Multiplier.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
+        
+        else
+            
+            % stochastic prediction
+            
+            % expected trips
+            Selection1=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts));
+            a_ts=(Multiplier.*sparse(As2(Selection1,1),As2(Selection1,2),1,nc,nc))/Pb.ratio;
+
+            Selection2=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts+tr));
+            a_to=(Multiplier.*sparse(As2(Selection2,1),As2(Selection2,2),1,nc,nc))/Pb.ratio;
+            
+        end
 
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[Clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];

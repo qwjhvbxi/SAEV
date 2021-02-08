@@ -48,7 +48,14 @@ end
 load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
 
 % NOTE: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,~,~]=loadTrips(P);
+% [A,Atimes,~,~]=loadTrips(P);
+[A,Atimes,AbuckC,~]=loadTrips(P);
+% AbuckC=AbuckC(1:P.Sim.e:end);
+if ~P.mpcpredict
+    Pb.tripfolder=[P.tripfolder '-2'];
+    Pb.tripday=P.tripday;
+    [A2,Atimes2,~,~]=loadTrips(Pb);
+end
 
 % NOTE: should generalize vector length for cases with different beta, e,
 % etc. Also: change names of variables
@@ -60,6 +67,7 @@ load([DataFolder 'eleprices/' P.gridfile '.mat'],'x','y');
 
 % parameters
 n=size(T,1);              % number of nodes
+r=AbuckC(1441);           % number of requests
 tsim=1440/P.e;            % number of time steps
 etsim=floor(1440/P.beta); % number of charging decisions
 Tr=max(1,round(T/P.e));   % distance matrix in steps
@@ -73,12 +81,12 @@ e=zeros(tsim,P.m,'double');            % charging
 u=zeros(tsim,P.m,'double');            % vehicles in charging stations
 
 % results variables
-waiting=zeros(length(A),1);  % minutes waited for each request
-dropped=zeros(length(A),1);  % request is dropped?
-chosenmode=false(length(A),1);% which mode is chosen?
+waiting=zeros(r,1);  % minutes waited for each request
+dropped=zeros(r,1);  % request is dropped?
+chosenmode=false(r,1);% which mode is chosen?
 relodist=zeros(ceil(tsim),1); % distances of relocation (at moment of decision)
 tripdist=zeros(ceil(tsim),1); % distances of trips (at moment of acceptance)
-waitingestimated=zeros(length(A),1);  % estimated minutes to wait for each request
+waitingestimated=zeros(r,1);  % estimated minutes to wait for each request
 
 % initial states
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
@@ -109,17 +117,17 @@ if strcmp(P.enlayeralg,'aggregate')
 
     % generate aggregate trip statistics
     EMDFileName=[TripName '-' num2str(P.tripday)];
-    [Trips,~,~]=generateEMD(A,Atimes,T,etsim,EMDFileName);
+    [Trips]=generateEMD(A,Atimes,T,P.beta,EMDFileName);
 
-    % append values for next day
-    if isfield(P,'tripfolder')
-        P2=P;
-        P2.tripday=P.tripday+1;
-        [A2,Atimes2,~,~]=loadTrips(P2);
-        EMDFileName=[TripName '-' num2str(P2.tripday)];
-        [Trips2,~,~]=generateEMD(A2,Atimes2,T,etsim,EMDFileName);
-        Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
-    end
+%     % append values for next day
+%     if isfield(P,'tripfolder')
+%         P2=P;
+%         P2.tripday=P.tripday+1;
+%         [A2,Atimes2,~,~]=loadTrips(P2);
+%         EMDFileName=[TripName '-' num2str(P2.tripday)];
+%         [Trips2]=generateEMD(A2,Atimes2,T,etsim,EMDFileName);
+%         Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
+%     end
     
     % energy layer variable: static values
     E.v2g=P.Operations.v2g; % use V2G?
@@ -186,11 +194,26 @@ if strcmp(P.trlayeralg,'opti')
     
     % create arrival vectors for optimization (cexpected) and simulation (c)
     c=reshape(c1(:,:,1:tsim+P.TransportLayer.thor),[n^2*(tsim+P.TransportLayer.thor),1]);
+    
+    % create secondary file if needed
     if P.mpcpredict==true
         cexpected=c;
     else
-        % NOTE: need to implement case with imperfect predictions
-        error('mpcpredict==false not implemented'); 
+        
+        c2=double(convertAtimes(A2,Atimes2,n));
+        c21=cat(3,c2,zeros(n,n,tsim)); % add padding
+        
+        % sum arrivals (counted by minute) over one time step
+        if P.e>1
+            L=floor(size(c21,3)/2);
+            c21=permute(squeeze(sum(reshape(permute(c21(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
+            % NOTE: implementation for stochastic arrivals needed:
+            % c2=permute(squeeze(sum(reshape(permute(c2(:,:,1:L*P.e),[3,1,2]),[P.e,L,n,n]),1)),[2,3,1]);
+        end
+        cexpected=reshape(c21(:,:,1:tsim+P.TransportLayer.thor),[n^2*(tsim+P.TransportLayer.thor),1]);
+
+%         % NOTE: need to implement case with imperfect predictions
+%         error('mpcpredict==false not implemented'); 
     end
     
     % create optimization variables
@@ -433,7 +456,7 @@ Res.Internals=Internals;
 Res.CPUtimes=S;
 Res.cputime=elapsed;
 Res.cost=(sum(Sim.e/60/1000*P.e,2)')*elep(1:tsim)+Sim.emissions*P.carbonprice;
-Res.dropped=sum(dropped)/length(A);
+Res.dropped=sum(dropped)/r;
 Res.peakwait=max(waiting);
 Res.avgwait=mean(waiting);
 
