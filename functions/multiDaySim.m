@@ -8,7 +8,7 @@
 % Summary is a struct with a summary of the results
 % R is the optional full results struct if ResultsOut==true
 
-function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut,varargin)
+function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut,OutSave,varargin)
 
 Extended=false;
 
@@ -23,6 +23,10 @@ end
 
 if nargin<4
     ResultsOut=false;
+end
+
+if nargin<5 || isempty(OutSave)
+    OutSave=1;
 end
 
 if  ResultsOut==false
@@ -92,7 +96,7 @@ for j=1:length(Period)
     end
     
     % launch today's simulation
-    Res=generalC(P,1,-j);
+    Res=generalC(P,OutSave,-j);
     
     % next day input variables
     SOC(j+1,:)=Res.Sim.q(end,:);
