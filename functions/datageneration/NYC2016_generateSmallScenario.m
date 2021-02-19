@@ -74,30 +74,41 @@ if 0  % specific day
 end
 
 
+Divisor=[100,75,50,25];
 
 if 1  % folder based
     
-    TripRatio=1/25;
-    Period=1:76;
-    TripFolder='NYC2016';
-    NewTripFolder='NYC2016-small_25';
+    for L=1:length(Divisor)
     
-    for d=1:length(Period)
-        
-        tripFileLocation=[DataFolder 'trips/' TripFolder '/d' num2str(Period(d)) '.mat'];
-        load(tripFileLocation,'A','Atimes');
+        TripRatio=1/Divisor(L);
+        Period=1:69;%76;
+        TripFolder='NYC2016';
+        NewTripFolder=['NYC2016-small_' num2str(Divisor(L)) '-2'];
 
-        [~,~,A2,A2times,tripsubset]=generateScenario(A,Atimes,10,setlimits,C);
-        
-        [A3,A3times,~]=cleanData(A2,A2times,1);
+        for d=1:length(Period)
 
-        k=round(length(A3)*TripRatio);
-        [A,Atimes]=reduceTrips(A3,A3times,k);
+            tripFileLocation=[DataFolder 'trips/' TripFolder '/d' num2str(Period(d)) '.mat'];
+            load(tripFileLocation,'A','Atimes');
 
-        save([DataFolder 'trips/' NewTripFolder '/d' num2str(Period(d)) '.mat'],'A','Atimes');
+            [~,~,A2,A2times,tripsubset]=generateScenario(A,Atimes,10,setlimits,C);
+
+            [A3,A3times,~]=cleanData(A2,A2times,1);
+
+            k=round(length(A3)*TripRatio);
+            [A,Atimes]=reduceTrips(A3,A3times,k);
+
+            save([DataFolder 'trips/' NewTripFolder '/d' num2str(Period(d)) '.mat'],'A','Atimes');
+        end
     end
     
 end
+
+
+
+%% create probability 
+
+
+
 
 
 
