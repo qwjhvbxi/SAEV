@@ -36,7 +36,7 @@ F=min(uv,(b-Par.bmin).*(b>=Par.bmin)); % feeders
 R=(-b+Par.bmin).*(b<Par.bmin); % receivers
 
 % identify optimal relocation flux
-x=optimalrelocationfluxes(F',R',Par.Trs);
+x=optimalrelocationfluxes(F',R',Par.Trs,Par.limite);
 
 if ~isempty(x)
 
@@ -59,7 +59,8 @@ if ~isempty(x)
 
         % find candidate vehicles for the task with enough soc and idle, give
         % priority to non-charging vehicles
-        candidates=(soc-charging).*(position==Fs(dstnid(ka))).*(soc/Par.ad >= ReloDistanceSorted(ka)).*(relocating==0); 
+        candidates=(1+soc-charging*Par.chargepenalty).*(position==Fs(dstnid(ka))).* ...
+            (soc/Par.ad >= delay+ReloDistanceSorted(ka)).*(relocating==0).*(delay+ReloDistanceSorted(ka)<=Par.limite); 
 
         % remove unavailable vehicles
         candidates(candidates==0)=NaN;
@@ -80,6 +81,7 @@ if ~isempty(x)
 
             % update status
             used(ui)=true;
+            relocating(ui)=1;
 
         end
     end

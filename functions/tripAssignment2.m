@@ -56,8 +56,9 @@ if ~isempty(Bin)
     % create matrix X
     X=(distancepickup + ... distance from passenger
         ones(m,1)*( di' + ... current delay
-                    Vin(:,4)'*0.5 + ... penalty for currently charging vehicles
-                    (1-Vin(:,3)')*0.5) ... penalty for low soc vehicles
+                    0.1 + ... indicate the vehicle is available
+                    Vin(:,4)'*0.25*Par.chargepenalty + ... penalty for currently charging vehicles
+                    (1-Vin(:,3)')*0.25) ... penalty for low soc vehicles
                    )...
          .*(EnergyReq<ones(m,1)*Vin(:,3)'); % requirement for enough SOC
      
@@ -135,7 +136,11 @@ if ~isempty(Bin)
                     di(uids)=di(uids)+pickupdist+distancetomove(tripID); % delay
 
                     % update X
-                    X(:,uids)=(Par.Tr(Bin(:,1),ui(uids))+di(uids)).*(EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
+                    X(:,uids)=(Par.Tr(Bin(:,1),ui(uids))+ ... 
+                            di(uids)+... updated delay
+                            0.1 + ... indicate the vehicle is available
+                            (1-Vin(uids,3))*0.25).* ... penalty for low soc vehicles
+                            (EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
                     X(X(:,uids)==0,uids)=NaN;
 
                     % remove vehicles that are needed for FCR

@@ -306,7 +306,11 @@ ProbAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
 %% setup trip assignment module
 
 Par=struct('Tr',Tr,'ad',ad,'e',P.Sim.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
-    'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,'LimitFCR',LimitFCR);
+    'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,'LimitFCR',LimitFCR,'chargepenalty',1);
+
+% if DynamicCharging
+%     Par.chargepenalty=1;
+% end
 
 
 %% initial states
@@ -534,8 +538,10 @@ for i=1:tsim
         ParRel.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
         ParRel.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
         ParRel.Trs=Trs;
+        ParRel.limite=P.Relocation.ts;
         ParRel.bmin=bmin;
         ParRel.LimitFCR=LimitFCR;
+        ParRel.chargepenalty=Par.chargepenalty;
         
         [Vout,bkt]=Relocation(Vin,ParRel);
         
