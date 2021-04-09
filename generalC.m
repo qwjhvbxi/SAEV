@@ -59,7 +59,7 @@ if ~P.Sim.mpcpredict
     temp1=strfind(P.tripfolder,'_');
     Pb.tripfolder=P.tripfolder(1:temp1(end)-1);
     Pb.tripday=P.tripday;
-    Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end));
+    Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end)); % TODO: change!!
     [As2,~,AbuckC2,~]=loadTrips(Pb);
     AbuckC2=AbuckC2(1:P.Sim.e:end);
 end
@@ -186,9 +186,12 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         mco2=average2(co2Minute,Beta);
 
         % generate aggregate trip statistics
-        EMDFileName=[P.tripfolder '-' num2str(P.tripday)];
-        Trips=generateEMD(A,Atimes,T,Beta,EMDFileName);
-
+        % EMDFileName=[P.tripfolder '-' num2str(P.tripday)];
+        % Trips=generateEMD(A,Atimes,T,Beta,EMDFileName);
+            
+        EMDFileName=[P.tripfolder '-' num2str(P.tripday) '-50'];
+        Trips=generateEMD(A,Atimes,T,Beta,EMDFileName,chargingStations,Clusters);
+        
         % energy layer variable: static values
         E.v2g=P.Operations.v2g; % use V2G?
         E.eta=P.Tech.efficiency;       % roundtrip (discharge) efficiency
