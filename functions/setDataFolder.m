@@ -13,6 +13,5 @@ if strcmp(version('-release'),'2015a')
     DataFolder='data/';
     return
 end
-DataFolder='c:\Users\iacob\Documents\model_aev5_data\';
 
-% if on cluster, change
+DataFolder='c:\Users\iacob\Documents\model_aev5_data\';
