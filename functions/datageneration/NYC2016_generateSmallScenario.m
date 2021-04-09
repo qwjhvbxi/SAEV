@@ -74,7 +74,10 @@ if 0  % specific day
 end
 
 
-Divisor=[100,75,50,25];
+% Divisor=[100,75,50,25];
+Divisor=[40,35];
+Append='-2';
+% Append='';
 
 if 1  % folder based
     
@@ -83,7 +86,7 @@ if 1  % folder based
         TripRatio=1/Divisor(L);
         Period=1:69;%76;
         TripFolder='NYC2016';
-        NewTripFolder=['NYC2016-small_' num2str(Divisor(L)) '-2'];
+        NewTripFolder=['NYC2016-small_' num2str(Divisor(L)) Append];
 
         for d=1:length(Period)
 
