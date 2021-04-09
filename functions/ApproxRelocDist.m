@@ -1,33 +1,23 @@
 %% [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta)
 % calculate approximate relocation distance needed 
 
-function [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta)
+function dkemd=ApproxRelocDist(A,Atimes,T,Beta)
 
 n=size(T,1);
-t=double(max(Atimes(:,2)));
+t=double(max(Atimes(:)));
 mtsim=round(t/Beta);
 t=Beta*mtsim;
 
-% cleanup A
-Atimes(Atimes(:,1)==0,1)=1;
-Atimes(Atimes(:,2)==0,2)=1;
-
 fo=zeros(t,n);
 fd=zeros(t,n);
-dk=zeros(t,1);
 
 for i=1:t
     ThisMinute=logical(Atimes(:,1)==i);
     fo(i,:)=accumarray([A(ThisMinute,1);n],[ones(sum(ThisMinute),1);0]);
     fd(i,:)=accumarray([A(ThisMinute,2);n],[ones(sum(ThisMinute),1);0]);
-    dk(i)=sum(T(sub2ind(size(T),A(ThisMinute,1),A(ThisMinute,2))));
+    
 end
 
-% fo=sparse(fo);
-% fd=sparse(fd);
-
-
-dkod=sum(reshape(dk(1:t),Beta,mtsim))';
 dkemd=zeros(mtsim,1);
 
 approx=(n>200);
@@ -56,7 +46,6 @@ for kt=1:mtsim
 
 end
 
-dktrip=dkemd+dkod;
 
 
 

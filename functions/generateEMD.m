@@ -5,9 +5,18 @@
 %
 % see also generalC
 
-function Trips=generateEMD(A,Atimes,T,Beta,FileName)
+function Trips=generateEMD(A,Atimes,T,Beta,FileName,chargingStations,Clusters)
 
 DataFolder=setDataFolder();
+
+if nargin==7
+    As=Clusters(A);
+    Ts=T(chargingStations,chargingStations);
+else
+    As=A;
+    Ts=T;
+end
+
 
 emdname=[DataFolder 'temp/emd-' FileName '-' num2str(Beta) '.mat'];
 if exist(emdname,'file')
@@ -21,10 +30,23 @@ else
         % calculate from known distribution
         error('not implemented');
     else
-        [dkemd,dkod,dktrip]=ApproxRelocDist(A,Atimes,T,Beta);
+        dkemd=ApproxRelocDist(As,Atimes,Ts,Beta);
     end
+    
+    % calculate distance
+    t=double(max(Atimes(:)));
+    mtsim=round(t/Beta);
+    t=Beta*mtsim;
+    dk=zeros(t,1);
+    for i=1:t
+        ThisMinute=logical(Atimes(:,1)==i);
+        dk(i)=sum(T(sub2ind(size(T),A(ThisMinute,1),A(ThisMinute,2))));
+    end
+    dkod=sum(reshape(dk(1:t),Beta,mtsim))';
+    dktrip=dkemd+dkod;
+    
     save(emdname,'dkemd','dkod','dktrip');
-
+    
 end
 
 Trips.dkemd=dkemd;

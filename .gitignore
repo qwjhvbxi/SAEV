@@ -9,3 +9,4 @@ functions/Copy_of_NLPricing.m
 *.png
 run/*
 *.csv
+*.eps

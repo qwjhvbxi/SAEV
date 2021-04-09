@@ -3,11 +3,15 @@
 
 function [A,Atimes,ASortInd]=cleanData(AIN,AtimesIN,RmSameNode)
 
-if sum(AtimesIN(:,1)~=AtimesIN(:,2))>0
-    % impossible trips
-    Rmv1=AtimesIN(:,1)>=AtimesIN(:,2);
-else
-    Rmv1=0;
+Rmv1=0;
+
+if size(AtimesIN,2)>1
+    
+    if sum(AtimesIN(:,1)~=AtimesIN(:,2))>0
+        % impossible trips
+        Rmv1=AtimesIN(:,1)>=AtimesIN(:,2);
+    end
+
 end
 
 % 0s
@@ -16,6 +20,7 @@ Rmv=logical(Rmv1+(AtimesIN(:,1)==0));
 % remove wrong trips
 AIN(Rmv,:)=[];
 AtimesIN(Rmv,:)=[];
+
 
 if nargin>2 && RmSameNode==true
 

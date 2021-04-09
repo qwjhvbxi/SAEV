@@ -38,7 +38,7 @@ DataFolder=setDataFolder();
 % initial parameters
 SOC=zeros(length(Period)+1,P.m);
 Uinit=zeros(length(Period)+1,P.m);
-load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
+load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
 n=size(T,1);
 
 % load or create start variables
@@ -47,7 +47,16 @@ if exist(StartFile,'file')
     load(StartFile,'StartSoc','StartPos');
 else
     StartSoc=ones(1,P.m)*0.7;
-    StartPos=randi(n,1,P.m);
+    if isfield(P,'chargingStations')
+        chargingStations=P.chargingStations;
+    end
+    if exist('chargingStations','var')
+        nc=length(chargingStations);
+    else
+        chargingStations=(1:n)';
+        nc=n;
+    end
+    StartPos=chargingStations(randi(nc,1,P.m));
     save(StartFile,'StartSoc','StartPos');
 end
 SOC(1,:)=StartSoc;
