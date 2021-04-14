@@ -28,6 +28,7 @@ A typical call would be:
 `P` can be constructed from scratch, but default values of `P` are available with the function `pdefault`. For example, this function creates a `P` for simulations with the `NYC2016` dataset:
 
 `addpath functions`
+
 `P=pdefault('NYC2016')`
 
 The first line add the folder containing pdefault to the current path. `P` includes default values for fleet size, technological properties of vehicles, etc.
