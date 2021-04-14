@@ -1,57 +1,47 @@
-%% Trips=COMPUTEEMD(A,Atimes,T,etsim,FileName)
-% dkemd, dkod, dktrip are the number of minutes of travel for
-% relocation, serving trips, and total, respectively, for each
-% energy layer time step. 
-%
+%% dkemd=COMPUTEEMD(A,Atimes,T,Beta)
+% compute travel time for relocation during time horizon
+% 
 % see also generalC
 
-function Trips=computeemd(A,Atimes,T,Beta,FileName,chargingStations,Clusters)
+function dkemd=computeemd(A,Atimes,T,Beta)
 
-DataFolder=getdatafolder();
+fprintf('\n Calculating approximate relocation distance\n\n')
 
-if nargin==7
-    As=Clusters(A);
-    Ts=T(chargingStations,chargingStations);
-else
-    As=A;
-    Ts=T;
+n=size(T,1);
+t=double(max(Atimes(:)));
+mtsim=round(t/Beta);
+approx=(n>100);
+
+fo=zeros(mtsim,n);
+fd=zeros(mtsim,n);
+
+for i=1:mtsim
+    thisStep=logical((Atimes(:,1)>=(i-1)*Beta+1).*(Atimes(:,1)<=i*Beta));
+    fo(i,:)=accumarray([A(thisStep,1);n],[ones(sum(thisStep),1);0]);
+    fd(i,:)=accumarray([A(thisStep,2);n],[ones(sum(thisStep),1);0]);
 end
 
+dkemd=zeros(mtsim,1);
 
-emdname=[DataFolder 'temp/emd-' FileName '-' num2str(Beta) '.mat'];
-if exist(emdname,'file')
-    load(emdname,'dkemd','dkod','dktrip');
-else
+for kt=1:mtsim
+    
+    % progress report
+    clc
+    fprintf('\n %d/%d\n\n',kt,mtsim)
+    
+    F=fd(kt,:);
+    R=fo(kt,:);
 
-    % is a probability distribution of trips available?
-    probabilistic=false;
+    % identify optimal relocation flux
+    x=optimalrelocationfluxes(F,R,T,60,approx);
 
-    if probabilistic
-        % calculate from known distribution
-        error('not implemented');
-    else
-        dkemd=ApproxRelocDist(As,Atimes,Ts,Beta);
-    end
-    
-    % calculate distance
-    t=double(max(Atimes(:)));
-    mtsim=round(t/Beta);
-    t=Beta*mtsim;
-    dk=zeros(t,1);
-    for i=1:t
-        ThisMinute=logical(Atimes(:,1)==i);
-        dk(i)=sum(T(sub2ind(size(T),A(ThisMinute,1),A(ThisMinute,2))));
-    end
-    dkod=sum(reshape(dk(1:t),Beta,mtsim))';
-    dktrip=dkemd+dkod;
-    
-    save(emdname,'dkemd','dkod','dktrip');
-    
+    % read results
+    [Fs,Rs,Vr]=find(x);
+
+    % distance of relocation
+    dkemd(kt)=sum(T(sub2ind(size(T),Fs,Rs)).*Vr);
+
 end
-
-Trips.dkemd=dkemd;
-Trips.dkod=dkod;
-Trips.dktrip=dktrip;
 
 end
 

@@ -115,8 +115,17 @@ clear d1 d2 ReshapeFactor x y;
 if strcmp(P.enlayeralg,'aggregate') 
 
     % generate aggregate trip statistics
-    EMDFileName=[TripName '-' num2str(P.tripday)];
-    [Trips]=computeemd(A,Atimes,T,P.beta,EMDFileName);
+    emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Beta) '.mat'];
+    if exist(emdFileName,'file')
+        load(emdFileName,'dkemd','dkod','dktrip');
+    else
+        Ts=T(chargingStations,chargingStations);
+        dkod=computetraveltime(A,Atimes,T,Beta);
+        dkemd=computeemd(As,Atimes,Ts,Beta);
+        dktrip=dkod+dkemd;
+        save(emdFileName,'dkemd','dkod','dktrip');
+    end
+    Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dktrip);
 
 %     % append values for next day
 %     if isfield(P,'tripfolder')

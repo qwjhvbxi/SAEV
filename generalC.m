@@ -186,11 +186,18 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         mco2=average2(co2Minute,Beta);
 
         % generate aggregate trip statistics
-        % EMDFileName=[P.tripfolder '-' num2str(P.tripday)];
-        % Trips=computeemd(A,Atimes,T,Beta,EMDFileName);
-            
-        EMDFileName=[P.tripfolder '-' num2str(P.tripday) '-50'];
-        Trips=computeemd(A,Atimes,T,Beta,EMDFileName,chargingStations,Clusters);
+        emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Beta) '.mat'];
+        if exist(emdFileName,'file')
+            load(emdFileName,'dkemd','dkod','dktrip');
+        else
+            Ts=T(chargingStations,chargingStations);
+            dkod=computetraveltime(A,Atimes,T,Beta);
+            dkemd=computeemd(As,Atimes,Ts,Beta);
+            dktrip=dkod+dkemd;
+            save(emdFileName,'dkemd','dkod','dktrip');
+        end
+        Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dktrip);
+        totTimeToTravel=dktrip;
         
         % energy layer variable: static values
         E.v2g=P.Operations.v2g; % use V2G?
@@ -376,7 +383,7 @@ for i=1:tsim
             t=(i-1)/(Beta/P.Sim.e)+1;
 
             actualminsoc=min(P.Operations.minsoc+P.Charging.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
-            dktripnow=Trips.dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
+            dktripnow=totTimeToTravel(t:t+mthor-1);    % minutes spent traveling during this horizon
 
             E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
             E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh

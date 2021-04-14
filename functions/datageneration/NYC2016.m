@@ -22,8 +22,8 @@ for i=37:60
     TripName='NYC2016-nodes';
     EMDFileName=[TripName '-' num2str(i)];
     etsim=48;
-    load(TripFile,'A','Atimes');
-    computeemd(A,Atimes,T,etsim,EMDFileName)
+%     load(TripFile,'A','Atimes');
+%     computeemd(A,Atimes,T,etsim,EMDFileName)
 end
 
 
