@@ -1,4 +1,4 @@
-% [Res]=GENERALC(P[,extsave,dispiter])
+% [Res]=MAIN(P[,extsave,dispiter])
 % Run SAEV simulation and relocation/charge oprimization.
 % Vehicles start at beginning of time step, arrive at end of time step.
 % 
@@ -13,7 +13,7 @@
 % 
 % see also CPAR
 
-function [Res]=generalC(P,extsave,dispiter)
+function [Res]=main(P,extsave,dispiter)
 
 %% initializations and input check
 
@@ -24,6 +24,14 @@ if nargin<3
     if nargin<2
         extsave=1;
     end
+end
+
+
+%% console call
+% If called without variables, presents available options.
+
+if nargin==0
+    P=getp();
 end
 
 

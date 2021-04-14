@@ -1,7 +1,7 @@
 %% dkemd=COMPUTEEMD(A,Atimes,T,Beta)
-% compute travel time for relocation during time horizon
+% Compute travel time for relocation during time horizon
 % 
-% see also generalC
+% See also: main
 
 function dkemd=computeemd(A,Atimes,T,Beta)
 

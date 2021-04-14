@@ -17,7 +17,7 @@
 % relodist: total distance for relocation to pickup
 % queue: queued passengers (IDs)
 %
-% See also: generalC
+% See also: main
 
 function [V,B,tripdist,relodist,queue]=tripassignmentsaev(Vin,Bin,Par)
 

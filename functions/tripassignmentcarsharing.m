@@ -17,7 +17,7 @@
 % relodist: total distance for relocation to pickup (0)
 % queue: queued passengers (IDs)
 %
-% See also: generalC
+% See also: main
 
 function [V,B,tripdist,relodist,queue]=tripassignmentcarsharing(Vin,Bin,Par)
 

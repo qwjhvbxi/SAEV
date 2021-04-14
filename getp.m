@@ -1,4 +1,4 @@
-function P=loadP(Pname)
+function P=getp(Pname)
 
 addpath functions utilities
 DataFolder=getdatafolder();

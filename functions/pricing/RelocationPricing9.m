@@ -9,7 +9,7 @@
 % prices is the price metrix, with prices(i,j) the optimal pricing of a
 % trip from i to j. 
 %
-% see also generalC
+% see also: main
 
 function [X,prices,fval]=RelocationPricing9(m)
 

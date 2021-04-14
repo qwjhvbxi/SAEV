@@ -8,7 +8,7 @@ P.tr=round(tve(3));
 P.m=round(tve(4));       % number of vehicles
 
 % launch simulation
-Res=generalC(P,0,0);
+Res=main(P,0,0);
  
 x=Res.avgwait*10+Res.peakwait;
 

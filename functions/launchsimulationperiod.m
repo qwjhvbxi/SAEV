@@ -105,7 +105,7 @@ for j=1:length(Period)
     end
     
     % launch today's simulation
-    Res=generalC(P,OutSave,-j);
+    Res=main(P,OutSave,-j);
     
     % next day input variables
     SOC(j+1,:)=Res.Sim.q(end,:);

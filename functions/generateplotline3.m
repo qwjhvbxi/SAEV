@@ -6,7 +6,7 @@
 %   field associated with that name and takes the results from saved files.
 %   If results are not found, it returns NaN.
 % If outfieldname is a number, the function runs the simulations with the
-%   corresponding setting in general5 (second parameter) and returns a
+%   corresponding setting in main (second parameter) and returns a
 %   struct array of results.  
 % If outfieldname is -2, the function deletes the corresponding files
 % 
@@ -36,7 +36,7 @@ DataFolder=getdatafolder();
 
 % generate input matrix of struct
 % S=cpar(mapscenario);
-S=loadP(mapscenario);
+S=getp(mapscenario);
 [Pmat,varparams]=changeStruct(S,varargin);
 
 N=numel(Pmat);
@@ -77,7 +77,7 @@ if outfieldname==-2
 end
 
 parfor j=1:N
-    Resmat(j)=generalC(Pmat{j},outfieldname,-j); 
+    Resmat(j)=main(Pmat{j},outfieldname,-j); 
 end
 
 Resmat=reshape(Resmat,fliplr(varparams))';

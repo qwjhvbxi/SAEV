@@ -2,7 +2,7 @@
 % P struct contains fields 'tripfolder' and 'tripday' OR 'tripfile'.
 % Files should be in folder trips/
 %
-% See also: generalC
+% See also: main
 
 function [A,Atimes,AbuckC,Distances]=gettrips(P)
 
@@ -43,7 +43,7 @@ if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
     end
 else
     
-    warning('need to specify trip folder!')
+    error('need to specify trip folder!')
     %tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
     
 end

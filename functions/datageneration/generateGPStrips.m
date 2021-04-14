@@ -1,7 +1,7 @@
 %% generateGPStrips(FileIn,FileOut,C,stationradius,WalkingSpeed)
 % create trip files from coordinates
 %
-% See also generalC
+% See also: main
 
 function generateGPStrips(FileIn,FileOut,C,StationRadius,WalkingSpeed)
 
