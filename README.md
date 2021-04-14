@@ -39,31 +39,21 @@ Previously saved default values of `P` can be called with the function `getp`, w
 
 The parameter variable `P` need to have the following fields:
 
-`scenario`
-
-`tripfolder`
-
-`tripday`
-
-`gridfile`
-
-`gridday`
-
-`m`
-
-`modechoice`
-
-`carbonprice`
-
-`Sim`
-
-`Tech`
-
-`Operations`
-
-`Charging`
-
-`Relocation`
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+| `scenario`    | char  | Name of scenario |
+| `tripfolder`  | char  | Name of trip folder |
+| `tripday`     | int   | Number of day | 
+| `gridfile`    | char  | Name of file with electricity data |
+| `gridday`     | int   | Number of day | 
+| `m`           | int   | Fleet size | 
+| `modechoice`  | logical   | Wether to use modechoice | 
+| `carbonprice` | double   | Carbon price (per MWh) | 
+| `Sim`         | struct | Simulation settings (see below) |
+| `Tech`        | struct | Technical parameters of vehicles (see below) |
+| `Operations`  | struct | Operational settings (see below) |
+| `Charging`    | struct | Charging settings (see below) |
+| `Relocation`  | struct | Relocation settings (see below) |
 
 Additional optional fields:
 
