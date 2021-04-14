@@ -5,7 +5,7 @@ DataFolder=getdatafolder();
 
 if nargin<1
     
-    Files=displayContents([DataFolder 'par/']);
+    Files=listdircontents([DataFolder 'par/']);
     
     Pname=input('P var name or number: ','s');
 end

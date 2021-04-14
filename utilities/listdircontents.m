@@ -1,4 +1,4 @@
-function Files=displayContents(folderaddress)
+function Files=listdircontents(folderaddress)
 
 DirFiles=dir(folderaddress);
 q=0;
