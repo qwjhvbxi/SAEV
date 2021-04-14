@@ -11,14 +11,27 @@ DataFolder=getdatafolder();
 if nargin<3 || ~Plots
 
     load([DataFolder 'scenarios/' scenario],'T','C')
+    
+    % remove nan values if they exist
+    nanT=isnan(T(:,1));
+    realT=find(1-nanT);
+    tempC=C;
+    tempC(nanT,:)=[];
 
-    % find clusters
-    [Clusters,CS]=kmeans(C,K);
+    % generate charging stations
+    [IDX,CS,~,D] =kmeans(tempC,K);
 
-    % find closest nodes to cluster centroids
-    distances=(C(:,1)-CS(:,1)').^2+(C(:,2)-CS(:,2)').^2;
-    [~,chargingStations]=min(distances);
-    chargingStations=chargingStations';
+    % find closest node to station
+    [~,nodeID]=min(D);
+
+    % associate to real node number
+    chargingStations=realT(nodeID);
+    Clusters=zeros(length(T),1);
+    for i=1:length(IDX)
+        Clusters(realT(i))=IDX(i);
+    end
+
+    T(isnan(T))=0;
 
     save([DataFolder 'scenarios/' scenario '-' num2str(K) 'clusters'],'T','C','Clusters','chargingStations')
 
