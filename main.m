@@ -132,19 +132,15 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 if isfield(P,'clusters')
     chargingStations=P.chargingStations;
     clusters=P.clusters;
-end
-
-if exist('Clusters','var')
-    As=clusters(A);
-    Trs=Tr(chargingStations,chargingStations);
-    nc=length(chargingStations);             % number of clusters
+elseif exist('Clusters','var')
+    clusters=Clusters;
 else
     chargingStations=(1:n)';
     clusters=(1:n)';
-    As=A;
-    Trs=Tr;
-    nc=n;
 end
+As=clusters(A);
+Trs=Tr(chargingStations,chargingStations);
+nc=length(chargingStations);             % number of clusters
 
 
 %% setup relocation module
