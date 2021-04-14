@@ -1,4 +1,4 @@
-%% [Summary,R]=multiDaySim(Period,P[,GridOffset,ResultsOut,varargin])
+%% [Summary,R]=launchsimulationperiod(Period,P[,GridOffset,ResultsOut,varargin])
 % launch simulations over multiple days.
 % Period is the consecutive days
 % P is the parameter struct
@@ -8,7 +8,7 @@
 % Summary is a struct with a summary of the results
 % R is the optional full results struct if ResultsOut==true
 
-function [Summary,R]=multiDaySim(Period,P,GridOffset,ResultsOut,OutSave,varargin)
+function [Summary,R]=launchsimulationperiod(Period,P,GridOffset,ResultsOut,OutSave,varargin)
 
 Extended=false;
 

@@ -1,4 +1,4 @@
-function P=defaultP(Scenario)
+function P=pdefault(Scenario)
 
 % scenario
 P.scenario=Scenario;%'NYC2016';
