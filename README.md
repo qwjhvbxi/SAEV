@@ -37,7 +37,37 @@ Previously saved default values of `P` can be called with the function `getp`, w
 
 ## Parameter variable `P`
 
-...
+The parameter variable `P` need to have the following fields:
+
+`scenario`
+
+`tripfolder`
+
+`tripday`
+
+`gridfile`
+
+`gridday`
+
+`m`
+
+`modechoice`
+
+`carbonprice`
+
+`Sim`
+
+`Tech`
+
+`Operations`
+
+`Charging`
+
+`Relocation`
+
+Additional optional fields:
+
+`Pricing`
 
 
 extsave and info variables

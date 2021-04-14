@@ -10,8 +10,10 @@
 % d: delay at beginning of time step
 % sc: status during time step: connected/not connected
 % sm: status during time step: moving/not moving
+%
+% TODO: add charging station size
 % 
-% see also CPAR
+% See also: getp
 
 function [Res]=main(P,extsave,dispiter)
 
@@ -378,7 +380,7 @@ for i=1:tsim
     
     %% charging optimization
     
-    if dynamicCharging 
+    if dynamicCharging
         
         if rem(i,Beta/P.Sim.e)==1
         
