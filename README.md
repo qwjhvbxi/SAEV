@@ -60,6 +60,41 @@ Additional optional fields:
 `Pricing`
 
 
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+|e| int |  |
+|mpcpredict| logical | |
+
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+|battery| double|  |
+|chargekw| double|  |
+|consumption| double|  |
+|cyclingcost| double|  |
+|efficiency| double|  |
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+|initialsoc| double|  |
+|minsoc| double|  |
+|maxsoc| double|  |
+|v2g| logical|  |
+|v2gminsoc| double|  |
+|maxwait| double| (minutes) |
+|maxidle| double| (minutes) |
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+| mthor| int| (minutes) |
+| extrasoc| double|  |
+| beta| int| (minutes) |
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+| alg | char | Name of algorithm |
+| ... | ... | Parameters for specific algorithm | 
+
 extsave and info variables
 --------------------------
 
