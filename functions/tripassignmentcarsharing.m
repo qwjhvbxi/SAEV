@@ -1,4 +1,4 @@
-%% [V,B,tripdist,relodist,queue]=tripAssignment(Vin,Bin,Par)
+%% [V,B,tripdist,relodist,queue]=tripassignmentcarsharing(Vin,Bin,Par)
 % Trip assignment for SAEV simulation
 % 
 % input
@@ -19,7 +19,7 @@
 %
 % See also: generalC
 
-function [V,B,tripdist,relodist,queue]=tripAssignment(Vin,Bin,Par)
+function [V,B,tripdist,relodist,queue]=tripassignmentcarsharing(Vin,Bin,Par)
 
 tripdist=0;
 relodist=0;

@@ -48,7 +48,7 @@ for i=1:7
 
     Atimes=repmat(TimeVec.Hour*60+TimeVec.Minute,1,2)+1;
 
-    [A,Atimes,~]=cleanData(A,Atimes,1);
+    [A,Atimes,~]=cleantripdata(A,Atimes,1);
     save([DataFolder 'trips/Munich_1week/d' num2str(i) '.mat'],'A','Atimes')
 
 end
@@ -89,7 +89,7 @@ end
 T=round(Tseconds./N/60);
 T(isnan(T))=0;
 
-T=populateT(T);
+T=computefullmat(T);
 
 T(1:n+1:end)=0;
 

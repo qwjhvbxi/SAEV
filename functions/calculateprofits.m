@@ -1,7 +1,7 @@
-%% [R,Rcost,U]=calculateProfits2(Pmat,Resmat,subsidy,penalty)
+%% [R,Rcost,U]=calculateprofits(Pmat,Resmat,subsidy,penalty)
 % 
 
-function [R,Rcost,U]=calculateProfits2(Pmat,Resmat,subsidy,penalty)
+function [R,Rcost,U]=calculateprofits(Pmat,Resmat,subsidy,penalty)
 
 DroppedUtility=-15;
 

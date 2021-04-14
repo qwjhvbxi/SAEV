@@ -1,10 +1,10 @@
-% [Res]=GENERALC(P[,extsave,dispiter])
+% [Res]=GENERALMILP(P[,extsave,dispiter])
 % Run SAEV simulation and relocation/charge oprimization.
 % Vehicles start at beginning of time step, arrive at end of time step.
 % 
 % see also CPAR
 
-function [Res]=generalOpti(P,extsave,dispiter)
+function [Res]=generalmilp(P,extsave,dispiter)
 
 
 %% initializations
@@ -117,7 +117,7 @@ if strcmp(P.enlayeralg,'aggregate')
 
     % generate aggregate trip statistics
     EMDFileName=[TripName '-' num2str(P.tripday)];
-    [Trips]=generateEMD(A,Atimes,T,P.beta,EMDFileName);
+    [Trips]=computeemd(A,Atimes,T,P.beta,EMDFileName);
 
 %     % append values for next day
 %     if isfield(P,'tripfolder')
@@ -125,7 +125,7 @@ if strcmp(P.enlayeralg,'aggregate')
 %         P2.tripday=P.tripday+1;
 %         [A2,Atimes2,~,~]=loadTrips(P2);
 %         EMDFileName=[TripName '-' num2str(P2.tripday)];
-%         [Trips2]=generateEMD(A2,Atimes2,T,etsim,EMDFileName);
+%         [Trips2]=computeemd(A2,Atimes2,T,etsim,EMDFileName);
 %         Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];
 %     end
     

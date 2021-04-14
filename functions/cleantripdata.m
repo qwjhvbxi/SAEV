@@ -1,7 +1,7 @@
 
 
 
-function [A,Atimes,ASortInd]=cleanData(AIN,AtimesIN,RmSameNode)
+function [A,Atimes,ASortInd]=cleantripdata(AIN,AtimesIN,RmSameNode)
 
 Rmv1=0;
 

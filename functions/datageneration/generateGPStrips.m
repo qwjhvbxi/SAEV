@@ -18,7 +18,7 @@ end
 load(FileIn,'A','Atimes');
 
 % clean up data
-[A,Atimes,~]=cleanData(A,Atimes);
+[A,Atimes,~]=cleantripdata(A,Atimes);
 A=double(A);
 Atimes=double(Atimes);
 
@@ -28,8 +28,8 @@ if size(A,2)==4
     % raw distance
     Distances.RawDistance=sqrt((A(:,1)-A(:,3)).^2+(A(:,2)-A(:,4)).^2);
     
-    [ODistToNode,ONodeID]=coordsToNodes(A(:,1:2),C,10);
-    [DDistToNode,DNodeID]=coordsToNodes(A(:,3:4),C,10);
+    [ODistToNode,ONodeID]=computedistancetonodes(A(:,1:2),C,10);
+    [DDistToNode,DNodeID]=computedistancetonodes(A(:,3:4),C,10);
 
     % equivalent station matrix (closest station to each request GPS origin)
     A=[ONodeID(:,1),DNodeID(:,1)];

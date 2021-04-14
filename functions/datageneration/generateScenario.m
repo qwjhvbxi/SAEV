@@ -81,7 +81,7 @@ if nargin<5
 
     %% reconstruct missing coordinates
 
-    T=populateT(T);
+    T=computefullmat(T);
     
 else 
     

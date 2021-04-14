@@ -1,7 +1,7 @@
-%% T=populateT(T)
+%% T=computefullmat(T)
 % reconstruct missing coordinates (==0) with Dijkstra algorithm
 
-function newT=populateT(T)
+function newT=computefullmat(T)
 
 addpath('utilities/dijkstra_alg');
 N=size(T,1);

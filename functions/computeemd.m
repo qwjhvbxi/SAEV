@@ -1,11 +1,11 @@
-%% Trips=generateEMD(A,Atimes,T,etsim,FileName)
+%% Trips=COMPUTEEMD(A,Atimes,T,etsim,FileName)
 % dkemd, dkod, dktrip are the number of minutes of travel for
 % relocation, serving trips, and total, respectively, for each
 % energy layer time step. 
 %
 % see also generalC
 
-function Trips=generateEMD(A,Atimes,T,Beta,FileName,chargingStations,Clusters)
+function Trips=computeemd(A,Atimes,T,Beta,FileName,chargingStations,Clusters)
 
 DataFolder=setDataFolder();
 

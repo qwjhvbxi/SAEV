@@ -40,7 +40,7 @@ if extsave<2
 end
 
 if isfield(P,'trlayeralg') && strcmp(P.trlayeralg,'opti')
-    Res=generalOpti(P,extsave,dispiter);
+    Res=generalmilp(P,extsave,dispiter);
     return
 end
 
@@ -187,10 +187,10 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
 
         % generate aggregate trip statistics
         % EMDFileName=[P.tripfolder '-' num2str(P.tripday)];
-        % Trips=generateEMD(A,Atimes,T,Beta,EMDFileName);
+        % Trips=computeemd(A,Atimes,T,Beta,EMDFileName);
             
         EMDFileName=[P.tripfolder '-' num2str(P.tripday) '-50'];
-        Trips=generateEMD(A,Atimes,T,Beta,EMDFileName,chargingStations,Clusters);
+        Trips=computeemd(A,Atimes,T,Beta,EMDFileName,chargingStations,Clusters);
         
         % energy layer variable: static values
         E.v2g=P.Operations.v2g; % use V2G?
@@ -543,7 +543,7 @@ for i=1:tsim
         ParRel.LimitFCR=LimitFCR;
         ParRel.chargepenalty=Par.chargepenalty;
         
-        [Vout,bkt]=Relocation(Vin,ParRel);
+        [Vout,bkt]=relocationmodule(Vin,ParRel);
         
         % update vehicles position
         used=logical(Vout(:,2));
@@ -594,11 +594,10 @@ for i=1:tsim
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
 
-        % tripAssignment (no clustering) or tripAssignment2 (clustering)
         if AutoRelo
-            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment2(Vin,Bin,Par);
+            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripassignmentsaev(Vin,Bin,Par);
         else
-            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripAssignment(Vin,Bin,Par);
+            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripassignmentcarsharing(Vin,Bin,Par);
         end
         
         % update vehicles positions

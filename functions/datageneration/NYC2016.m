@@ -23,7 +23,7 @@ for i=37:60
     EMDFileName=[TripName '-' num2str(i)];
     etsim=48;
     load(TripFile,'A','Atimes');
-    generateEMD(A,Atimes,T,etsim,EMDFileName)
+    computeemd(A,Atimes,T,etsim,EMDFileName)
 end
 
 

@@ -95,7 +95,7 @@ if 1  % folder based
 
             [~,~,A2,A2times,tripsubset]=generateScenario(A,Atimes,10,setlimits,C);
 
-            [A3,A3times,~]=cleanData(A2,A2times,1);
+            [A3,A3times,~]=cleantripdata(A2,A2times,1);
 
             k=round(length(A3)*TripRatio);
             [A,Atimes]=reduceTrips(A3,A3times,k);

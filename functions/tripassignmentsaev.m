@@ -1,4 +1,4 @@
-%% [V,B,tripdist,relodist,queue]=tripAssignment2(Vin,Bin,Par)
+%% [V,B,tripdist,relodist,queue]=tripassignmentsaev(Vin,Bin,Par)
 % Trip assignment for SAEV simulation with active rebalancing
 % 
 % input
@@ -19,7 +19,7 @@
 %
 % See also: generalC
 
-function [V,B,tripdist,relodist,queue]=tripAssignment2(Vin,Bin,Par)
+function [V,B,tripdist,relodist,queue]=tripassignmentsaev(Vin,Bin,Par)
 
 tripdist=0;
 relodist=0;
