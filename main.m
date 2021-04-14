@@ -20,7 +20,7 @@ function [Res]=main(P,extsave,dispiter)
 addpath functions utilities 
 DataFolder=getdatafolder();
 if nargin<3
-    dispiter=1;
+    dispiter=2;
     if nargin<2
         extsave=1;
     end
