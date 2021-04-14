@@ -153,7 +153,7 @@ lon3=lon3/pi*180;
 
 [lat3 ;lon3]
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder;
 % M=imread('data/TokyoStreetMapNarrow.png');
 % M=imread('data/TokyoStreetMapSmall2.png');
 M=imread([DataFolder 'input_files\Tokyo\maps/TokyoStreetMap5km.png']);

@@ -7,7 +7,7 @@
 
 function Trips=computeemd(A,Atimes,T,Beta,FileName,chargingStations,Clusters)
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 if nargin==7
     As=Clusters(A);

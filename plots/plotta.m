@@ -1,6 +1,6 @@
 function plotta(Res,PlotType,FolderName,FileID,Format,Resolution)
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 tsim=length(Res.Sim.relodist);
 x=linspace(0,24,tsim);
 x1=linspace(0,24,tsim+1);

@@ -1,5 +1,5 @@
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 load([DataFolder 'scenarios/NYC2016'],'T','C');
 
 for i=39:80
@@ -13,7 +13,7 @@ end
 
 %% generate trip stats
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 load([DataFolder 'scenarios/NYC2016'],'T','C');
 
 for i=37:60

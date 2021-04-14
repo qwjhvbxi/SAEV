@@ -10,7 +10,7 @@ function [Res]=generalmilp(P,extsave,dispiter)
 %% initializations
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 
 %% parallel computing and input check
@@ -48,13 +48,12 @@ end
 load([DataFolder 'scenarios/' P.scenario '.mat'],'T');
 
 % NOTE: can add secondary trip file (real vs expected/forecasted)
-% [A,Atimes,~,~]=loadTrips(P);
-[A,Atimes,AbuckC,~]=loadTrips(P);
+[A,Atimes,AbuckC,~]=gettrips(P);
 % AbuckC=AbuckC(1:P.Sim.e:end);
 if ~P.mpcpredict
     Pb.tripfolder=[P.tripfolder '-2'];
     Pb.tripday=P.tripday;
-    [A2,Atimes2,~,~]=loadTrips(Pb);
+    [A2,Atimes2,~,~]=gettrips(Pb);
 end
 
 % NOTE: should generalize vector length for cases with different beta, e,
@@ -123,7 +122,7 @@ if strcmp(P.enlayeralg,'aggregate')
 %     if isfield(P,'tripfolder')
 %         P2=P;
 %         P2.tripday=P.tripday+1;
-%         [A2,Atimes2,~,~]=loadTrips(P2);
+%         [A2,Atimes2,~,~]=gettrips(P2);
 %         EMDFileName=[TripName '-' num2str(P2.tripday)];
 %         [Trips2]=computeemd(A2,Atimes2,T,etsim,EMDFileName);
 %         Trips.dktrip=[Trips.dktrip(1:48,:) ; Trips2.dktrip(1:48,:)];

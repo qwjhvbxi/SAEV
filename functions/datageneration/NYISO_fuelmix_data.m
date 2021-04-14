@@ -1,7 +1,7 @@
 %% NYISO fuel mix data processing
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 % Year='2018';
 % MonthDays=[31 28 31 30 31 30 31 31 30 31 30 31];
@@ -108,7 +108,7 @@ save([DataFolder 'eleprices/DayaheadPrices2016NY.mat'],'PriceByZone_USDMWh','Zon
 % results should be half-hourly
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 load([DataFolder 'grid/NYISO_fuelmix_2016-2.mat'],'CarbonIntensity_kgPerMWh');
 load([DataFolder 'eleprices/DayaheadPrices2016NY.mat'],'PriceByZone_USDMWh');

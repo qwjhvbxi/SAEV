@@ -1,7 +1,7 @@
 %% Germany fuel mix data processing
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 % load([DataFolder 'eleprices/Generation2018Germany.mat'],'GermanyGeneration2018');
 load([DataFolder 'eleprices/Generation2019Germany.mat'],'GermanyGeneration2019');
@@ -27,7 +27,7 @@ save([DataFolder 'grid/Germany_fuelmix_2019.mat'],'Fuels','CarbonEmissionsByFuel
 % results should be half-hourly
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 load([DataFolder 'grid/Germany_fuelmix_2019.mat'],'CarbonIntensity_kgPerMWh');
 load([DataFolder 'eleprices/DayaheadPrices2018-2019Germany.mat'],'GermanyDayAheadEURMWh_2019');

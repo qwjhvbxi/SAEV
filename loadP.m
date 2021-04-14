@@ -1,7 +1,7 @@
 function P=loadP(Pname)
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 if nargin<1
     

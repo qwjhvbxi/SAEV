@@ -32,7 +32,7 @@ if nargin>0
     end
 end
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 % generate input matrix of struct
 % S=cpar(mapscenario);

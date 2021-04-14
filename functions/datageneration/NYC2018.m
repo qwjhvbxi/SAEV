@@ -1,6 +1,6 @@
 
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 load([DataFolder 'scenarios/NYC2018'],'C')
 
 for i=1:10

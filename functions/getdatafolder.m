@@ -1,4 +1,4 @@
-function DataFolder=setDataFolder()
+function DataFolder=getdatafolder()
 
 if exist('functions/DataFolderAddress.mat','file')
     load('functions/DataFolderAddress','DataFolder')

@@ -5,7 +5,7 @@
 
 function [nomefile]=generatematrices3(n,m,Tr,maxt,ac,ad,thor,maxsoc,minsoc)
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 hashcell={n,m,Tr,maxt,ac,ad,thor,maxsoc,minsoc,'v3'};
 nomefile=[DataFolder 'optimatrices/' DataHash(hashcell) '.mat'];
 

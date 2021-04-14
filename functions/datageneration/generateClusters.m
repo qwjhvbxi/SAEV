@@ -6,7 +6,7 @@
 function generateClusters(scenario,K,Plots)
 
 addpath functions
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 if nargin<3 || ~Plots
 

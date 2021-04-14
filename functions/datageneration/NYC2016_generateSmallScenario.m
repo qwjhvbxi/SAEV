@@ -8,7 +8,7 @@
 if 0
     
     addpath functions
-    DataFolder=setDataFolder();
+    DataFolder=getdatafolder();
     P=cpar('NYC2016');
 
     setlimits=[0,5;0,5];
@@ -42,7 +42,7 @@ end
 %% generate trips file
 
 addpath functions
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 load([DataFolder 'scenarios/NYC2016-small.mat'],'C','T');
 
 setlimits=[0,5;0,5];

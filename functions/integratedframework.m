@@ -16,7 +16,7 @@ function [Res]=integratedframework(P,E)
 
 T=P.Ib;            % time steps
 J=size(P.T,1);     % stations
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 starttime=cputime;
 % FileName=[DataFolder 'out/benchmark/outnew-' num2str(J) 'st-' num2str(P.tripday) '-' num2str(P.O) '-' num2str(P.Ib) '-' num2str(P.K) '.mat'];
 

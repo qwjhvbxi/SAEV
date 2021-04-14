@@ -18,7 +18,7 @@ function [Res]=generalC(P,extsave,dispiter)
 %% initializations and input check
 
 addpath functions utilities 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 if nargin<3
     dispiter=1;
     if nargin<2
@@ -52,7 +52,7 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 
 % load trips
 % TODO: can add secondary trip file (real vs expected/forecasted)
-[A,Atimes,AbuckC,~]=loadTrips(P);
+[A,Atimes,AbuckC,~]=gettrips(P);
 AbuckC=AbuckC(1:P.Sim.e:end);
 
 if ~P.Sim.mpcpredict
@@ -60,13 +60,13 @@ if ~P.Sim.mpcpredict
     Pb.tripfolder=P.tripfolder(1:temp1(end)-1);
     Pb.tripday=P.tripday;
     Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end)); % TODO: change!!
-    [As2,~,AbuckC2,~]=loadTrips(Pb);
+    [As2,~,AbuckC2,~]=gettrips(Pb);
     AbuckC2=AbuckC2(1:P.Sim.e:end);
 end
     
 
 % load electricity prices and carbon emissions
-[elepMinute,co2Minute,~]=ReadExtFile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
+[elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
 
 %% parameters of simulation
@@ -228,7 +228,7 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     end
     
     % TODO: use CSV as inputs
-    [fraw,~,fresolution]=ReadExtFile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
+    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
     f=average2(fraw,P.Sim.e/fresolution);
 %     load([DataFolder 'grid/' P.FCR.filename],'f');
 %     ReshapeFactor=size(f,1)/1440*P.Sim.e;

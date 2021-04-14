@@ -1,4 +1,4 @@
 function convertcpar(Scenario)
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 P=cpar(Scenario);
 save([DataFolder 'par/' Scenario '.mat'],'P');

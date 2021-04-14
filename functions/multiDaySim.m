@@ -33,7 +33,7 @@ if  ResultsOut==false
     R=[];
 end
 
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 % initial parameters
 SOC=zeros(length(Period)+1,P.m);

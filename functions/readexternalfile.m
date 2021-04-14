@@ -1,7 +1,7 @@
-%% [Column1,Column2,Resolution]=ReadExtFile(FileName,Day)
+%% [Column1,Column2,Resolution]=readexternalfile(FileName,Day)
 % return data in each minute for the specified day and the next.
 
-function [Column1,Column2,Resolution]=ReadExtFile(FileName,Day,MinuteSample)
+function [Column1,Column2,Resolution]=readexternalfile(FileName,Day,MinuteSample)
 
 fileID=fopen(FileName,'r');
 H=textscan(fileID,'%q %f',1,'Delimiter',','); % retrieve resolution info

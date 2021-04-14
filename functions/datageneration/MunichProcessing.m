@@ -1,6 +1,6 @@
 
 addpath functions utilities
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 
 %% non-clustered

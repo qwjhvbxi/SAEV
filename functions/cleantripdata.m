@@ -41,7 +41,7 @@ return
 % temporary solution for cell files
 
 tripfolder='NYC2018_10wed';
-DataFolder=setDataFolder();
+DataFolder=getdatafolder()
 A1=A;
 Atimes1=Atimes;
 for i=1:10

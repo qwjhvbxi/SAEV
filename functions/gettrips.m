@@ -1,15 +1,15 @@
-%% [A,Atimes,AbuckC,Distances]=loadTrips(P)
+%% [A,Atimes,AbuckC,Distances]=gettrips(P)
 % P struct contains fields 'tripfolder' and 'tripday' OR 'tripfile'.
 % Files should be in folder trips/
 %
 % See also: generalC
 
-function [A,Atimes,AbuckC,Distances]=loadTrips(P)
+function [A,Atimes,AbuckC,Distances]=gettrips(P)
 
 %% loading
 
 % set external data folder
-DataFolder=setDataFolder();
+DataFolder=getdatafolder();
 
 % determine file name
 if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
