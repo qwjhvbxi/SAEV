@@ -398,10 +398,7 @@ for i=1:tsim
                 end
 
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging , ...
-                                        ELayerResults.discharging , ...
-                                        maxc , ...
-                                        E.etrip]';
+                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging , ELayerResults.discharging , maxc , E.etrip ]';
                 zmacro(isnan(zmacro))=0;
 
             else

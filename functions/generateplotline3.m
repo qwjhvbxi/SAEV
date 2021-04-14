@@ -35,7 +35,8 @@ end
 DataFolder=setDataFolder();
 
 % generate input matrix of struct
-S=cpar(mapscenario);
+% S=cpar(mapscenario);
+S=loadP(mapscenario);
 [Pmat,varparams]=changeStruct(S,varargin);
 
 N=numel(Pmat);
