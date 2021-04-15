@@ -33,7 +33,7 @@ end
 %% generate unique Hash for savefile
 
 Hash=DataHash(P);
-simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
+simname=[DataFolder 'out/' Hash '.mat'];
 if extsave<2
     if extsave>=0 && exist(simname,'file')
         % if the file already exists, just return the previous result

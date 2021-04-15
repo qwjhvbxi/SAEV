@@ -49,7 +49,7 @@ if ischar(outfieldname)
     for j=1:N
         try
             Hash=DataHash(Pmat{j});
-            simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
+            simname=[DataFolder 'out/' Hash '.mat'];
             load(simname,'Res');
             if isempty(PointPos) 
                 Resmat(j)=Res.(FieldName);
@@ -69,7 +69,7 @@ end
 if outfieldname==-2
     for j=1:N
         Hash=DataHash(Pmat{j});
-        simname=[DataFolder 'out_saev/simulations/' Hash '.mat'];
+        simname=[DataFolder 'out/' Hash '.mat'];
         delete(simname);
     end
     Resmat=NaN;
