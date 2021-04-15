@@ -99,7 +99,33 @@ Additional optional fields:
 | alg | char | Name of algorithm |
 | ... | ... | Parameters for specific algorithm | 
 
-### `extsave` and `info` variables
+### Data preparation
+
+To run the simulations, there are at least 3 external files needed: 
+
+1. a scenario file
+1. a trip file
+1. a file with electricity price data
+
+#### Scenario files
+
+Scenario files are .mat Matlab files with the variable `T`, a square matrix which represent the travel time between each node. 
+These files are stored in folder `data/scenarios/`.
+
+#### Trip files
+
+Trip files are .mat Matlab files with variables `A` and `Atimes`, representing the origin and destination nodes of each trip and their request time (in minutes after midnight).
+These files are stored in folder `data/trips/`.
+
+#### Electricity price data
+
+These are .csv files with the price of electricity at each time interval. 
+The first row is reserved for statement about resolution: `Resolution in minutes, 30` means each value represent an interval of 30 minutes.
+The second row are the headers, and the third row is the first data point.
+If there are two columns, the second column represents the carbon intensity.
+These files are stored in folder `data/grid/`.
+
+### `extsave` and `info` variables 
 
 `extsave` can be:
 
