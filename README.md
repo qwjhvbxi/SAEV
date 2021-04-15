@@ -2,6 +2,13 @@
 
 Shared Autonomous Electric Vehicles simulation and optimization model.
 
+## Cite
+
+If you use this code in your research, please cite:
+
+1. R.Iacobucci et al., Frequency Control Reserve Provision from a Fleet of Shared Autonomous Electric Vehicles. IEEE MT-ITS 2021
+1. R.Iacobucci, J.D.Schmöcker. Dynamic pricing for ride-hailing services considering relocation and mode choice. IEEE MT-ITS 2021
+
 ## Setup
 
 To setup the model, first run:
