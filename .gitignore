@@ -1,12 +1,6 @@
 
 *.asv
-*.mat
-prova.m
-functions/RelocationPricing2.m
-functions/Copy_of_RelocationPricing3.m
-functions/Copy_of_NLPricing.m
 *.fig
 *.png
 run/*
-*.csv
 *.eps

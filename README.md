@@ -9,13 +9,21 @@ If you use this code in your research, please cite:
 1. R.Iacobucci et al., Frequency Control Reserve Provision from a Fleet of Shared Autonomous Electric Vehicles. IEEE MT-ITS 2021
 1. R.Iacobucci, J.D.Schmöcker. Dynamic pricing for ride-hailing services considering relocation and mode choice. IEEE MT-ITS 2021
 
-## Setup
+## Quick start
 
-To setup the model, first run:
+To test the model, you can run the example data. This is based on the New York yellow taxicab data for 2018, available at https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page .
+Run `main`. The function will list the available simulation scenarios. 
+At first installation, only one scenario will be available (`NYC2018`), so select `1`. 
+
+## Advanced setup (not necessary)
+
+The model tends to create large savefiles. 
+For this reason, it is better to have the folder with savefiles in a location with enough space separated from the code.
+To setup a data folder in another location, you can run:
 
 `setup`
 
-This will prompt you to choose a folder where to save output files and parameters.  The model tends to create large savefiles. For this reason, it is better to have the folder with savefiles in a location with enough space separated from the code.
+This will prompt you to choose a folder where to save output files and parameters.  
 
 ## Using the model
 
