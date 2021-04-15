@@ -43,8 +43,8 @@ The parameter variable `P` need to have the following fields:
 | `gridfile`    | char  | Name of file with electricity data |
 | `gridday`     | int   | Number of day | 
 | `m`           | int   | Fleet size | 
-| `modechoice`  | logical   | Wether to use modechoice | 
-| `carbonprice` | double   | Carbon price (per MWh) | 
+| `modechoice`  | logical| Wether to use modechoice | 
+| `carbonprice` | double | Carbon price (per MWh) | 
 | `Sim`         | struct | Simulation settings (see below) |
 | `Tech`        | struct | Technical parameters of vehicles (see below) |
 | `Operations`  | struct | Operational settings (see below) |
@@ -59,18 +59,18 @@ Additional optional fields:
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-|e| int | Length of time step (minutes) |
-|mpcpredict| logical | Perfect prediction? |
+|e              | int       | Length of time step (minutes) |
+|mpcpredict     | logical   | Perfect prediction? |
 
 #### `Tech`
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-|battery| double |  |
-|chargekw| double |  |
-|consumption| double |  |
-|cyclingcost| double |  |
-|efficiency| double | Battery round-trip efficiency [0,1] |
+|battery    | double | Vehicle battery capacity (kWh) |
+|chargekw   | double | Vehicle max. charging power (kW) |
+|consumption| double | Vehicle consumption (kWh/min) |
+|cyclingcost| double | Battery cycling cost (per cycle) |
+|efficiency | double | Battery round-trip efficiency [0,1] |
 
 #### `Operations`
 
@@ -88,9 +88,9 @@ Additional optional fields:
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-| mthor| int| (minutes) |
-| extrasoc| double|  |
-| beta| int| (minutes) |
+| mthor     | int   | Time horizon for charging optimization (minutes) |
+| extrasoc  | double| Extra charge level over min. SoC for charging optimization [0,1] |
+| beta      | int   | Lenght of charging optimization interval (minutes) |
 
 #### `Relocation`
 
@@ -99,7 +99,7 @@ Additional optional fields:
 | alg | char | Name of algorithm |
 | ... | ... | Parameters for specific algorithm | 
 
-### `extsave` and info variables
+### `extsave` and `info` variables
 
 `extsave` can be:
 
