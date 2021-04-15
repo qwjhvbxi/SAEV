@@ -2,9 +2,7 @@
 
 Shared Autonomous Electric Vehicles simulation and optimization model.
 
-
-Setup
------
+## Setup
 
 To setup the model, first run:
 
@@ -12,9 +10,7 @@ To setup the model, first run:
 
 This will prompt you to choose a folder where to save output files and parameters.  The model tends to create large savefiles. For this reason, it is better to have the folder with savefiles in a location with enough space separated from the code.
 
-
-Using the model
----------------
+## Using the model
 
 How to launch a simulation:
 
@@ -35,7 +31,7 @@ The first line add the folder containing pdefault to the current path. `P` inclu
 
 Previously saved default values of `P` can be called with the function `getp`, which reads the content of the subfolder `par` in the data folder.
 
-## Parameter variable `P`
+### Parameter variable `P`
 
 The parameter variable `P` need to have the following fields:
 
@@ -59,30 +55,36 @@ Additional optional fields:
 
 `Pricing`
 
+#### `Sim`
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-|e| int |  |
-|mpcpredict| logical | |
+|e| int | Length of time step (minutes) |
+|mpcpredict| logical | Perfect prediction? |
 
-
-| Field         | format| description |
-| ------------- | ------------- | ------------- |
-|battery| double|  |
-|chargekw| double|  |
-|consumption| double|  |
-|cyclingcost| double|  |
-|efficiency| double|  |
+#### `Tech`
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-|initialsoc| double|  |
-|minsoc| double|  |
-|maxsoc| double|  |
-|v2g| logical|  |
-|v2gminsoc| double|  |
-|maxwait| double| (minutes) |
+|battery| double |  |
+|chargekw| double |  |
+|consumption| double |  |
+|cyclingcost| double |  |
+|efficiency| double | Battery round-trip efficiency [0,1] |
+
+#### `Operations`
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+|initialsoc| double| Initial state of charge [0,1] |
+|minsoc| double| Minimum state of charge [0,1] |
+|maxsoc| double| Maximum state of charge [0,1] |
+|v2g| logical| Enable V2G discharge? |
+|v2gminsoc| double| Minimum state of charge for V2G [0,1] |
+|maxwait| double|  (minutes) |
 |maxidle| double| (minutes) |
+
+#### `Charging`
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
@@ -90,13 +92,14 @@ Additional optional fields:
 | extrasoc| double|  |
 | beta| int| (minutes) |
 
+#### `Relocation`
+
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
 | alg | char | Name of algorithm |
 | ... | ... | Parameters for specific algorithm | 
 
-extsave and info variables
---------------------------
+### `extsave` and info variables
 
 `extsave` can be:
 
