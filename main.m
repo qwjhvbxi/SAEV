@@ -61,25 +61,14 @@ end
 load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
 
 % load trips
-% TODO: can add secondary trip file (real vs expected/forecasted)
 [A,Atimes,AbuckC,~]=gettrips(P);
 AbuckC=AbuckC(1:P.Sim.e:end);
-
-if ~P.Sim.mpcpredict
-    temp1=strfind(P.tripfolder,'_');
-    Pb.tripfolder=P.tripfolder(1:temp1(end)-1);
-    Pb.tripday=P.tripday;
-    Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end)); % TODO: change!!
-    [As2,~,AbuckC2,~]=gettrips(Pb);
-    AbuckC2=AbuckC2(1:P.Sim.e:end);
-end
-    
 
 % load electricity prices and carbon emissions
 [elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
 
-%% parameters of simulation
+%% initialize parameters of simulation
 
 % parameters
 n=size(T,1);              % number of nodes
@@ -120,21 +109,17 @@ waitingestimated=zeros(r,1);    % estimated minutes to wait for each request
 waiting=zeros(r,1);             % minutes waited for each request
 dropped=false(r,1);             % request is dropped?
 chosenmode=false(r,1);          % which mode is chosen?
-% pooling=zeros(r,1);             % pool ID of each user (if ride shared)
 offeredprices=zeros(r,1);       % price offered to each passenger
 sc=false(tsim,P.m);             % connected to charging station status
 sm=false(tsim,P.m);             % moving status
 relodist=zeros(tsim,1);         % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
+% pooling=zeros(r,1);             % pool ID of each user (if ride shared)
 
 
 %% setup clustering
 
-% override loaded info if passed from P struct
-if isfield(P,'clusters')
-    chargingStations=P.chargingStations;
-    clusters=P.clusters;
-elseif exist('Clusters','var')
+if exist('Clusters','var')
     clusters=Clusters;
 else
     chargingStations=(1:n)';
@@ -143,6 +128,23 @@ end
 As=clusters(A);
 Trs=Tr(chargingStations,chargingStations);
 nc=length(chargingStations);             % number of clusters
+
+
+%% load predictions
+
+% TODO: cleanup call to secondary trip file (real vs expected/forecasted)
+if ~P.Sim.mpcpredict
+    temp1=strfind(P.tripfolder,'_');
+    Pb.tripfolder=P.tripfolder(1:temp1(end)-1);
+    Pb.tripday=P.tripday;
+    Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end)); % TODO: change!!
+    [As2,~,AbuckC2,~]=gettrips(Pb);
+    AbuckC2=AbuckC2(1:P.Sim.e:end);
+else
+    Pb.ratio=1;
+    As2=As;
+    AbuckC2=AbuckC;
+end 
 
 
 %% setup relocation module
@@ -169,13 +171,10 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
     
     if strcmp(P.Charging,'night')
         
-        limitHour=5;
-        
         % night charging
+        limitHour=5;        % charging hour limit
+        refillmaxsoc=0.6;   % min. soc to trigger charging during day
         zmacro=[ [1;0;1;0]*ones(1,60*limitHour/P.Sim.e) , [0;0;1;0]*ones(1,60*(24-limitHour)/P.Sim.e) ];
-        
-        % refill low soc
-        refillmaxsoc=0.6;
         
     else
     
@@ -202,15 +201,12 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
             save(emdFileName,'dkemd','dkod','dktrip');
         end
         Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dktrip);
-        totTimeToTravel=dktrip;
         
         % energy layer variable: static values
         E.v2g=P.Operations.v2g; % use V2G?
-        E.eta=P.Tech.efficiency;       % roundtrip (discharge) efficiency
-        E.selling=1;            % can sell to the grid?
-        % TODO: socboost should be calculated by optimization as function of inputs
-        E.socboost=1e4;         % soft constraint for final soc 
-        E.T=mthor;% number of time steps in energy layer
+        E.eta=P.Tech.efficiency;% roundtrip (discharge) efficiency
+        E.socboost=1e4;         % soft constraint for final soc (TODO: change depending on inputs)
+        E.T=mthor;              % number of time steps in energy layer
         E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
         E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
         E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
@@ -230,9 +226,9 @@ end
 
 %% setup frequency control reserve module
 
+fcr=false;
+fcrLimit=0;
 if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
-    
-    addpath functions/FCR
     
     fcr=true;
     if isfield(P.FCR,'aggregatechargeratio')
@@ -242,9 +238,6 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     % TODO: use CSV as inputs
     [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
     f=average2(fraw,P.Sim.e/fresolution);
-%     load([DataFolder 'grid/' P.FCR.filename],'f');
-%     ReshapeFactor=size(f,1)/1440*P.Sim.e;
-%     f=average2(f(:,P.gridday),ReshapeFactor);
     
     fcrLimit=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
     
@@ -260,9 +253,6 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     ParC.battery=P.Tech.battery;
     ParC.efficiency=P.Tech.efficiency;
     
-else
-    fcr=false;
-    fcrLimit=0;
 end
 
 
@@ -380,7 +370,7 @@ for i=1:tsim
     
     %% charging optimization
     
-    if dynamicCharging
+    if dynamicCharging 
         
         if rem(i,Beta/P.Sim.e)==1
         
@@ -388,7 +378,7 @@ for i=1:tsim
             t=(i-1)/(Beta/P.Sim.e)+1;
 
             actualminsoc=min(P.Operations.minsoc+P.Charging.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
-            dktripnow=totTimeToTravel(t:t+mthor-1);    % minutes spent traveling during this horizon
+            dktripnow=dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
 
             E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
             E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
@@ -404,13 +394,8 @@ for i=1:tsim
 
             if ~isempty(ELayerResults)
 
-                % make sure that there is no discharging when V2G is not allowed
-                if ~P.Operations.v2g
-                    ELayerResults.discharging(:)=0;
-                end
-
                 % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging , ELayerResults.discharging , maxc , E.etrip ]';
+                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging , ELayerResults.discharging*logical(P.Operations.v2g) , maxc , E.etrip ]';
                 zmacro(isnan(zmacro))=0;
 
             else
@@ -420,12 +405,11 @@ for i=1:tsim
 
             end
 
-
             % record time
             S.lasttime=cputime;
+            
+        end 
 
-        end
-    
     else
         
         t=i;
@@ -445,21 +429,20 @@ for i=1:tsim
     if P.modechoice
         
         % if Pricing.dynamic>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
-        if Pricing.dynamic
+        if Pricing.dynamic 
             
             if mod(i-1,tp)==0
         
                 % expected trips
                 selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
                 AsNow=As(selection0,:);
-                a_tp=sparse(AsNow(:,1),AsNow(:,2),1,nc,nc);%+q_t;
 
                 % number of vehicles at each station (including vehicles directed there)
                 Pricing.v=histc(clusters(ui),1:nc);
-                
+                a_tp=sparse(AsNow(:,1),AsNow(:,2),1,nc,nc);%+q_t;
                 a_tp(1:nc+1:end)=0;
                 Pricing.a=a_tp;
-                
+
                 if numel(P.Pricing.alternative)>1
                     altpNow=Aaltp(selection0);
                     [a,Ib,~]=unique(AsNow,'rows','stable');
@@ -467,25 +450,26 @@ for i=1:tsim
                 else
                     Pricing.altp=altpmat;
                 end
-                
+
                 if ~nodebased
-            
+
                     [ODpricesNow,~,~]=NLPricing5(Pricing); % OD-pair-based pricing
 
                     dynamicPricing(:,:,kp)=ODpricesNow;
 
                     perDistanceTariff=dynamicPricing(:,:,kp);
-                    
+
                 else 
-                    
+
                     [NodeSurchargeNow,~,~]=NLPricingNodes(Pricing); % node-based pricing
 
                     dynamicPricing(kp,:)=NodeSurchargeNow';
 
                     surcharges=dynamicPricing(kp,1:nc)+dynamicPricing(kp,nc+1:2*nc)';
-                
+
                 end
-            end  
+            end
+            
         else
             
             % expected trips
@@ -515,34 +499,15 @@ for i=1:tsim
         kt=(i-1)/tx+1;
 
         % number of waiting passenger at station
-        if sum(queue)>0
-            dw=histcounts(As(queue(queue>0),1),1:nc+1)';
-        else 
-            dw=zeros(nc,1);
-        end
-        
-        if P.Sim.mpcpredict
-        
-            % expected trips
-            selection1=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts));
-            a_ts=(multiplier.*sparse(As(selection1,1),As(selection1,2),1,nc,nc));
-
-            Selection2=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+ts+tr));
-            a_to=(multiplier.*sparse(As(Selection2,1),As(Selection2,2),1,nc,nc));
-        
-        else
+        dw=histcounts(As(queue(queue>0),1),1:nc+1)';
             
-            % stochastic prediction
-            
-            % expected trips
-            selection1=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts));
-            a_ts=(multiplier.*sparse(As2(selection1,1),As2(selection1,2),1,nc,nc))/Pb.ratio;
+        % expected trips
+        selection1=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts));
+        a_ts=(multiplier.*sparse(As2(selection1,1),As2(selection1,2),1,nc,nc))/Pb.ratio;
 
-            Selection2=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts+tr));
-            a_to=(multiplier.*sparse(As2(Selection2,1),As2(Selection2,2),1,nc,nc))/Pb.ratio;
+        Selection2=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts+tr));
+        a_to=(multiplier.*sparse(As2(Selection2,1),As2(Selection2,2),1,nc,nc))/Pb.ratio;
             
-        end
-
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
         ParRel.ad=ad;
@@ -582,12 +547,10 @@ for i=1:tsim
     trips=(AbuckC(i)+1:AbuckC(i+1))';
 
     % add previously queued requests and reset queue
-    if sum(queue)>0
-        trips=[queue(queue>0);trips];
-        queue(:)=0;
-    end
+    trips=[queue(queue>0);trips];
+    queue(:)=0;
     
-    if ~isempty(trips) 
+    if ~isempty(trips)
     
         % TODO: fix pooling option 
         
@@ -639,11 +602,11 @@ for i=1:tsim
         
         if rem(i,Beta/P.Sim.e)==1
             
-            [setPoints]=fleetSetpoint(ParC,q(i,:),s(2,:),zmacro(1:2,t));
+            [setPoints]=setpointfleet(ParC,q(i,:),s(2,:),zmacro(1:2,t));
             
         end
         
-        [ei,efi]=vehicleSetpoint(ParC,q(i,:),s(2,:),f(i),setPoints);
+        [ei,efi]=setpointvehicle(ParC,q(i,:),s(2,:),f(i),setPoints);
         
         e(i,:)=ei;
         ef(i,:)=efi;

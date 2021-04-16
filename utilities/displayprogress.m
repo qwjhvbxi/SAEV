@@ -12,14 +12,14 @@ else
     relatedtime=min(LastIterations,iteration);
 end
 
-DisplayResolution=20;
+displayResolution=20;
 TimeLeft=timespent/relatedtime*(totaliterations-iteration);
 
 fprintf('\n\n');
 fprintf('Progress: %0.1f%%\n',iteration/totaliterations*100);
 displaytimes(TimeLeft,'ETA');
-fprintf(char('*'*ones(1,floor(iteration/totaliterations*DisplayResolution)  )));
-fprintf(char('-'*ones(1,DisplayResolution-floor(iteration/totaliterations*DisplayResolution) )));
+fprintf(char('*'*ones(1,floor(iteration/totaliterations*displayResolution)  )));
+fprintf(char('-'*ones(1,displayResolution-floor(iteration/totaliterations*displayResolution) )));
 fprintf('\n\n');
 
 end

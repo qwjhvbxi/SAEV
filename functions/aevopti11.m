@@ -55,6 +55,9 @@ end
 if ~isfield(Q,'minfinalsoc')
     Q.minfinalsoc=0;
 end
+if ~isfield(Q,'selling')
+    Q.selling=1;
+end
 
 
 %% initializations

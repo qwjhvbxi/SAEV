@@ -1,7 +1,7 @@
-function displayState(i,itot,dispiter,comptime,DisplayResolution)
+function displayState(i,itot,dispiter,comptime,displayResolution)
 
 if nargin<4
-    DisplayResolution=40;
+    displayResolution=40;
 end
 
 % update state of simulation
@@ -13,9 +13,9 @@ if dispiter<0
     end
 elseif dispiter==1
     clc
-    fprintf(char('-'*ones(1,DisplayResolution)));
+    fprintf(char('-'*ones(1,displayResolution)));
     fprintf('\n')
-    fprintf(char('*'*ones(1,floor(i/itot*DisplayResolution))));
+    fprintf(char('*'*ones(1,floor(i/itot*displayResolution))));
     fprintf('\n\n')
 elseif dispiter==2
     clc

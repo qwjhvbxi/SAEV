@@ -1,7 +1,7 @@
-%% [SetPoints]=fleetSetpoint(Par,q,s,z)
+%% [SetPoints]=setpointfleet(Par,q,s,z)
 % create set points at beginning of charging period
 
-function [SetPoints]=fleetSetpoint(Par,q,s,z)
+function [SetPoints]=setpointfleet(Par,q,s,z)
 
 % power exchanged for vehicles charging
 acv=(q<Par.fastchargesoc)*Par.ac+(q>=Par.fastchargesoc)*Par.ac*Par.slowchargeratio;
