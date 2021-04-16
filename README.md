@@ -11,9 +11,11 @@ If you use this code in your research, please cite:
 
 ## Quick start
 
-To test the model, you can run the example data. This is based on the New York yellow taxicab data for 2018, available at https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page .
+To test the model, you can run the example data. 
 Run `main`. The function will list the available simulation scenarios. 
-At first installation, only one scenario will be available (`NYC2018`), so select `1`. 
+At first installation, only one scenario will be available (`NYC2018`), so type `NYC2018` or just `1`. 
+
+The example data is based on the New York yellow taxicab data for 2018, available at https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page .
 
 ## Advanced setup (not necessary)
 
@@ -68,7 +70,9 @@ The parameter variable `P` need to have the following fields:
 
 Additional optional fields:
 
-`Pricing`
+| Field         | format | description |
+|`Pricing` 		| struct | Pricing info (see below) |
+|`FCR` 			| struct | Settings for frequency control reserve (see below) |
 
 #### `Sim`
 
@@ -113,6 +117,18 @@ Additional optional fields:
 | ------------- | ------------- | ------------- |
 | alg | char | Name of algorithm |
 | ... | ... | Parameters for specific algorithm | 
+
+#### `Pricing`
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+| ... | ... | ... | 
+
+#### `FCR`
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+| ... | ... | ... | 
 
 ### Data preparation
 
