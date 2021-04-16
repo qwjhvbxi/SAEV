@@ -8,8 +8,12 @@
 % ef: FCR energy exchanged during time step
 % b: imbalance from relocation module
 % d: delay at beginning of time step
-% sc: status during time step: connected/not connected
-% sm: status during time step: moving/not moving
+% status:
+%     1 charging
+%     2 idle
+%     3 moving
+%     4 moving for relocation
+%     5 moving to charging station
 %
 % TODO: add charging station size
 % 
@@ -68,17 +72,31 @@ AbuckC=AbuckC(1:P.Sim.e:end);
 [elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
 
+%% setup clustering
+
+n=size(T,1);              % number of nodes
+if exist('Clusters','var')
+    clusters=Clusters;
+else
+    chargingStations=(1:n)';
+    clusters=(1:n)';
+end
+As=clusters(A);
+nc=length(chargingStations);             % number of clusters
+
+
 %% initialize parameters of simulation
 
 % parameters
-n=size(T,1);              % number of nodes
 r=AbuckC(1441);           % number of requests
 tsim=1440/P.Sim.e;        % number of time steps
 Tr=max(1,round(T/P.Sim.e));% distance matrix in steps
 Tr(1:n+1:end)=0;          % no distance between same node
-aggregateratio=1;         % charge rate at aggregate level optimization
+Ts=T(chargingStations,chargingStations);
+Trs=Tr(chargingStations,chargingStations);
 ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
 ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
+aggregateratio=1;         % charge rate at aggregate level optimization
 tripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.Sim.e; % trip distances in minutes
 
 % electricity and emissions profiles
@@ -101,7 +119,7 @@ ef=zeros(tsim,P.m);         % FCR charging
 
 % working variables
 g=zeros(1,P.m);             % current idle time
-s=false(3,P.m);             % current status: [relocating, connected, moving to charging station]
+s=false(5,P.m);             % current status: [relocating, connected, moving to charging station]
 queue=zeros(100,1);         % temporary variable to store queued arrivals
 
 % results variables
@@ -110,24 +128,10 @@ waiting=zeros(r,1);             % minutes waited for each request
 dropped=false(r,1);             % request is dropped?
 chosenmode=false(r,1);          % which mode is chosen?
 offeredprices=zeros(r,1);       % price offered to each passenger
-sc=false(tsim,P.m);             % connected to charging station status
-sm=false(tsim,P.m);             % moving status
+status=zeros(tsim,P.m);         % vehicle status
 relodist=zeros(tsim,1);         % distances of relocation (at moment of decision)
 tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
-
-
-%% setup clustering
-
-if exist('Clusters','var')
-    clusters=Clusters;
-else
-    chargingStations=(1:n)';
-    clusters=(1:n)';
-end
-As=clusters(A);
-Trs=Tr(chargingStations,chargingStations);
-nc=length(chargingStations);             % number of clusters
 
 
 %% load predictions
@@ -147,6 +151,12 @@ else
 end 
 
 
+%% setup trip assignment module
+
+Par=struct('Tr',Tr,'ad',ad,'e',P.Sim.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
+    'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,'LimitFCR',0,'chargepenalty',1);
+
+
 %% setup relocation module
 
 if isfield(P,'Relocation') && ~isempty(P.Relocation)
@@ -158,6 +168,36 @@ if isfield(P,'Relocation') && ~isempty(P.Relocation)
     autoRelocation=1;
 else
     autoRelocation=0;
+end
+
+
+%% setup frequency control reserve module
+
+fcr=false;
+if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
+    
+    fcr=true;
+    if isfield(P.FCR,'aggregatechargeratio')
+        aggregateratio=P.FCR.aggregatechargeratio;
+    end
+    
+    % TODO: use CSV as inputs
+    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
+    f=average2(fraw,P.Sim.e/fresolution);
+    
+    fcrLimit=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
+    Par.LimitFCR=fcrLimit;
+    Par.ac=ac;
+    Par.af=P.FCR.contracted*1000/P.Tech.battery/60*P.Sim.e;    % FCR rate per time step (normalized)
+    Par.H=P.Charging.beta/P.Sim.e;
+    Par.limits=P.FCR.limits;
+    Par.fastchargesoc=P.FCR.fastchargesoc;
+    Par.slowchargeratio=P.FCR.slowchargeratio;
+    Par.maxsoc=P.Operations.maxsoc;
+    Par.v2gminsoc=P.Operations.v2gminsoc;
+    Par.battery=P.Tech.battery;
+    Par.efficiency=P.Tech.efficiency;
+    
 end
 
 
@@ -194,7 +234,6 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         if exist(emdFileName,'file')
             load(emdFileName,'dkemd','dkod','dktrip');
         else
-            Ts=T(chargingStations,chargingStations);
             dkod=computetraveltime(A,Atimes,T,Beta);
             dkemd=computeemd(As,Atimes,Ts,Beta);
             dktrip=dkod+dkemd;
@@ -210,7 +249,8 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
         E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
         E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
-
+        E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
+        
         % matrix of optimal control variables for energy layer
         zmacro=zeros(4,etsim+mthor); 
         
@@ -220,38 +260,6 @@ else
     
     % charge as much as possible
     zmacro=[1;0;1;0]*ones(1,tsim);
-    
-end
-
-
-%% setup frequency control reserve module
-
-fcr=false;
-fcrLimit=0;
-if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
-    
-    fcr=true;
-    if isfield(P.FCR,'aggregatechargeratio')
-        aggregateratio=P.FCR.aggregatechargeratio;
-    end
-    
-    % TODO: use CSV as inputs
-    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
-    f=average2(fraw,P.Sim.e/fresolution);
-    
-    fcrLimit=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
-    
-    ParC.ac=ac;
-    ParC.af=P.FCR.contracted*1000/P.Tech.battery/60*P.Sim.e;    % FCR rate per time step (normalized)
-    ParC.H=P.Charging.beta/P.Sim.e;
-    ParC.limits=P.FCR.limits;
-    ParC.fastchargesoc=P.FCR.fastchargesoc;
-    ParC.slowchargeratio=P.FCR.slowchargeratio;
-    ParC.minsoc=P.Operations.minsoc;
-    ParC.maxsoc=P.Operations.maxsoc;
-    ParC.v2gminsoc=P.Operations.v2gminsoc;
-    ParC.battery=P.Tech.battery;
-    ParC.efficiency=P.Tech.efficiency;
     
 end
 
@@ -308,16 +316,6 @@ end
 probAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
 
 
-%% setup trip assignment module
-
-Par=struct('Tr',Tr,'ad',ad,'e',P.Sim.e,'minsoc',P.Operations.minsoc,'modechoice',P.modechoice,...
-    'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,'LimitFCR',fcrLimit,'chargepenalty',1);
-
-% if DynamicCharging
-%     Par.chargepenalty=1;
-% end
-
-
 %% initial states
 
 q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
@@ -330,10 +328,10 @@ if isfield(P.Operations,'dinit')
     d(1,:)=P.Operations.dinit;
 end
 
+% initial status
 atChargingStation=sum(u(1,:)==chargingStations);
-    
-% update statuses
-s(2,:)=logical(atChargingStation.*(d(1,:)==0));
+s(1,:)=logical(atChargingStation.*(d(1,:)==0));
+s(2,:)=logical(~atChargingStation.*(d(1,:)==0));
 
 
 %% variables for progress display and display initializations
@@ -363,14 +361,15 @@ for i=1:tsim
         ui(IdleReached)=chargingStations(clusters(ui(IdleReached)));
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
         di(IdleReached)=relodistCS;
-        s(3,IdleReached)=true;
+        s(2,IdleReached)=0;
+        s(5,IdleReached)=1;
         relodist(i)=relodist(i)+sum(relodistCS);
     end
     
     
     %% charging optimization
     
-    if dynamicCharging 
+    if dynamicCharging
         
         if rem(i,Beta/P.Sim.e)==1
         
@@ -380,7 +379,6 @@ for i=1:tsim
             actualminsoc=min(P.Operations.minsoc+P.Charging.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
             dktripnow=dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
 
-            E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
             E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
             E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
             E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
@@ -508,16 +506,18 @@ for i=1:tsim
         Selection2=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts+tr));
         a_to=(multiplier.*sparse(As2(Selection2,1),As2(Selection2,2),1,nc,nc))/Pb.ratio;
             
+        available=sum(s(1:2,:))';
+        
         % Vin: vehicles information in the form: [station delay soc connected relocating]
-        Vin=[clusters(ui) , di' , q(i,:)' , s(2,:)' , logical(s(1,:)+s(3,:))' ];
-        ParRel.ad=ad;
+        Vin=[clusters(ui) , di' , available.*q(i,:)' , s(1,:)' , logical(s(4,:)+s(5,:))' ];
         ParRel.dw=dw; % number of passengers waiting at each station
         ParRel.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
         ParRel.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
         ParRel.Trs=Trs;
         ParRel.limite=P.Relocation.ts;
         ParRel.bmin=bmin;
-        ParRel.LimitFCR=fcrLimit;
+        ParRel.ad=ad;
+        ParRel.LimitFCR=Par.LimitFCR;
         ParRel.chargepenalty=Par.chargepenalty;
         
         [Vout,bkt]=relocationmodule(Vin,ParRel);
@@ -531,8 +531,9 @@ for i=1:tsim
         di(used)=di(used)+relodisti;
         
         % update vehicles status (relocating vehicles cannot be relocated)
-        s(1,used)=1;
-        s(2:3,used)=0;
+        s(1:2,used)=0;
+        s(4,used)=1;
+        s(5,used)=0;
         
         % update results
         b(kt,:)=bkt;
@@ -563,8 +564,11 @@ for i=1:tsim
         % offered prices
         offeredprices(trips)=pp;
         
+        % available vehicles depending on status
+        available=sum(s(1:3,:))';
+        
         % Vin: vehicles information in the form: [station delay soc connected]
-        Vin=[ui' , di' , q(i,:)' , s(2,:)' ];
+        Vin=[ui' , di' , available.*q(i,:)' , s(1,:)' ];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
         Bin=[A(trips,:) , waiting(trips) , pp , alte ];
@@ -581,7 +585,8 @@ for i=1:tsim
         
         % update vehicles status
         used=logical(Vout(:,3));
-        s(1:3,used)=0;
+        s(1:2,used)=0;
+        s(3,used)=1;
         
         % update results
         tripdist(i)=tripdisti;
@@ -601,12 +606,10 @@ for i=1:tsim
     if fcr  % setpoint based
         
         if rem(i,Beta/P.Sim.e)==1
-            
-            [setPoints]=setpointfleet(ParC,q(i,:),s(2,:),zmacro(1:2,t));
-            
+            [setPoints]=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:2,t));
         end
         
-        [ei,efi]=setpointvehicle(ParC,q(i,:),s(2,:),f(i),setPoints);
+        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),f(i),setPoints);
         
         e(i,:)=ei;
         ef(i,:)=efi;
@@ -614,8 +617,8 @@ for i=1:tsim
     else
         
         % capacity based
-        capUp=s(2,:).*min(ac,P.Operations.maxsoc-q(i,:)); % charge
-        capDown=s(2,:).*min(ac,(q(i,:)-P.Operations.minsoc)*P.Tech.efficiency); % discharge
+        capUp=s(1,:).*min(ac,P.Operations.maxsoc-q(i,:)); % charge
+        capDown=s(1,:).*min(ac,(q(i,:)-P.Operations.minsoc)*P.Tech.efficiency); % discharge
         
         e(i,:)=min(capUp,max(0,chargevector))+max(-capDown,min(0,chargevector));
         
@@ -635,14 +638,14 @@ for i=1:tsim
     
     atChargingStation=sum(u(i+1,:)==chargingStations);
     
-    % update historic statuses
-    sm(i,:)=logical(di>0);
-    sc(i,:)=logical(s(2,:));
-    
     % update current statuses
-    s(1,:)=(d(i+1,:)>0).*s(1,:);
-    s(2,:)=logical(atChargingStation.*(d(i+1,:)==0));
+    s(1,:)=logical(atChargingStation.*(d(i+1,:)==0));
+    s(2,:)=logical(~atChargingStation.*(d(i+1,:)==0));
     s(3,:)=(d(i+1,:)>0).*s(3,:);
+    s(4,:)=(d(i+1,:)>0).*s(4,:);
+    s(5,:)=(d(i+1,:)>0).*s(5,:);
+    
+    status(i,:)=(1:5)*s;
     
     % record time
     S.lasttime=cputime;
@@ -664,6 +667,7 @@ if fcr
 else
     Sim.ef=sparse(ef);
 end
+Sim.status=status;
 
 % passenger related
 Sim.waiting=sparse(waiting); % waiting times
@@ -686,8 +690,6 @@ end
 
 % Internals struct
 Internals.b=b;
-Internals.sc=logical(sc);
-Internals.sm=logical(sm);
 Internals.d=uint8(d);
 Internals.zmacro=zmacro;
 
