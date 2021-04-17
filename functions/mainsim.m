@@ -173,7 +173,7 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         
         % inputs
         Beta=P.Charging.beta;
-        mthor=round(P.Charging.mthor/Beta);
+        chargingHorizon=round(P.Charging.mthor/Beta);
         
         % variables
         etsim=floor(1440/Beta); % number of charging decisions
@@ -186,7 +186,7 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
             load(emdFileName,'dkemd','dkod','dktrip');
         else
             dkod=computetraveltime(A,Atimes,T,Beta);
-            dkemd=computeemd(As,Atimes,Ts,Beta);
+            dkemd=computeemd(As,Atimes,Ts,Beta); % TODO: should be on prediction
             dktrip=dkod+dkemd;
             save(emdFileName,'dkemd','dkod','dktrip');
         end
@@ -194,23 +194,24 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         
         % energy layer variable: static values
         E.v2g=P.Operations.v2g; % use V2G?
-        E.eta=P.Tech.efficiency;% roundtrip (discharge) efficiency
+        E.efficiency=P.Tech.efficiency;% roundtrip (discharge) efficiency
         E.socboost=1e4;         % soft constraint for final soc (TODO: change depending on inputs)
-        E.T=mthor;              % number of time steps in energy layer
+        E.T=chargingHorizon;              % number of time steps in energy layer
         E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
         E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
         E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
         E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
         
         % matrix of optimal control variables for energy layer
-        zmacro=zeros(4,etsim+mthor); 
+        zmacro=zeros(4,etsim+chargingHorizon); 
         
     end
 
-else 
+else
     
     % charge as much as possible
-    zmacro=[1;0;1;0]*ones(1,tsim);
+    zmacro=[1;0;1;0];
+    t=1;
     
 end
 
@@ -227,13 +228,13 @@ if numel(Pricing.alternative)>1
     Aaltp=Pricing.alternative; % alternative price for each user is given as input 
 else
     Aaltp=Pricing.alternative*tripDistances; % alternative price for each user
-%     Pricing.altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
 end
 
 % initialize multiplier for relocation
 multiplier=1;
 
 if Pricing.dynamic
+    
     addpath functions/pricing
     tp=round(Pricing.tp/P.Sim.e);       % pricing interval
     tpH=round(Pricing.horizon/P.Sim.e); % pricing horizon
@@ -242,14 +243,11 @@ if Pricing.dynamic
     tariff=ones(nc^2,ceil(tsim/tp)+1)*Pricing.basetariff;
     surcharge=zeros(nc*2,ceil(tsim/tp)+1);
     
-%     % dynamic calculation is ignored if modechoice is not selected
-%     if ~P.modechoice
-%         warning('modechoice option is disabled, ignoring price optimization.')
-%     end
-else 
+else
+    
     tpH=0;
     tp=1;
-    dynamicPricing=NaN;
+    
 end
 
 % function to calculate probability of acceptance given a certain price for each OD pair
@@ -309,49 +307,41 @@ for i=1:tsim
     
     %% charging optimization
     
-    if dynamicCharging
-        
-        if rem(i,Beta/P.Sim.e)==1
-        
-            % index of energy layer
-            t=(i-1)/(Beta/P.Sim.e)+1;
+    if dynamicCharging && rem(i,Beta/P.Sim.e)==1
 
-            actualminsoc=min(P.Operations.minsoc+P.Charging.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
-            dktripnow=dktrip(t:t+mthor-1);    % minutes spent traveling during this horizon
+        % index of energy layer
+        t=(i-1)/(Beta/P.Sim.e)+1;
 
-            E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
-            E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
-            E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
-            E.dkav=max(0,P.m*Beta-dktripnow);         % minutes of availability of cars
-            E.electricityprice=melep(t:t+mthor-1)/1000; % convert to [$/kWh]
-            E.emissionsGridProfile=mco2(t:t+mthor-1); % [g/kWh]
+        actualminsoc=min(P.Operations.minsoc+P.Charging.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+        dktripnow=dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
 
-            maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
+        E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
+        E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
+        E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
+        E.dkav=max(0,P.m*Beta-dktripnow);         % minutes of availability of cars
+        E.electricityprice=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
+        E.emissionsGridProfile=mco2(t:t+chargingHorizon-1); % [g/kWh]
 
-            ELayerResults=aevopti11(E);
+        maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
 
-            if ~isempty(ELayerResults)
+        ELayerResults=aevopti11(E);
 
-                % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                zmacro(:,t:t+mthor-1)=[ ELayerResults.charging , ELayerResults.discharging*logical(P.Operations.v2g) , maxc , E.etrip ]';
-                zmacro(isnan(zmacro))=0;
+        if ~isempty(ELayerResults)
 
-            else
+            % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
+            zmacro(:,t:t+chargingHorizon-1)=[ ELayerResults.charging , ELayerResults.discharging*logical(P.Operations.v2g) , maxc , E.etrip ]';
+            zmacro(isnan(zmacro))=0;
 
-                % in case there is no feasible solution, charge as much as possible
-                zmacro(:,t:t+mthor-1)=[ones(size(maxc,1),1),zeros(size(maxc,1),1),maxc,E.etrip]';
+        else
 
-            end
+            % in case there is no feasible solution, charge as much as possible
+            zmacro(:,t:t+chargingHorizon-1)=[ones(size(maxc,1),1),zeros(size(maxc,1),1),maxc,E.etrip]';
 
-            % record time
-            S.lasttime=cputime;
-            
-        end 
+        end
 
-    else
-        
-        t=i;
-        
+        % record time
+        S.lasttime=cputime;
+
     end
     
     v2gallowed=q(i,:)>P.Operations.v2gminsoc;
@@ -584,8 +574,8 @@ if isfield(P,'Pricing')
     Sim.revenues=sum((offeredprices-Pricing.relocationcost.*tripDistances(1:r)).*chosenmode.*(1-dropped));
     Sim.relocationcosts=sum(relodist)*P.Sim.e*Pricing.relocationcost;
     Sim.offeredprices=offeredprices;
-    Sim.tariff=tariff;
-    Sim.surcharge=surcharge;
+    Sim.tariff=sparse(tariff);
+    Sim.surcharge=sparse(surcharge);
 end
 
 % Internals struct
