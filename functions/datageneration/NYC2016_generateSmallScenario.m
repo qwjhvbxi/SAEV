@@ -9,7 +9,7 @@ if 0
     
     addpath functions
     DataFolder=getdatafolder();
-    P=cpar('NYC2016');
+    P=getp('NYC2016');
 
     setlimits=[0,5;0,5];
     
@@ -49,7 +49,7 @@ setlimits=[0,5;0,5];
 
 if 0  % specific day
 
-    P=cpar('NYC2016');
+    P=getp('NYC2016');
     tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
 
     % load original files

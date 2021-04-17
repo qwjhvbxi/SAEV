@@ -35,7 +35,6 @@ end
 DataFolder=getdatafolder();
 
 % generate input matrix of struct
-% S=cpar(mapscenario);
 S=getp(mapscenario);
 [Pmat,varparams]=changeStruct(S,varargin);
 
