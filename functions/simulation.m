@@ -19,7 +19,7 @@
 % 
 % See also: getp
 
-function [Res]=main(P,extsave,dispiter)
+function [Res]=simulation(P,extsave,dispiter)
 
 %% initializations and input check
 
