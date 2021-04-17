@@ -1,6 +1,12 @@
+%% [Res]=MAINSIM(P,dispiter)
+% Main simulation.
+% Vehicles start at beginning of time step, arrive at end of time step.
+% 
+% TODO: add charging station size
+% 
+% See also: main
 
-
-function [Res]=simulation(P,dispiter)
+function [Res]=mainsim(P,dispiter)
 
 DataFolder=getdatafolder();
 

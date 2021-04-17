@@ -1,4 +1,4 @@
-function setupFolders()
+function setupfolders()
 
 if exist('functions/DataFolderAddress.mat','file')
     load('functions/DataFolderAddress.mat','DataFolder');

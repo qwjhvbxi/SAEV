@@ -9,7 +9,7 @@
 % - 'Munich_clustered'
 % - 'Munich_clustered_week'
 % 
-% see also GENERALC
+% See also: main
 
 function P=cpar(Scenario,trlayer)
 

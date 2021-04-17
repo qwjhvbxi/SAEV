@@ -23,7 +23,7 @@ The model tends to create large savefiles.
 For this reason, it is better to have the folder with savefiles in a location with enough space separated from the code.
 To setup a data folder in another location, you can run:
 
-`setup`
+`setupfolders`
 
 This will prompt you to choose a folder where to save output files and parameters.  
 

@@ -1,6 +1,5 @@
 % [Res]=MAIN(P[,extsave,dispiter])
-% Run SAEV simulation and relocation/charge oprimization.
-% Vehicles start at beginning of time step, arrive at end of time step.
+% Run SAEV simulation and relocation/charge optimization. 
 % 
 % u: destination or position at beginning of time step
 % q: SOC at beginning of time step
@@ -14,10 +13,8 @@
 %     3 moving
 %     4 moving for relocation
 %     5 moving to charging station
-%
-% TODO: add charging station size
 % 
-% See also: getp
+% See also: getp, mainsim
 
 function [Res]=main(P,extsave,dispiter)
 
@@ -58,7 +55,7 @@ if isfield(P,'trlayeralg') && strcmp(P.trlayeralg,'opti')
     return
 end
 
-Res=simulation(P,dispiter);
+Res=mainsim(P,dispiter);
 
 % save results
 if extsave>0
