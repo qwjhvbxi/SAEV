@@ -1,25 +1,21 @@
-function TimeLeft=displayprogress(iteration,totaliterations,timeelapsed)
+function displayprogress(i,itot,dispiter,comptime,displayResolution)
 
-LastIterations=100;
-
-if numel(timeelapsed)==1
-    % global average
-    timespent=timeelapsed;
-    relatedtime=iteration;
-else
-    % consider only last iterations
-    timespent=timeelapsed(max(1,iteration))-timeelapsed(max(1,iteration-LastIterations+1));
-    relatedtime=min(LastIterations,iteration);
+if nargin<4
+    displayResolution=40;
 end
 
-displayResolution=20;
-TimeLeft=timespent/relatedtime*(totaliterations-iteration);
-
-fprintf('\n\n');
-fprintf('Progress: %0.1f%%\n',iteration/totaliterations*100);
-displaytimes(TimeLeft,'ETA');
-fprintf(char('*'*ones(1,floor(iteration/totaliterations*displayResolution)  )));
-fprintf(char('-'*ones(1,displayResolution-floor(iteration/totaliterations*displayResolution) )));
-fprintf('\n\n');
-
+% update state of simulation
+if dispiter<0
+    if i~=itot
+        fprintf('No. %d: %0.1f%% \n',-dispiter,i/itot*100);
+    else
+        fprintf('No. %d: finished',-dispiter);
+    end
+elseif dispiter==1
+    clc
+    progressbar(i,tot,displayResolution);
+    fprintf('\n\n')
+elseif dispiter==2
+    clc
+    displayeta(i,itot,comptime); %cputime-starttime); 
 end

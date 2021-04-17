@@ -348,7 +348,7 @@ for i=1:tsim
     
 	%% display progress
     
-    displayState(i,tsim,dispiter,S.comptime(i)-S.comptime(1),40)
+    displayprogress(i,tsim,dispiter,S.comptime(i)-S.comptime(1),40)
     ui=double(u(i,:));
     di=double(d(i,:));
     relodist(i)=0;
