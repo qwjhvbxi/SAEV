@@ -50,10 +50,16 @@ if extsave<2
     end
 end
 
+
+%% launch alternative benchmark simulation
+
 if isfield(P,'trlayeralg') && strcmp(P.trlayeralg,'opti')
     Res=generalmilp(P,extsave,dispiter);
     return
 end
+
+
+%% launch main simulation
 
 Res=mainsim(P,dispiter);
 
@@ -62,10 +68,11 @@ if extsave>0
     save(simname,'Res','P');
 end
 
-
-%% end display
+% end display
 
 if dispiter<0
     fprintf('sim #%d ',-dispiter)
 end
 fprintf('successfully completed \n');
+
+
