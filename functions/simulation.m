@@ -1,6 +1,8 @@
 
 
-function [Res]=simulation(P,extsave,dispiter)
+function [Res]=simulation(P,dispiter)
+
+DataFolder=getdatafolder();
 
 %% load external files: scenario, trips 
 

@@ -58,7 +58,7 @@ if isfield(P,'trlayeralg') && strcmp(P.trlayeralg,'opti')
     return
 end
 
-Res=simulation(P,extsave,dispiter);
+Res=simulation(P,dispiter);
 
 % save results
 if extsave>0
