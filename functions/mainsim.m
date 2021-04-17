@@ -58,7 +58,7 @@ co2=average2(co2Minute,P.Sim.e);
 if isfield(P,'Pricing') && ~isempty(P.Pricing)
     Pricing=P.Pricing;
 else
-    Pricing=struct('relocationcost',0,'basetariff',0,'altp',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
+    Pricing=struct('relocationcost',0,'basetariff',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
 end
 
 % main simulation variables
@@ -218,21 +218,15 @@ end
 %% setup pricing module 
 
 % add info to Pricing struct
+Pricing.n=nc;
 Pricing.c=Trs*P.Sim.e;
 Pricing.relocation=autoRelocation;
-
-% initialize matrix of fare per minute
-perDistanceTariff=ones(nc,nc).*Pricing.basetariff;
-
-% initialize surcharges per stations
-surcharges=zeros(nc,nc);
 
 % price of alternative option 
 if numel(Pricing.alternative)>1
     Aaltp=Pricing.alternative; % alternative price for each user is given as input 
 else
     Aaltp=Pricing.alternative*tripDistances; % alternative price for each user
-    altpmat=Pricing.alternative.*Pricing.c; % alternative price for each OD
 %     Pricing.altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
 end
 
@@ -243,22 +237,17 @@ if Pricing.dynamic
     addpath functions/pricing
     tp=round(Pricing.tp/P.Sim.e);       % pricing interval
     tpH=round(Pricing.horizon/P.Sim.e); % pricing horizon
-    nodebased=isfield(Pricing,'nodebased') && Pricing.nodebased;
     
     % initialization for dynamic pricing
-    if ~nodebased
-        % initialize matrix of real prices offered
-        dynamicPricing=ones(nc,nc,ceil(tsim/tp)+1)*Pricing.basetariff;
-    else
-        % initialize matrix of surcharges
-        dynamicPricing=zeros(ceil(tsim/tp)+1,nc*2);
-    end
+    tariff=ones(nc^2,ceil(tsim/tp)+1)*Pricing.basetariff;
+    surcharge=zeros(nc*2,ceil(tsim/tp)+1);
     
-    % dynamic calculation is ignored if modechoice is not selected
-    if ~P.modechoice
-        warning('modechoice option is disabled, ignoring price optimization.')
-    end
+%     % dynamic calculation is ignored if modechoice is not selected
+%     if ~P.modechoice
+%         warning('modechoice option is disabled, ignoring price optimization.')
+%     end
 else 
+    tpH=0;
     tp=1;
     dynamicPricing=NaN;
 end
@@ -372,69 +361,28 @@ for i=1:tsim
     
     %% pricing optimization
 
-    % current pricing number
-    kp=ceil(i/tp);
-
     if P.modechoice
         
-        % if Pricing.dynamic>0 && dynamicpricing<3 && (i==1 || mod(i-(ts+tr+1),tp)==0)
-        if Pricing.dynamic 
+        if ~Pricing.dynamic || mod(i-1,tp)==0
             
-            if mod(i-1,tp)==0
+            % current pricing number
+            kp=ceil(i/tp);
         
-                % expected trips
-                selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
-                AsNow=As(selection0,:);
-
-                % number of vehicles at each station (including vehicles directed there)
-                Pricing.v=histc(clusters(ui),1:nc);
-                a_tp=sparse(AsNow(:,1),AsNow(:,2),1,nc,nc);%+q_t;
-                a_tp(1:nc+1:end)=0;
-                Pricing.a=a_tp;
-
-                if numel(P.Pricing.alternative)>1
-                    altpNow=Aaltp(selection0);
-                    [a,Ib,~]=unique(AsNow,'rows','stable');
-                    Pricing.altp=sparse(a(:,1),a(:,2),altpNow(Ib),nc,nc);
-                else
-                    Pricing.altp=altpmat;
-                end
-
-                if ~nodebased
-
-                    [ODpricesNow,~,~]=NLPricing5(Pricing); % OD-pair-based pricing
-
-                    dynamicPricing(:,:,kp)=ODpricesNow;
-
-                    perDistanceTariff=dynamicPricing(:,:,kp);
-
-                else 
-
-                    [NodeSurchargeNow,~,~]=NLPricingNodes(Pricing); % node-based pricing
-
-                    dynamicPricing(kp,:)=NodeSurchargeNow';
-
-                    surcharges=dynamicPricing(kp,1:nc)+dynamicPricing(kp,nc+1:2*nc)';
-
-                end
-            end
-            
-        else
-            
             % expected trips
-            selection0=AbuckC(i)+1:AbuckC(i+1);
+            selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
             AsNow=As(selection0,:);
-            if numel(P.Pricing.alternative)>1
-                altpNow=Aaltp(selection0);
-                [a,Ib,~]=unique(AsNow,'rows','stable');
-                Pricing.altp=sparse(a(:,1),a(:,2),altpNow(Ib),nc,nc);
-            else
-                Pricing.altp=altpmat;
-            end
+            altpNow=Aaltp(selection0);
+            
+            [perDistanceTariff,surchargeNodes,altp]=pricingmodule(Pricing,AsNow,altpNow,clusters(ui));
+            
+            tariff(:,kp)=perDistanceTariff(:);
+            surcharge(:,kp)=surchargeNodes;
+            
+            surchargeMat=surchargeNodes(1:nc)+surchargeNodes(nc+1:2*nc)';
             
         end
         
-        multiplier=(probAcc(perDistanceTariff,surcharges,Pricing.altp));
+        multiplier=(probAcc(perDistanceTariff,surchargeMat,altp));
         
     end
     
@@ -509,7 +457,7 @@ for i=1:tsim
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+...
-            surcharges(selectorClusters);
+            surchargeMat(selectorClusters);
         alte=exp(-Aaltp(trips));
         
         % offered prices
@@ -633,10 +581,11 @@ Sim.emissions=(sum(Sim.e/60*P.Sim.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
 % pricing info
 if isfield(P,'Pricing')
-    Sim.revenues=sum((offeredprices-Pricing.relocationcost.*tripDistances).*chosenmode.*(1-dropped));
+    Sim.revenues=sum((offeredprices-Pricing.relocationcost.*tripDistances(1:r)).*chosenmode.*(1-dropped));
     Sim.relocationcosts=sum(relodist)*P.Sim.e*Pricing.relocationcost;
     Sim.offeredprices=offeredprices;
-    Sim.prices=dynamicPricing;
+    Sim.tariff=tariff;
+    Sim.surcharge=surcharge;
 end
 
 % Internals struct
