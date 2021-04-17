@@ -120,6 +120,7 @@ if isfield(P,'Relocation') && ~isempty(P.Relocation)
     b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
     autoRelocation=1;
 else
+    b=NaN;
     autoRelocation=0;
 end
 
