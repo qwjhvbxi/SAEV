@@ -103,11 +103,12 @@ else
 end 
 
 
-%% setup trip assignment module
+%% setup internal parameter struct
 
 Par=struct('Tr',Tr,'ad',ad,'ac',ac,'e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
-    'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
-    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency);
+    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
+    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0);
+
 
 %% setup relocation module
 
@@ -125,7 +126,6 @@ end
 
 %% setup frequency control reserve module
 
-Par.fcr=false;
 Beta=0;
 if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
     
@@ -145,7 +145,6 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     Par.limits=P.FCR.limits;
     Par.fastchargesoc=P.FCR.fastchargesoc;
     Par.slowchargeratio=P.FCR.slowchargeratio;
-    Par.battery=P.Tech.battery;
     
 end
 
@@ -153,7 +152,6 @@ end
 %% setup charging module
 
 dynamicCharging=false;
-Par.refillmaxsoc=0;
 Trips=[];
 
 if isfield(P,'Charging') && ~isempty(P.Charging)
