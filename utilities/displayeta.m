@@ -1,4 +1,4 @@
-function TimeLeft=displayprogress(iteration,totaliterations,timeelapsed)
+function timeLeft=displayeta(iteration,totaliterations,timeelapsed)
 
 LastIterations=100;
 
@@ -12,11 +12,11 @@ else
     relatedtime=min(LastIterations,iteration);
 end
 
-TimeLeft=timespent/relatedtime*(totaliterations-iteration);
+timeLeft=timespent/relatedtime*(totaliterations-iteration);
 
 fprintf('\n\n');
 fprintf('Progress: %0.1f%%\n',iteration/totaliterations*100);
-fprintf('ETA: %s \n',formattimes(TimeLeft));
+fprintf('ETA: %s \n',formattimes(timeLeft));
 progressbar(iteration,totaliterations,20);
 fprintf('\n\n');
 
