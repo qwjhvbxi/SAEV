@@ -218,6 +218,12 @@ Pricing.n=nc;
 Pricing.c=Trs*P.Sim.e;
 Pricing.relocation=autoRelocation;
 
+% initialize matrix of fare per minute
+perDistanceTariff=ones(nc,nc).*Pricing.basetariff;
+
+% initialize surcharges per stations
+surchargeMat=zeros(nc,nc);
+
 % price of alternative option 
 if numel(Pricing.alternative)>1
     Aaltp=Pricing.alternative; % alternative price for each user is given as input 
@@ -234,16 +240,16 @@ if Pricing.dynamic
     tp=round(Pricing.tp/P.Sim.e);       % pricing interval
     tpH=round(Pricing.horizon/P.Sim.e); % pricing horizon
     
-    % initialization for dynamic pricing
-    tariff=ones(nc^2,ceil(tsim/tp)+1)*Pricing.basetariff;
-    surcharge=zeros(nc*2,ceil(tsim/tp)+1);
-    
 else
     
     tpH=0;
-    tp=1;
+    tp=tsim;
     
 end
+
+% initialization for dynamic pricing
+tariff=ones(nc^2,ceil(tsim/tp))*Pricing.basetariff;
+surcharge=zeros(nc*2,ceil(tsim/tp));
 
 % function to calculate probability of acceptance given a certain price for each OD pair
 probAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
