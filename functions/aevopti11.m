@@ -7,7 +7,7 @@
 %   maxchargeminute
 %   T
 %   v2g                 boolean
-%   eta
+%   efficiency
 %   selling
 %   cyclingcost [$/kWh]
 %   einit
@@ -80,8 +80,8 @@ beq=[];
 
 
 % min max energy
-A=[     -tril(ones(Q.T)) , tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % min SOC constraint (e(t))
-A=[A;   tril(ones(Q.T)) , -tril(ones(Q.T))/Q.eta  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % max SOC constraint (e(t))
+A=[     -tril(ones(Q.T)) , tril(ones(Q.T))/Q.efficiency  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % min SOC constraint (e(t))
+A=[A;   tril(ones(Q.T)) , -tril(ones(Q.T))/Q.efficiency  , zeros(Q.T,Q.T*(2+4*numgenerators))];      % max SOC constraint (e(t))
 
 % main equation (TODO: need to add curtailment variable in case of large surplus)
 %        charge [kWh]            discharge                   import                  export                              generators        
@@ -98,7 +98,7 @@ fmge=zeros(4*Q.T,1); % cost of energy generation
 fco2=[ zeros(2*Q.T,1)   ; Q.emissionsGridProfile*Q.carbonprice/10^6 ; zeros(Q.T,1) ]; 
 
 % soc boost
-fsoc=[ -ones(Q.T,1) ; ones(Q.T,1)/Q.eta ; zeros(Q.T*2+4*numgenerators,1) ];
+fsoc=[ -ones(Q.T,1) ; ones(Q.T,1)/Q.efficiency ; zeros(Q.T*2+4*numgenerators,1) ];
 
 % constraints for generators & cost function constructors
 for i=1:numgenerators
@@ -179,7 +179,7 @@ if Flag>0
     Res.discharging=x1(Q.T+1:2*Q.T);
 
     % stored energy
-    Res.E(2:end)=  Res.E(1)  +cumsum(x1(1:Q.T)) -cumsum(x1(Q.T+1:2*Q.T))/Q.eta  -etripcday;
+    Res.E(2:end)=  Res.E(1)  +cumsum(x1(1:Q.T)) -cumsum(x1(Q.T+1:2*Q.T))/Q.efficiency  -etripcday;
 
     % grid import/export
     Res.gridimport=x1(2*Q.T+1:Q.T*3);
