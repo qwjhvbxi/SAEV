@@ -1,4 +1,4 @@
-%% [Pmat,varparams]=changeStruct(S,Inputs)
+%% [Pmat,varparams]=modifystruct(S,Inputs)
 % Return a matrix of struct with modified parameters. The parameters to
 % change are specified in the format (...,'FieldName',value,...). You can
 % specify up to two parameters with vector values and an unlimited number
@@ -8,7 +8,7 @@
 % quotation marks ( " " ).
 %   example: (...,'FieldName',"text",...)
 
-function [Pmat,varparams]=changeStruct(S,varargin)
+function [Pmat,varparams]=modifystruct(S,varargin)
 
 if numel(varargin)==1
     Inputs=varargin{1};

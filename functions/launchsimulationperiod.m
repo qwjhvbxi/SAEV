@@ -100,7 +100,7 @@ for j=1:length(Period)
     % variable input
     if numel(varargin)>0
         NewInput={varargin{1},varargin{2}(j)};
-        Pmat=changeStruct(P,NewInput);
+        Pmat=modifystruct(P,NewInput);
         P=Pmat{1};
     end
     
