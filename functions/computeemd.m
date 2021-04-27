@@ -1,27 +1,17 @@
-%% dkemd=COMPUTEEMD(A,Atimes,T,Beta)
+%% [dkemd,dkod]=COMPUTEEMD(A,Atimes,T,Beta,relocationNodes)
 % Compute travel time for relocation during time horizon
 % 
 % See also: main
 
-function dkemd=computeemd(A,Atimes,T,Beta)
+function [dkemd,dkod]=computeemd(A,Atimes,T,Beta,relocationNodes)
 
 fprintf('\n Calculating approximate relocation distance\n\n')
 
-n=size(T,1);
 t=double(max(Atimes(:)));
 mtsim=round(t/Beta);
-approx=(n>100);
-
-fo=zeros(mtsim,n);
-fd=zeros(mtsim,n);
-
-for i=1:mtsim
-    thisStep=logical((Atimes(:,1)>=(i-1)*Beta+1).*(Atimes(:,1)<=i*Beta));
-    fo(i,:)=accumarray([A(thisStep,1);n],[ones(sum(thisStep),1);0]);
-    fd(i,:)=accumarray([A(thisStep,2);n],[ones(sum(thisStep),1);0]);
-end
 
 dkemd=zeros(mtsim,1);
+dkod=zeros(mtsim,1);
 
 for kt=1:mtsim
     
@@ -29,17 +19,34 @@ for kt=1:mtsim
     clc
     fprintf('\n %d/%d\n\n',kt,mtsim)
     
-    F=fd(kt,:);
-    R=fo(kt,:);
+    [thisT]=gettraveltimenow(T,kt*Beta);
+    
+    if nargin<5
+        n=size(thisT,1);
+        relocationNodes=(1:n)';
+    end
+    thisTrelocation=thisT(relocationNodes,relocationNodes);
+    nr=size(thisTrelocation,1);
+    approx=(nr>100);
+    
+    % find trips in this time step
+    thisStep=logical((Atimes(:,1)>=(kt-1)*Beta+1).*(Atimes(:,1)<=kt*Beta));
+    
+    % feeder and receiver stations
+    F=accumarray([A(thisStep,2);nr],[ones(sum(thisStep),1);0])';
+    R=accumarray([A(thisStep,1);nr],[ones(sum(thisStep),1);0])';
 
     % identify optimal relocation flux
-    x=optimalrelocationfluxes(F,R,T,60,approx);
+    x=optimalrelocationfluxes(F,R,thisTrelocation,60,approx);
 
     % read results
     [Fs,Rs,Vr]=find(x);
 
     % distance of relocation
-    dkemd(kt)=sum(T(sub2ind(size(T),Fs,Rs)).*Vr);
+    dkemd(kt)=sum(thisTrelocation(sub2ind(size(thisTrelocation),Fs,Rs)).*Vr);
+    
+    % distance to travel
+    dkod(kt)=sum(thisTrelocation(sub2ind(size(thisTrelocation),A(thisStep,1),A(thisStep,2))));
 
 end
 

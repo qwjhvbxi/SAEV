@@ -13,7 +13,7 @@ DataFolder=getdatafolder();
 %% load external files: scenario, trips 
 
 % load distance matrix
-load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
+[T,clusters,chargingStations]=getscenario(P);
 
 % load trips
 [A,Atimes,AbuckC,~]=gettrips(P);
@@ -23,32 +23,12 @@ AbuckC=AbuckC(1:P.Sim.e:end);
 [elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
 
-%% setup clustering
-
-n=size(T,1);              % number of nodes
-if exist('Clusters','var')
-    clusters=Clusters;
-else
-    chargingStations=(1:n)';
-    clusters=(1:n)';
-end
-As=clusters(A);
-nc=length(chargingStations);             % number of clusters
-
-
 %% initialize parameters of simulation
 
 % parameters
 r=AbuckC(1441);           % number of requests
 tsim=1440/P.Sim.e;        % number of time steps
-Tr=max(1,round(T/P.Sim.e));% distance matrix in steps
-Tr(1:n+1:end)=0;          % no distance between same node
-Ts=T(chargingStations,chargingStations);
-Trs=Tr(chargingStations,chargingStations);
-ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
-ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
 aggregateratio=1;         % charge rate at aggregate level optimization
-tripDistances=Tr(sub2ind(size(Tr),A(:,1),A(:,2)))*P.Sim.e; % trip distances in minutes
 
 % electricity and emissions profiles
 elep=average2(elepMinute,P.Sim.e);
@@ -86,14 +66,40 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
 
 
+%% setup clustering
+
+n=size(clusters,1);             % number of nodes 
+As=clusters(A);                 % OD at clusters
+nc=length(chargingStations);    % number of clusters
+
+
+%% setup internal parameters
+
+Par=struct('e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
+    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
+    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0);
+Par.ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
+Par.ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
+
+% distances
+if ~isstruct(T)
+    Tr=max(1,round(T/P.Sim.e));% distance matrix in steps
+    Tr(1:n+1:end)=0;          % no distance between same node
+    Trs=Tr(chargingStations,chargingStations);
+    Par.Tr=Tr;
+    Pricing.c=Trs*P.Sim.e;
+end
+tripDistances=nan(r,1);
+
+
 %% load predictions
 
 % TODO: cleanup call to secondary trip file (real vs expected/forecasted)
 if ~P.Sim.mpcpredict
-    temp1=strfind(P.tripfolder,'_');
-    Pb.tripfolder=P.tripfolder(1:temp1(end)-1);
+    k=strfind(P.tripfolder,'_');
+    Pb.tripfolder=P.tripfolder(1:k(end)-1);
     Pb.tripday=P.tripday;
-    Pb.ratio=str2double(P.tripfolder(temp1(end)+1:end)); % TODO: change!!
+    Pb.ratio=str2double(P.tripfolder(k(end)+1:end)); % TODO: change!!
     [As2,~,AbuckC2,~]=gettrips(Pb);
     AbuckC2=AbuckC2(1:P.Sim.e:end);
 else
@@ -101,13 +107,6 @@ else
     As2=As;
     AbuckC2=AbuckC;
 end 
-
-
-%% setup internal parameter struct
-
-Par=struct('Tr',Tr,'ad',ad,'ac',ac,'e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
-    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
-    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0);
 
 
 %% setup relocation module
@@ -183,17 +182,17 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
             load(emdFileName,'dkemd','dkod','dktrip');
         else
             dkod=computetraveltime(A,Atimes,T,Beta);
-            dkemd=computeemd(As,Atimes,Ts,Beta); % TODO: should be on prediction
+            [dkemd,~]=computeemd(As,Atimes,T,Beta,chargingStations); % TODO: should be on prediction
             dktrip=dkod+dkemd;
             save(emdFileName,'dkemd','dkod','dktrip');
         end
         Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dktrip);
         
         % energy layer variable: static values
-        E.v2g=P.Operations.v2g; % use V2G?
-        E.efficiency=P.Tech.efficiency;% roundtrip (discharge) efficiency
-        E.socboost=1e4;         % soft constraint for final soc (TODO: change depending on inputs)
-        E.T=chargingHorizon;              % number of time steps in energy layer
+        E.v2g=P.Operations.v2g;             % use V2G?
+        E.efficiency=P.Tech.efficiency;     % roundtrip (discharge) efficiency
+        E.socboost=1e4;                     % soft constraint for final soc (TODO: change depending on inputs)
+        E.T=chargingHorizon;                % number of time steps in energy layer
         E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
         E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
         E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
@@ -216,7 +215,6 @@ end
 
 % add info to Pricing struct
 Pricing.n=nc;
-Pricing.c=Trs*P.Sim.e;
 Pricing.relocation=autoRelocation;
 
 % initialize matrix of fare per minute
@@ -225,12 +223,8 @@ perDistanceTariff=ones(nc,nc).*Pricing.basetariff;
 % initialize surcharges per stations
 surchargeMat=zeros(nc,nc);
 
-% price of alternative option 
-if numel(Pricing.alternative)>1
-    Aaltp=Pricing.alternative; % alternative price for each user is given as input 
-else
-    Aaltp=Pricing.alternative*tripDistances; % alternative price for each user
-end
+% initialize alternative prices
+Aaltp=nan(r,1);
 
 % initialize multiplier for relocation
 multiplier=1;
@@ -253,7 +247,7 @@ tariff=ones(nc^2,ceil(tsim/tp))*Pricing.basetariff;
 surcharge=zeros(nc*2,ceil(tsim/tp));
 
 % function to calculate probability of acceptance given a certain price for each OD pair
-probAcc=@(p,s,altp) exp(-p.*Pricing.c-s)./(exp(-p.*Pricing.c-s)+exp(-altp));
+probAcc=@(p,s,altp,c) exp(-p.*c-s)./(exp(-p.*c-s)+exp(-altp)); % TODO: remove and merge
 
 
 %% initial states
@@ -292,6 +286,18 @@ for i=1:tsim
     ui=double(u(i,:));
     di=double(d(i,:));
     relodist(i)=0;
+    
+    
+    %% calculate current distance matrix
+    
+    if isstruct(T)
+        [thisT]=gettraveltimenow(T,i*Par.e);
+        Tr=max(1,round(thisT/P.Sim.e));% distance matrix in steps
+        Trs=Tr(chargingStations,chargingStations);
+        Par.Tr=Tr;
+        % function to calculate probability of acceptance given a certain price for each OD pair
+        Pricing.c=Trs*Par.e;
+    end
     
     
     %% move idle vehicles back to charging stations
@@ -363,9 +369,19 @@ for i=1:tsim
             
             % current pricing number
             kp=ceil(i/tp);
-        
+            
             % expected trips
             selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
+            
+            % price of alternative option 
+            if numel(Pricing.alternative)>1
+                % alternative price for each user is given as input 
+                Aaltp(selection0)=Pricing.alternative(selection0);
+            else
+                % alternative price for each user calculated with trip distances in minutes
+                Aaltp(selection0)=Pricing.alternative*Tr(sub2ind(size(Tr),A(selection0,1),A(selection0,2)))*P.Sim.e; 
+            end
+            
             AsNow=As(selection0,:);
             altpNow=Aaltp(selection0);
             
@@ -378,7 +394,7 @@ for i=1:tsim
             
         end
         
-        multiplier=(probAcc(perDistanceTariff,surchargeMat,altp));
+        multiplier=(probAcc(perDistanceTariff,surchargeMat,altp,Pricing.c));
         
     end
     
@@ -411,7 +427,7 @@ for i=1:tsim
         ParRel.Trs=Trs;
         ParRel.limite=P.Relocation.ts;
         ParRel.bmin=bmin;
-        ParRel.ad=ad;
+        ParRel.ad=Par.ad;
         ParRel.LimitFCR=Par.LimitFCR;
         ParRel.chargepenalty=Par.chargepenalty;
         
@@ -452,7 +468,8 @@ for i=1:tsim
         
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
-        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+...
+        tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.e;
+        pp=perDistanceTariff(selectorClusters).*tripDistances(trips); % trip distances in minutes+...
             surchargeMat(selectorClusters);
         alte=exp(-Aaltp(trips));
         
@@ -503,7 +520,7 @@ for i=1:tsim
     ef(i,:)=efi;
     
     % update SOC 
-    q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/P.Tech.efficiency-(di>0).*ad;
+    q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/P.Tech.efficiency-(di>0).*Par.ad;
 
     % update position
     u(i+1,:)=ui;
@@ -540,7 +557,7 @@ end
 % vehicle related
 Sim.u=uint16(u); % final destination of vehicles (station) [tsim x m]
 Sim.q=single(q); % state of charge 
-Sim.e=sparse(e/ac*P.Tech.chargekw);
+Sim.e=sparse(e/Par.ac*P.Tech.chargekw);
 Sim.ef=datacompactor(ef*P.Tech.battery*60/P.Sim.e);
 Sim.status=status;
 

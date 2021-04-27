@@ -12,6 +12,8 @@ if nargin<3 || ~Plots
 
     load([DataFolder 'scenarios/' scenario],'T','C')
     
+    T=gettraveltimenow(T,0);
+    
     % remove nan values if they exist
     nanT=isnan(T(:,1));
     realT=find(1-nanT);
@@ -33,11 +35,12 @@ if nargin<3 || ~Plots
 
     T(isnan(T))=0;
 
-    save([DataFolder 'scenarios/' scenario '-' num2str(K) 'clusters'],'T','C','Clusters','chargingStations')
+    save([DataFolder 'scenarios/' scenario '_' num2str(K)],'Clusters','chargingStations')
 
 else
     
-    load([DataFolder 'scenarios/' scenario '-' num2str(K) 'clusters'],'T','C','Clusters','chargingStations')
+    load([DataFolder 'scenarios/' scenario],'C');
+    load([DataFolder 'scenarios/' scenario '_' num2str(K)],'Clusters','chargingStations')
 
     c=2
 
