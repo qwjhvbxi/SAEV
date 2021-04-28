@@ -126,7 +126,6 @@ end
 
 %% setup frequency control reserve module
 
-Beta=0;
 if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
     
     Par.fcr=true;
@@ -153,6 +152,7 @@ end
 
 dynamicCharging=false;
 Trips=[];
+Beta=0;
 
 if isfield(P,'Charging') && ~isempty(P.Charging)
     
@@ -165,8 +165,6 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         
     else
     
-        addpath functions/pricing
-        
         dynamicCharging=true;
         
         % inputs
@@ -215,41 +213,29 @@ end
 
 %% setup pricing module 
 
+addpath functions/pricing
+
 % add info to Pricing struct
 Pricing.n=nc;
 Pricing.relocation=autoRelocation;
 
-% initialize matrix of fare per minute
-perDistanceTariff=ones(nc,nc).*Pricing.basetariff;
+% initializations
+perDistanceTariff=ones(nc,nc).*Pricing.basetariff; % matrix of fare per minute
+surchargeMat=zeros(nc,nc);  % surcharges per stations
+Aaltp=nan(r,1);             % alternative prices
+multiplier=1;               % multiplier for relocation
 
-% initialize surcharges per stations
-surchargeMat=zeros(nc,nc);
-
-% initialize alternative prices
-Aaltp=nan(r,1);
-
-% initialize multiplier for relocation
-multiplier=1;
-
-if Pricing.dynamic
-    
-    addpath functions/pricing
+if Pricing.dynamic    
     tp=round(Pricing.tp/P.Sim.e);       % pricing interval
     tpH=round(Pricing.horizon/P.Sim.e); % pricing horizon
-    
 else
-    
     tpH=0;
     tp=tsim;
-    
 end
 
 % initialization for dynamic pricing
 tariff=ones(nc^2,ceil(tsim/tp))*Pricing.basetariff;
 surcharge=zeros(nc*2,ceil(tsim/tp));
-
-% function to calculate probability of acceptance given a certain price for each OD pair
-probAcc=@(p,s,altp,c) exp(-p.*c-s)./(exp(-p.*c-s)+exp(-altp)); % TODO: remove and merge
 
 
 %% initial states
@@ -395,8 +381,9 @@ for i=1:tsim
             surchargeMat=surchargeNodes(1:nc)+surchargeNodes(nc+1:2*nc)';
             
         end
-        
-        multiplier=(probAcc(perDistanceTariff,surchargeMat,altp,Pricing.c));
+
+        option1=exp(-perDistanceTariff.*Pricing.c-surchargeMat);
+        multiplier=option1./(option1+exp(-altp));
         
     end
     
