@@ -6,8 +6,6 @@
 
 function [A,Atimes,AbuckC,Distances]=gettrips(P)
 
-%% loading
-
 % set external data folder
 DataFolder=getdatafolder();
 
@@ -21,6 +19,7 @@ if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
         % load files
         [A,Atimes,Distances]=loadFile(tripFileLocation);
         
+        % load next day if it exists
         tripFileLocation2=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday+1) '.mat'];
         if exist(tripFileLocation2,'file')
             [A2,Atimes2,~]=loadFile(tripFileLocation2);
@@ -44,10 +43,8 @@ if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
 else
     
     error('need to specify trip folder!')
-    %tripFileLocation=[DataFolder 'trips/' P.tripfile '.mat'];
     
 end
-
 
 A=[A;A2];
 Atimes=[Atimes;(1440+Atimes2)];
@@ -86,12 +83,10 @@ end
 
 
 
-
-
 function [A,Atimes,Distances]=loadFile(tripFileLocation)
 
-% load files
 if exist(tripFileLocation,'file')
+    
     load(tripFileLocation,'A','Atimes','Distances');
     
     if ~exist('Distances','var')
@@ -99,11 +94,9 @@ if exist(tripFileLocation,'file')
     end
     
 else
-    %error('File ''%s'' does not exist in ''%s''.',[P.tripfile '.mat'],[DataFolder 'trips/'])
-    %     A=NaN;
-    %     Atimes=NaN;
-    %     Distances=NaN;
+    
     error('File ''%s'' does not exist.',tripFileLocation);
+    
 end
 
 end
