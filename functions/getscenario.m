@@ -11,6 +11,9 @@ load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStation
 
 if exist('Clusters','var')
     clusters=Clusters;
+end
+
+if ~exist('T','var')
     k=strfind(P.scenario,'_');
     scenarioRoot=P.scenario(1:k(end)-1);
     load([DataFolder 'scenarios/' scenarioRoot '.mat'],'T');
