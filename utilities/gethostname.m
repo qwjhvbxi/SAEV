@@ -1,6 +1,7 @@
+%% HostName=gethostname()
 % works on Windows
 
-function HostName=getHost()
+function HostName=gethostname()
 
 % [~,HostName]=system('hostname');
 [~,HostName]=unix('hostname');

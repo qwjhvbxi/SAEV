@@ -1,5 +1,5 @@
-%% [thisT]=gettraveltimenow(T,k)
-% Return current travel time.
+%% [thisT]=GETTRAVELTIMENOW(T,k)
+% Return current travel time for scenario with variable travel times.
 % T is a struct with fields `hour` and `traveltime`.
 % k is the minute in the day (between 0 and 1440)
 % 

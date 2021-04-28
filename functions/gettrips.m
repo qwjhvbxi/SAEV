@@ -1,6 +1,9 @@
-%% [A,Atimes,AbuckC,Distances]=gettrips(P)
-% P struct contains fields 'tripfolder' and 'tripday' OR 'tripfile'.
-% Files should be in folder trips/
+%% [A,Atimes,AbuckC,Distances]=GETTRIPS(P)
+% Get trip files from information in parameter struct. 
+% P struct contains fields 'tripfolder' and optionally 'tripday'.
+% If 'tripday' is not set, then 'tripfolder' is treated as a single file
+% instead of a folder.
+% All trip files/folders should be in folder 'data/trips/'.
 %
 % See also: main
 

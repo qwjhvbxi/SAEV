@@ -1,7 +1,10 @@
 %% [dkemd,dkod]=COMPUTEEMD(A,Atimes,T,Beta,relocationNodes)
-% Compute travel time for relocation during time horizon
+% Compute travel time for relocation during time horizon.
+% 'Beta' is the length (in minutes) of one interval in the horizon.
+% 'relocationNodes' is the index of the nodes which are relocation
+% destinations (associated with A).
 % 
-% See also: main
+% See also: mainsim, computetraveltime
 
 function [dkemd,dkod]=computeemd(A,Atimes,T,Beta,relocationNodes)
 

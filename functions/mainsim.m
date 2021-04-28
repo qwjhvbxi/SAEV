@@ -13,7 +13,7 @@ DataFolder=getdatafolder();
 %% load external files: scenario, trips 
 
 % load distance matrix
-[T,clusters,chargingStations]=getscenario(P);
+[T,clusters,chargingStations]=getscenario(P.scenario);
 
 % load trips
 [A,Atimes,AbuckC,~]=gettrips(P);

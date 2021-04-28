@@ -18,7 +18,7 @@
 % Warning: variables with text values should be inserted between double
 % quotation marks ( " " ) 
 % 
-% see also GENERAL11, CPAR
+% See also: main, launchsimulationperiod
 
 function [Pmat,Resmat]=generateplotline3(mapscenario,outfieldname,varargin)
 

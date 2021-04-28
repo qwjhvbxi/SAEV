@@ -1,10 +1,15 @@
-function [T,clusters,chargingStations]=getscenario(P)
+%% [T,clusters,chargingStations]=GETSCENARIO(scenario)
+% Retrieve scenario files.
+% 
+% See also: mainsim
+
+function [T,clusters,chargingStations]=getscenario(scenario)
 
 DataFolder=getdatafolder();
 
 %% load distance matrix
 
-load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
+load([DataFolder 'scenarios/' scenario '.mat'],'T','Clusters','chargingStations');
 
 
 %% setup clustering
@@ -14,8 +19,8 @@ if exist('Clusters','var')
 end
 
 if ~exist('T','var')
-    k=strfind(P.scenario,'_');
-    scenarioRoot=P.scenario(1:k(end)-1);
+    k=strfind(scenario,'_');
+    scenarioRoot=scenario(1:k(end)-1);
     load([DataFolder 'scenarios/' scenarioRoot '.mat'],'T');
 end
 

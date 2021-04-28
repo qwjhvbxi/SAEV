@@ -1,5 +1,7 @@
-%% [e,ef]=setpointvehicle(Par,q,f,s,SetPoints)
+%% [e,ef]=SETPOINTVEHICLE(Par,q,f,s,SetPoints)
+% Return set point for each vehicle given fleet set points 'SetPoints'
 % 
+% See also: mainsim, setpointfleet
 
 function [e,ef]=setpointvehicle(Par,q,s,f,SetPoints)
 

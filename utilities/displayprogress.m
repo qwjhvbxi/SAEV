@@ -1,3 +1,6 @@
+%% DISPLAYPROGRESS(i,itot,dispiter,comptime[,displayResolution])
+% Prints progress of simulation
+
 function displayprogress(i,itot,dispiter,comptime,displayResolution)
 
 if nargin<4

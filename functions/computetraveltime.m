@@ -1,4 +1,8 @@
-% calculate distance
+%% dkod=COMPUTETRAVELTIME(A,Atimes,T,Beta)
+% Calculate distance to travel during horizon. 
+% 'Beta' is the length (in minutes) of one interval in the horizon.
+% 
+% See also: mainsim, computeemd
 
 function dkod=computetraveltime(A,Atimes,T,Beta)
 

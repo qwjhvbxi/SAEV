@@ -1,3 +1,7 @@
+%% timeLeft=DISPLAYETA(iteration,totaliterations,timeelapsed)
+% Print progress and estimated time to complete simulation.
+% Also returns the estimated time left.
+
 function timeLeft=displayeta(iteration,totaliterations,timeelapsed)
 
 LastIterations=100;

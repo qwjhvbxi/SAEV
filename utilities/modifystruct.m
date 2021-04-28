@@ -1,4 +1,4 @@
-%% [Pmat,varparams]=modifystruct(S,Inputs)
+%% [Pmat,varparams]=MODIFYSTRUCT(S,Inputs)
 % Return a matrix of struct with modified parameters. The parameters to
 % change are specified in the format (...,'FieldName',value,...). You can
 % specify up to two parameters with vector values and an unlimited number

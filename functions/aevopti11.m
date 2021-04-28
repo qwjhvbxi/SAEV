@@ -1,5 +1,6 @@
 %% [Res]=aevopti11(Q)
-% virtual power plant high level optimization.
+% High level optimization of virtual power plant.
+% 
 % Q has inputs: 
 %   minfinalsoc
 %   storagemin
@@ -14,7 +15,7 @@
 %   etrip
 %   dkav
 %   electricityprice [$/kWh]
-% optional:
+% optional fields:
 %   socboost
 %   gridimportconstraint
 %   gridexportconstraint
@@ -23,6 +24,8 @@
 %   surplus
 %   carbonprice [$/ton]
 %   emissionsGridProfile [g/kWh]
+%
+% See also: mainsim
 
 function [Res]=aevopti11(Q)
 

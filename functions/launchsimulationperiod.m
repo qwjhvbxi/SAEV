@@ -1,4 +1,4 @@
-%% [Summary,R]=launchsimulationperiod(Period,P[,GridOffset,ResultsOut,varargin])
+%% [Summary,R]=LAUNCHSIMULATIONPERIOD(Period,P[,GridOffset,ResultsOut,varargin])
 % launch simulations over multiple days.
 % Period is the consecutive days
 % P is the parameter struct
@@ -7,6 +7,8 @@
 %   outputted (warning: large memory use)
 % Summary is a struct with a summary of the results
 % R is the optional full results struct if ResultsOut==true
+%
+% See also: main, generateplotline3
 
 function [Summary,R]=launchsimulationperiod(Period,P,GridOffset,ResultsOut,OutSave,varargin)
 

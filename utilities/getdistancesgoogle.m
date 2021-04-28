@@ -1,5 +1,5 @@
-%% [d,resvec]=getdistancesgoogle(apikey,lat1,lon1,lat2,lon2,traveldate)
-% querying Google Maps Distance Matrix API
+%% [d,resvec]=GETDISTANCESGOOGLE(apikey,lat1,lon1,lat2,lon2,traveldate)
+% Querying Google Maps Distance Matrix API
 % traveldate: dd/MM/yyyy HH:mm
 
 function [d,resvec]=getdistancesgoogle(apikey,lat1,lon1,lat2,lon2,traveldate)

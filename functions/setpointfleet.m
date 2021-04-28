@@ -1,5 +1,7 @@
-%% [SetPoints]=setpointfleet(Par,q,s,z)
-% create set points at beginning of charging period
+%% [SetPoints]=SETPOINTFLEET(Par,q,s,z)
+% Create set points at beginning of charging period.
+% 
+% See also: mainsim, setpointvehicle
 
 function [SetPoints]=setpointfleet(Par,q,s,z)
 
