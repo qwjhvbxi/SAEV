@@ -165,6 +165,8 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         
     else
     
+        addpath functions/pricing
+        
         dynamicCharging=true;
         
         % inputs
@@ -371,7 +373,7 @@ for i=1:tsim
             kp=ceil(i/tp);
             
             % expected trips
-            selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH));
+            selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH+1));
             
             % price of alternative option 
             if numel(Pricing.alternative)>1
@@ -483,7 +485,7 @@ for i=1:tsim
         Vin=[ui' , di' , available.*q(i,:)' , s(1,:)' ];
         
         % Bin: passengers info in the form: [O D waiting offeredprice utilityalternative]
-        Bin=[A(trips,:) , waiting(trips) , pp , alte ];
+        Bin=[A(trips,1:2) , waiting(trips) , pp , alte ];
 
         if autoRelocation
             [Vout,Bout,tripdisti,relodistiPU,queuei]=tripassignmentsaev(Vin,Bin,Par);
