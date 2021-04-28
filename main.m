@@ -35,6 +35,9 @@ end
 
 if nargin==0
     P=getp();
+    if isempty(P)
+        return
+    end
 end
 
 
