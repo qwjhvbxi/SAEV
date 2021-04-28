@@ -1,9 +1,10 @@
-%% [y]=movingAverage(x,t,binsize)
+%% [y]=MOVINGAVERAGE(x,t,binsize)
 % calculate moving average of 'x' according to associated time of event
 % 't', with bin size 'binsize'. x and t must be the same length. 
 
-function [y]=movingAverage(x,t,binsize)
+function [y]=movingaverage(x,t,binsize)
 
+tsim=length(x);
 binsize=round(binsize);
 halfbin=floor(binsize/2);
 y=zeros(tsim,1);
