@@ -154,6 +154,10 @@ dynamicCharging=false;
 Trips=[];
 Beta=0;
 
+% TODO: 
+% - transform zmacro in coherent size! always 1?
+% - simplified and coherent inputs among modules (use always Par)
+
 if isfield(P,'Charging') && ~isempty(P.Charging)
     
     if strcmp(P.Charging,'night')
@@ -189,14 +193,14 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dktrip);
         
         % energy layer variable: static values
-        E.v2g=P.Operations.v2g;             % use V2G?
-        E.efficiency=P.Tech.efficiency;     % roundtrip (discharge) efficiency
-        E.socboost=1e4;                     % soft constraint for final soc (TODO: change depending on inputs)
-        E.T=chargingHorizon;                % number of time steps in energy layer
-        E.cyclingcost=P.Tech.cyclingcost;                       % battery cycling cost [$/kWh]
-        E.storagemax=P.Tech.battery*P.m*P.Operations.maxsoc;    % max total energy in batteries [kWh]
-        E.carbonprice=P.carbonprice;                            % carbon price [$ per kg]
-        E.maxchargeminute=P.Tech.chargekw/60*aggregateratio;    % energy exchangeable per minute per vehicle [kWh]
+        Par.Beta=P.Charging.beta;
+        Par.chargingHorizon=round(P.Charging.mthor/Par.Beta);
+        Par.v2g=P.Operations.v2g;
+        Par.cyclingcost=P.Tech.cyclingcost;
+        Par.m=P.m;
+        Par.carbonprice=P.carbonprice;
+        Par.aggregateratio=aggregateratio;
+        Par.extrasoc=P.Charging.extrasoc;
         
         % matrix of optimal control variables for energy layer
         zmacro=zeros(4,etsim+chargingHorizon); 
@@ -309,36 +313,14 @@ for i=1:tsim
 
             % index of energy layer
             t=(i-1)/(Beta/P.Sim.e)+1;
-
-            actualminsoc=min(P.Operations.minsoc+P.Charging.extrasoc,mean(q(i,:))*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
+            
             dktripnow=dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
+            melepnow=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
+            mco2now=mco2(t:t+chargingHorizon-1); % [g/kWh]
 
-            E.storagemin=P.Tech.battery*P.m*actualminsoc; % kWh
-            E.einit=sum(q(i,:))*P.Tech.battery;     % total initial energy [kWh]
-            E.etrip=dktripnow*P.Tech.consumption;   % energy used per step [kWh] 
-            E.dkav=max(0,P.m*Beta-dktripnow);         % minutes of availability of cars
-            E.electricityprice=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
-            E.emissionsGridProfile=mco2(t:t+chargingHorizon-1); % [g/kWh]
-
-            maxc=E.dkav*E.maxchargeminute; % max exchangeable energy per time step [kWh]
-
-            ELayerResults=aevopti11(E);
-
-            if ~isempty(ELayerResults)
-
-                % zmacro: [relative charging, relative discharging, max charging allowed, energy required by trips]
-                zmacro(:,t:t+chargingHorizon-1)=[ ELayerResults.charging , ELayerResults.discharging*logical(P.Operations.v2g) , maxc , E.etrip ]';
-                zmacro(isnan(zmacro))=0;
-
-            else
-
-                % in case there is no feasible solution, charge as much as possible
-                zmacro(:,t:t+chargingHorizon-1)=[ones(size(maxc,1),1),zeros(size(maxc,1),1),maxc,E.etrip]';
-
-            end
-
-            % record time
-            S.lasttime=cputime;
+            currentsp=chargingmodule(Par,q(i,:),dktripnow,melepnow,mco2now);
+            
+            zmacro(:,t)=currentsp;
 
         end
         
