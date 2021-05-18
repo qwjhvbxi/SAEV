@@ -5,5 +5,11 @@
 % ApproxLatitude=Lat (1x1) 
 
 function ACartesian=geo2cartesian(Ageodesic,BoundariesGeodesic,ApproxLatitude)
+    if nargin<3
+        ApproxLatitude=mean(Ageodesic(:,2));
+    end
+    if nargin<2
+        BoundariesGeodesic=min(Ageodesic);
+    end
     ACartesian=[(deg2km(Ageodesic(:,1)-min(BoundariesGeodesic(:,1))))*cos(deg2rad(ApproxLatitude)), deg2km(Ageodesic(:,2)-min(BoundariesGeodesic(:,2)))];
 end
