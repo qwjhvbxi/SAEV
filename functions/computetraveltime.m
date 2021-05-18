@@ -11,17 +11,25 @@ t=double(max(Atimes(:)));
 
 % length of total interval
 mtsim=round(t/Beta);
-t=Beta*mtsim;
+% t=Beta*mtsim;
 
 % initialize
-dk=zeros(t,1);
+dk=zeros(mtsim,1);
 
-for i=1:t
+for kt=1:mtsim
     
-    ThisMinute=logical(Atimes(:,1)==i);
-    dk(i)=sum(T(sub2ind(size(T),A(ThisMinute,1),A(ThisMinute,2))));
+    % progress report
+    clc
+    fprintf('\n %d/%d\n\n',kt,mtsim)
+    
+    [thisT]=gettraveltimenow(T,kt*Beta);
+    
+    % find trips in this time step
+    thisStep=logical((Atimes(:,1)>=(kt-1)*Beta+1).*(Atimes(:,1)<=kt*Beta));
+    dk(kt)=sum(thisT(sub2ind(size(thisT),A(thisStep,1),A(thisStep,2))));
+    
 end
 
-dkod=sum(reshape(dk(1:t),Beta,mtsim))';
+dkod=dk;
 
 end
