@@ -8,6 +8,7 @@
 function [thisT]=gettraveltimenow(T,k)
 
 if isstruct(T)
+    k=rem(k,1440);
     traveltimes=[0,T.hour,24.1]*60;
     nextIndex=find(traveltimes>k,1);
     minutePast=traveltimes(nextIndex-1);
