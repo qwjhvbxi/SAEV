@@ -69,7 +69,7 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 %% setup clustering
 
 n=size(clusters,1);             % number of nodes 
-As=clusters(A);                 % OD at clusters
+As=clusters(A(:,1:2));                 % OD at clusters
 nc=length(chargingStations);    % number of clusters
 
 
@@ -106,7 +106,7 @@ else
     Pb.ratio=1;
     As2=As;
     AbuckC2=AbuckC;
-end 
+end
 
 
 %% setup relocation module
@@ -381,7 +381,8 @@ for i=1:tsim
         % number of waiting passenger at station
         dw=histcounts(As(queue(queue>0),1),1:nc+1)';
             
-        % expected trips
+        % expected trips 
+        % TODO: use aggregate fo and fd [t x nc] calculated before or as input 
         selection1=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts));
         a_ts=(multiplier.*sparse(As2(selection1,1),As2(selection1,2),1,nc,nc))/Pb.ratio;
 
