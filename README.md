@@ -12,8 +12,8 @@ If you use this code in your research, please cite:
 ## Quick start
 
 To test the model, you can run the example data. 
-Run `main`. The function will list the available simulation scenarios. 
-At first installation, only one scenario will be available (`NYC2018`), so type `NYC2018` or just `1`. 
+1. Run `main`. on the command line. The function will list the available simulation scenarios. 
+1. When requested, input the scenario name `NYC2018` or just `1`. 
 
 The example data is based on the New York yellow taxicab data for 2018, available at https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page .
 
@@ -140,7 +140,14 @@ To run the simulations, there are at least 3 external files needed:
 
 #### Scenario files
 
-Scenario files are .mat Matlab files with the variable `T`, a square matrix which represent the travel time between each node. 
+Scenario files are .mat Matlab files with variables:
+
+1. `T`, [n x n], travel time between each node in minutes;
+1. (optional) `C`, [n x 2], list of coordinates of the nodes;
+1. (optional) `D`, [n x n], travel distance between each node in meters;
+1. (optional) `Clusters`, [n x 1], cluster ID for each node;
+1. (optional) `chargingStations`, [nc x 1], list of nodes which have charging stations;
+
 These files are stored in folder `data/scenarios/`.
 
 #### Trip files
@@ -174,6 +181,14 @@ Generally `extsave=1` is used (default value).
 * negative numbers: periodically print a line with progress summary -- useful with parallel computing 
 
 Generally `info=2` is used (default value).
+
+## Requirements
+
+The model is designed for Matlab 2018 or newer. 
+However, the code can be run with previous versions with some minor modifications (mostly explicit matrix expansions).
+
+
+
 
 
 
