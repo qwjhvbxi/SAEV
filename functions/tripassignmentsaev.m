@@ -95,7 +95,7 @@ if ~isempty(Bin)
                     % Tariff=distancetomove(tripID)*Par.e*Bin(tripID,4);
                     Tariff=Bin(tripID,4);
 
-                    UtilitySAEV=-Tariff-WaitingTime*Par.VOT/60*Par.WaitingCostToggle;
+                    UtilitySAEV=-Tariff-(Par.WaitingCostToggle*WaitingTime+distancetomove(tripID))*Par.VOT/60;
 
                     AcceptProbability=exp(UtilitySAEV)/(exp(UtilitySAEV)+Bin(tripID,5));
                     
