@@ -20,7 +20,8 @@ timeLeft=timespent/relatedtime*(totaliterations-iteration);
 
 fprintf('\n\n');
 fprintf('Progress: %0.1f%%\n',iteration/totaliterations*100);
-fprintf('ETA: %s \n',formattimes(timeLeft));
+fprintf('Time elapsed: %s \n',formattimes(timeelapsed));
+fprintf('Time left: %s \n',formattimes(timeLeft));
 progressbar(iteration,totaliterations,20);
 fprintf('\n\n');
 
