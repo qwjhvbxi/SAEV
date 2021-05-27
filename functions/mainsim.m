@@ -16,8 +16,8 @@ DataFolder=getdatafolder();
 [T,clusters,chargingStations]=getscenario(P.scenario);
 
 % load trips
-[A,Atimes,AbuckC,~]=gettrips(P);
-AbuckC=AbuckC(1:P.Sim.e:end);
+[A,Atimes,cumulativeTripArrivals,~]=gettrips(P);
+cumulativeTripArrivals=cumulativeTripArrivals(1:P.Sim.e:end);
 
 % load electricity prices and carbon emissions
 [elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
@@ -26,7 +26,7 @@ AbuckC=AbuckC(1:P.Sim.e:end);
 %% initialize parameters of simulation
 
 % parameters
-r=AbuckC(1441);           % number of requests
+r=cumulativeTripArrivals(1441);           % number of requests
 tsim=1440/P.Sim.e;        % number of time steps
 aggregateratio=1;         % charge rate at aggregate level optimization
 
@@ -105,7 +105,7 @@ if ~P.Sim.mpcpredict
 else
     Pb.ratio=1;
     As2=As;
-    AbuckC2=AbuckC;
+    AbuckC2=cumulativeTripArrivals;
 end
 
 
@@ -341,7 +341,7 @@ for i=1:tsim
             kp=ceil(i/tp);
             
             % expected trips
-            selection0=AbuckC(i)+1:AbuckC(min(length(AbuckC),i+tpH+1));
+            selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
             
             % price of alternative option 
             if numel(Pricing.alternative)>1
@@ -383,6 +383,7 @@ for i=1:tsim
             
         % expected trips 
         % TODO: use aggregate fo and fd [t x nc] calculated before or as input 
+        %       problem: need OD for pricing!!
         selection1=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts));
         a_ts=(multiplier.*sparse(As2(selection1,1),As2(selection1,2),1,nc,nc))/Pb.ratio;
 
@@ -428,7 +429,7 @@ for i=1:tsim
     %% trip assignment
 
     % generate trip requests for this time step
-    trips=(AbuckC(i)+1:AbuckC(i+1))';
+    trips=(cumulativeTripArrivals(i)+1:cumulativeTripArrivals(i+1))';
 
     % add previously queued requests and reset queue
     trips=[queue(queue>0);trips];
@@ -538,6 +539,7 @@ Sim.waiting=sparse(waiting); % waiting times
 Sim.dropped=sparse(dropped); % dropped requests
 Sim.chosenmode=chosenmode; % chosen mode
 Sim.waitingestimated=sparse(waitingestimated); % estimated waiting time (only mode choice)
+Sim.modalshare=sum(chosenmode)/r;
 
 % general info
 Sim.relodist=relodist*P.Sim.e; % relocation minutes
@@ -560,6 +562,7 @@ Internals.zmacro=zmacro;
 %% create Res struct and save results
 
 % parameters of simulation
+Params.cumulativeTripArrivals=cumulativeTripArrivals;
 Params.Tr=uint8(Tr);
 Params.elep=elep;
 Params.co2=co2;
