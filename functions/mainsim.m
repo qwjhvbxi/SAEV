@@ -13,7 +13,7 @@ DataFolder=getdatafolder();
 %% load external files: scenario, trips 
 
 % load distance matrix
-[T,clusters,chargingStations]=getscenario(P.scenario);
+[T,clusters,chargingStations,D]=getscenario(P.scenario);
 
 % load trips
 [A,Atimes,cumulativeTripArrivals,~]=gettrips(P);
@@ -39,7 +39,7 @@ f=sparse(tsim,1);
 if isfield(P,'Pricing') && ~isempty(P.Pricing)
     Pricing=P.Pricing;
 else
-    Pricing=struct('relocationcost',0,'basetariff',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
+    Pricing=struct('relocationcost',0,'basetariff',0,'basetariffkm',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
 end
 
 % main simulation variables
@@ -145,6 +145,16 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     Par.fastchargesoc=P.FCR.fastchargesoc;
     Par.slowchargeratio=P.FCR.slowchargeratio;
     
+end
+
+
+%% distances
+
+if exist('D','var')
+    tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
+else 
+    tripDistancesKm=zeros(r,1);
+    Pricing.basetariffkm=0;
 end
 
 
@@ -442,7 +452,7 @@ for i=1:tsim
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.e;
-        pp=perDistanceTariff(selectorClusters).*tripDistances(trips); % trip distances in minutes+...
+        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariffkm*tripDistancesKm(trips); % trip distances in minutes+...
             surchargeMat(selectorClusters);
         alte=exp(-Aaltp(trips));
         
