@@ -49,8 +49,8 @@ else
     
 end
 
-A=[A;A2];
-Atimes=[Atimes;(1440+Atimes2)];
+A=double([A;A2]);
+Atimes=double([Atimes;(1440+Atimes2)]);
 
 
 %% checks
