@@ -59,7 +59,7 @@ for k=1:varparams(1)
             end
             
             FieldNameTot=char(Inputs{(i-1)*2+1});
-            FieldNames=split(FieldNameTot,',');
+            FieldNames=strsplit(FieldNameTot,',');
             
             if isstring(ThisValue)
                 ThisValue=char(ThisValue);
