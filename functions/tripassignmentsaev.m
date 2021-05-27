@@ -29,19 +29,14 @@ ql=0;
 % if there are trips
 if ~isempty(Bin)
     
-    n=size(Par.Tr,1);
+    %n=size(Par.Tr,1);
+    %v=size(Vin,1);
     m=size(Bin,1);
-    v=size(Vin,1);
     
     ui=Vin(:,1);
     di=Vin(:,2);
     Used=zeros(length(ui),1);
     Connected=logical(Vin(:,4));
-    if isfield(Par,'LimitFCR')
-        LimitFCR=Par.LimitFCR;
-    else
-        LimitFCR=0;
-    end
     
     waiting=Bin(:,3);
     chosenmode=(waiting>0);
@@ -62,9 +57,9 @@ if ~isempty(Bin)
                    )...
          .*(EnergyReq<ones(m,1)*Vin(:,3)'); % requirement for enough SOC
      
-     X(X==0)=NaN;
+    X(X==0)=NaN;
      
-    if sum(Connected)<=LimitFCR
+    if sum(Connected)<=Par.LimitFCR
         X(:,Connected)=NaN;
     end
     
@@ -145,7 +140,7 @@ if ~isempty(Bin)
 
                     % remove vehicles that are needed for FCR
                     Connected(uids)=0;
-                    if sum(Connected)<=LimitFCR
+                    if sum(Connected)<=Par.LimitFCR
                         X(:,Connected)=NaN;
                     end
 
@@ -197,3 +192,5 @@ else
     B=[];
     
 end
+
+
