@@ -17,16 +17,6 @@ To test the model, you can run the example data.
 
 The example data is based on the New York yellow taxicab data for 2018, available at https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page .
 
-## Advanced setup (not necessary)
-
-The model tends to create large savefiles. 
-For this reason, it is better to have the folder with savefiles in a location with enough space separated from the code.
-To setup a data folder in another location, you can run:
-
-`setupfolders`
-
-This will prompt you to choose a folder where to save output files and parameters.  
-
 ## Using the model
 
 How to launch a simulation:
@@ -182,7 +172,21 @@ Generally `extsave=1` is used (default value).
 
 Generally `info=2` is used (default value).
 
+## (optional) Advanced setup
+
+The model tends to create large savefiles. 
+For this reason, it is better to have the folder with savefiles in a location with enough space separated from the code.
+To setup a data folder in another location, you can run:
+
+`setupfolders`
+
+This will prompt you to choose a folder where to save output files and parameters.  
+
 ## Requirements
+
+The main required toolbox is the *Optimization Toolbox*. 
+Other used toolboxes for minor functions (that can be replaced or ignored) is the *Statistics and Machine Learning Toolbox*.
+Some functions run faster with *Parallel Computing Toolbox*.
 
 The model is designed for Matlab 2018 or newer. 
 However, the code can be run with previous versions with some minor modifications (mostly explicit matrix expansions).
