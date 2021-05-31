@@ -35,13 +35,6 @@ elep=average2(elepMinute,P.Sim.e);
 co2=average2(co2Minute,P.Sim.e);
 f=sparse(tsim,1);
 
-% check optional info
-if isfield(P,'Pricing') && ~isempty(P.Pricing)
-    Pricing=P.Pricing;
-else
-    Pricing=struct('relocationcost',0,'basetariff',0,'basetariffkm',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
-end
-
 % main simulation variables
 q=zeros(tsim,P.m);          % SOC
 u=zeros(tsim,P.m,'uint16'); % vehicles in charging stations
@@ -75,6 +68,7 @@ nc=length(chargingStations);    % number of clusters
 
 %% setup internal parameters
 
+Pricing=P.Pricing;
 Par=struct('e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0);
