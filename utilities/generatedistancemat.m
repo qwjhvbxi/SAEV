@@ -1,6 +1,5 @@
 %% Generate distance matrix from coordinates
-% D=generatedistancemat(C)
-% 
+% D=generatedistancemat(C) 
 
 function D=generatedistancemat(C)
 
