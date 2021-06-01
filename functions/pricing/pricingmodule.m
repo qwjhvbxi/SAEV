@@ -53,7 +53,7 @@ if ~isempty(forecastOD)
 
 else
     
-    altp=[];
+    altp=zeros(n,n);
     
 end
 
