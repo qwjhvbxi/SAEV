@@ -4,6 +4,10 @@
 % 
 % TODO: add charging station size
 % 
+% Problem: pricing cannot be run with charging because of how EMD is
+% calculated right now
+% Problem: OD-based pricing cannot run with aggregate prediction
+% 
 % See also: main
 
 function [Res]=mainsim(P,dispiter)
@@ -17,7 +21,6 @@ DataFolder=getdatafolder();
 
 % load trips
 [A,Atimes,cumulativeTripArrivals,~]=gettrips(P);
-cumulativeTripArrivals=cumulativeTripArrivals(1:P.Sim.e:end);
 
 % load electricity prices and carbon emissions
 [elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
@@ -28,7 +31,6 @@ cumulativeTripArrivals=cumulativeTripArrivals(1:P.Sim.e:end);
 % parameters
 r=cumulativeTripArrivals(1441);           % number of requests
 tsim=1440/P.Sim.e;        % number of time steps
-aggregateratio=1;         % charge rate at aggregate level optimization
 
 % electricity and emissions profiles
 elep=average2(elepMinute,P.Sim.e);
@@ -71,7 +73,7 @@ nc=length(chargingStations);    % number of clusters
 Pricing=P.Pricing;
 Par=struct('e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
-    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0);
+    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0,'aggregateratio',1);
 Par.ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
 Par.ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
 
@@ -84,23 +86,17 @@ if ~isstruct(T)
     Pricing.c=Trs*P.Sim.e;
 end
 tripDistances=nan(r,1);
+if exist('D','var') && ~isempty(D)
+    tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
+else 
+    tripDistancesKm=zeros(r,1);
+    Pricing.basetariffkm=0;
+end
 
 
 %% load predictions
 
-% TODO: cleanup call to secondary trip file (real vs expected/forecasted)
-if ~P.Sim.mpcpredict
-    k=strfind(P.tripfolder,'_');
-    Pb.tripfolder=P.tripfolder(1:k(end)-1);
-    Pb.tripday=P.tripday;
-    Pb.ratio=str2double(P.tripfolder(k(end)+1:end)); % TODO: change!!
-    [As2,~,AbuckC2,~]=gettrips(Pb);
-    AbuckC2=AbuckC2(1:P.Sim.e:end);
-else
-    Pb.ratio=1;
-    As2=As;
-    AbuckC2=cumulativeTripArrivals;
-end
+[fo,fd,Aforecast]=loadpredictions(P,As,Atimes);
 
 
 %% setup relocation module
@@ -124,10 +120,9 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     
     Par.fcr=true;
     if isfield(P.FCR,'aggregatechargeratio')
-        aggregateratio=P.FCR.aggregatechargeratio;
+        Par.aggregateratio=P.FCR.aggregatechargeratio; % charge rate at aggregate level optimization
     end
     
-    % TODO: use CSV as inputs
     [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
     f=average2(fraw,P.Sim.e/fresolution);
     
@@ -142,25 +137,11 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
 end
 
 
-%% distances
-
-if exist('D','var')
-    tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
-else 
-    tripDistancesKm=zeros(r,1);
-    Pricing.basetariffkm=0;
-end
-
-
 %% setup charging module
 
 dynamicCharging=false;
 Trips=[];
 Beta=0;
-
-% TODO: 
-% - transform zmacro in coherent size! always 1?
-% - simplified and coherent inputs among modules (use always Par)
 
 if isfield(P,'Charging') && ~isempty(P.Charging)
     
@@ -189,8 +170,8 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         if exist(emdFileName,'file')
             load(emdFileName,'dkemd','dkod','dktrip');
         else
-            dkod=computetraveltime(A,Atimes,T,Beta);
-            [dkemd,~]=computeemd(As,Atimes,T,Beta,chargingStations); % TODO: should be on prediction
+            dkod=computetraveltime(A,Atimes,T,Beta);% TODO: should be on prediction
+            [dkemd,~]=computeemd(fo,fd,T,Beta,chargingStations); 
             dktrip=dkod+dkemd;
             save(emdFileName,'dkemd','dkod','dktrip');
         end
@@ -203,7 +184,6 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         Par.cyclingcost=P.Tech.cyclingcost;
         Par.m=P.m;
         Par.carbonprice=P.carbonprice;
-        Par.aggregateratio=aggregateratio;
         Par.extrasoc=P.Charging.extrasoc;
         
         % matrix of optimal control variables for energy layer
@@ -231,7 +211,7 @@ Pricing.relocation=autoRelocation;
 perDistanceTariff=ones(nc,nc).*Pricing.basetariff; % matrix of fare per minute
 surchargeMat=zeros(nc,nc);  % surcharges per stations
 Aaltp=nan(r,1);             % alternative prices
-multiplier=1;               % multiplier for relocation
+altp=0;
 
 if Pricing.dynamic    
     tp=round(Pricing.tp/P.Sim.e);       % pricing interval
@@ -262,6 +242,9 @@ end
 atChargingStation=sum(u(1,:)==chargingStations);
 s(1,:)=logical(atChargingStation.*(d(1,:)==0));
 s(2,:)=logical(~atChargingStation.*(d(1,:)==0));
+
+% setup for trip generation
+cumulativeTripArrivals=cumulativeTripArrivals(1:P.Sim.e:end);
 
 
 %% variables for progress display and display initializations
@@ -346,6 +329,13 @@ for i=1:tsim
             
             % expected trips
             selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
+
+            % TODO: change pricing with per km? Can be calculated from the start and
+            %       they do not change
+            % TODO: reorganize for imperfect prediction!
+            %       price of alternative option should be dependent on OD, not single
+            %       passenger (the one seen by optimization). Specific cost only for
+            %       mode choice module
             
             % price of alternative option 
             if numel(Pricing.alternative)>1
@@ -355,21 +345,35 @@ for i=1:tsim
                 % alternative price for each user calculated with trip distances in minutes
                 Aaltp(selection0)=Pricing.alternative*Tr(sub2ind(size(Tr),A(selection0,1),A(selection0,2)))*P.Sim.e; 
             end
-            
+
             AsNow=As(selection0,:);
             altpNow=Aaltp(selection0);
-            
+
             [perDistanceTariff,surchargeNodes,altp]=pricingmodule(Pricing,AsNow,altpNow,clusters(ui));
-            
+
             tariff(:,kp)=perDistanceTariff(:);
             surcharge(:,kp)=surchargeNodes;
-            
+
             surchargeMat=surchargeNodes(1:nc)+surchargeNodes(nc+1:2*nc)';
             
         end
 
-        option1=exp(-perDistanceTariff.*Pricing.c-surchargeMat);
-        multiplier=option1./(option1+exp(-altp));
+        if autoRelocation
+        
+            option1=exp(-perDistanceTariff.*Pricing.c-surchargeMat);
+            multiplier=option1./(option1+exp(-altp));
+
+            % expected OD matrices for different future horizons
+            % TODO: remove reshape, treat all pricing variables as reshaped (from
+            % pricingmodule)
+            a_ts=multiplier.*reshape(sum(Aforecast(i:i+ts,:)),nc,nc);
+            a_to=multiplier.*reshape(sum(Aforecast(i:i+ts+tr,:)),nc,nc);
+
+            % update expected arrivals and departures
+            fd(i:i+ts,:)=ones(ts+1,1)*sum(a_ts)/(ts+1);     % arrivals 
+            fo(i:i+ts+tr,:)=ones(ts+tr+1,1)*sum(a_to,2)'/(ts+tr+1); % departures
+            
+        end
         
     end
     
@@ -384,23 +388,14 @@ for i=1:tsim
 
         % number of waiting passenger at station
         dw=histcounts(As(queue(queue>0),1),1:nc+1)';
-            
-        % expected trips 
-        % TODO: use aggregate fo and fd [t x nc] calculated before or as input 
-        %       problem: need OD for pricing!!
-        selection1=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts));
-        a_ts=(multiplier.*sparse(As2(selection1,1),As2(selection1,2),1,nc,nc))/Pb.ratio;
-
-        Selection2=AbuckC2(i)+1:AbuckC2(min(length(AbuckC2),i+ts+tr));
-        a_to=(multiplier.*sparse(As2(Selection2,1),As2(Selection2,2),1,nc,nc))/Pb.ratio;
-            
+        
         available=sum(s(1:2,:))';
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[clusters(ui) , di' , available.*q(i,:)' , s(1,:)' , logical(s(4,:)+s(5,:))' ];
         ParRel.dw=dw; % number of passengers waiting at each station
-        ParRel.a_ts=round(sum(a_ts))'; % expected arrivals between now and now+ts
-        ParRel.a_to=round(sum(a_to,2)); % expected requests between now and now+ts+tr
+        ParRel.a_ts=round(sum(fd(i:i+ts,:)))'; % expected arrivals between now and now+ts
+        ParRel.a_to=round(sum(fo(i:i+ts+tr,:)))'; % expected requests between now and now+ts+tr
         ParRel.Trs=Trs;
         ParRel.limite=P.Relocation.ts;
         ParRel.bmin=bmin;
