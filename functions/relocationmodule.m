@@ -1,5 +1,19 @@
+%% [V,b]=RELOCATIONMODULE(Vin,Par)
+% Finds optimal relocation actions
 % Vin: vehicles information in the form: [station delay soc charging relocating]
-
+% Par: struct with parameters:
+%   Trs  [n x n]    travel time between nodes
+%   dw   [n x 1]    number of passengers waiting at each node
+%   a_ts [n x 1]    number of passenger expected to arrive during horizon
+%   a_to [n x 1]    number of requests expected during horizon
+%   ad   [scalar]   vehicle consumption (fraction of battery capacity per time step)
+%   chargepenalty   [scalar logical]    give priority to non-charging vehicles?    
+% optional parameters: 
+%   limite   [scalar]   max time allowed for relocation trips (default: no limit)
+%   bmin     [scalar]   minimum extra vehicles at nodes (default: 0)
+%   LimitFCR [scalar]   minimum numbers of vehicles that must remain connected (default: 0)
+% 
+% See also: mainsim
 
 function [V,b]=relocationmodule(Vin,Par)
 
@@ -12,6 +26,13 @@ soc=Vin(:,3);
 charging=Vin(:,4);
 relocating=Vin(:,5);
 used=zeros(nv,1);
+
+if ~isfield(Par,'limite')
+    Par.limite=[];
+end
+if ~isfield(Par,'bmin')
+    Par.bmin=0;
+end
 if isfield(Par,'LimitFCR')
     LimitFCR=Par.LimitFCR;
 else
