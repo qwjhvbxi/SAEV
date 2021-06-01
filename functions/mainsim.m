@@ -26,6 +26,18 @@ DataFolder=getdatafolder();
 [elepMinute,co2Minute,~]=readexternalfile([DataFolder 'grid/' P.gridfile '.csv'],P.gridday,true);
 
 
+%% setup clustering
+
+n=size(clusters,1);             % number of nodes 
+As=clusters(A(:,1:2));          % OD at clusters
+nc=length(chargingStations);    % number of clusters
+
+
+%% load predictions
+
+[fo,fd,Aforecast]=loadpredictions(P,As,Atimes);
+
+
 %% initialize parameters of simulation
 
 % parameters
@@ -61,13 +73,6 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
 
 
-%% setup clustering
-
-n=size(clusters,1);             % number of nodes 
-As=clusters(A(:,1:2));                 % OD at clusters
-nc=length(chargingStations);    % number of clusters
-
-
 %% setup internal parameters
 
 Pricing=P.Pricing;
@@ -92,11 +97,6 @@ else
     tripDistancesKm=zeros(r,1);
     Pricing.basetariffkm=0;
 end
-
-
-%% load predictions
-
-[fo,fd,Aforecast]=loadpredictions(P,As,Atimes);
 
 
 %% setup relocation module
