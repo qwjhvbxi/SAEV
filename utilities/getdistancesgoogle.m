@@ -2,7 +2,11 @@
 % Querying Google Maps Distance Matrix API
 % traveldate: dd/MM/yyyy HH:mm
 
-function [d,resvec]=getdistancesgoogle(apikey,lat1,lon1,lat2,lon2,traveldate)
+function [d,resvec]=getdistancesgoogle(apikey,lat1,lon1,lat2,lon2,traveldate,mode)
+
+if nargin<7
+    mode='driving'; % or transit
+end
 
 addpath('utilities/jsonlab');
 
@@ -14,15 +18,15 @@ destinstr=sprintf('%3.4f,%3.4f|',destinvec);
 origintime=num2str(posixtime(datetime(traveldate,'inputFormat','dd/MM/yyyy HH:mm')));
 
 % url1 = ['https://maps.google.co.jp/maps/api/geocode/json?address=' , urlencode([Codesraw.prefectures{i}{1} , Codesraw.wards{i}{1} , addr1{k}]) , '&sensor=false&language=ja&region=JP&key=' apikey];
-url1 = ['https://maps.google.co.jp/maps/api/distancematrix/json?origins=',originstr,'&destinations=',destinstr,'&departure_time=',origintime,'&mode=driving&sensor=false&language=ja&region=JP&key=' apikey];
+% url1 = ['https://maps.google.co.jp/maps/api/distancematrix/json?origins=',originstr,'&destinations=',destinstr,'&departure_time=',origintime,'&mode=',mode,'&sensor=false&language=ja&region=JP&key=' apikey];
+url1 = ['https://maps.google.co.jp/maps/api/distancematrix/json?origins=',originstr,'&destinations=',destinstr,'&departure_time=',origintime,'&mode=',mode,'&key=' apikey];
 str1 = urlread(url1,'Charset','UTF-8');
 resvec = loadjson(str1);
 
 % if result found
+d=NaN;
 if strcmp(resvec.status,'OK')
     d=resvec.rows{1}.elements{1}.duration.value;
-else
-    d=NaN;
 end
 
 end
