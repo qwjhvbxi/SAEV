@@ -79,7 +79,8 @@ end
 %% utilities
 
 % fast method for trip generation
-Abuck=histc(Atimes(:,1),1:1441); % number of trips in each minute
+maxt=max(Atimes(:));
+Abuck=histc(Atimes(:,1),1:maxt+1); % number of trips in each minute
 AbuckC=[0;cumsum(Abuck)]; % total number of trips up to each minute
 
 end
