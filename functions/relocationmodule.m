@@ -4,11 +4,12 @@
 % == Input ==
 % Vin: [m x 4]      vehicles information in the form: [station delay soc charging relocating]
 % Par: struct with parameters:
-%   Trs  [n x n]    travel time between nodes
+%   Trs  [n x n]    travel time between nodes (minutes)
 %   dw   [n x 1]    number of passengers waiting at each node
 %   a_ts [n x 1]    number of passenger expected to arrive during horizon
 %   a_to [n x 1]    number of requests expected during horizon
-%   ad   [scalar]   vehicle consumption (fraction of battery capacity per time step)
+%   consumption     [scalar]   vehicle consumption (kWh/minute)
+%   battery         [scalar]   vehicle battery capacity (kWh)
 %   chargepenalty   [scalar logical]    give priority to non-charging vehicles?    
 % optional parameters: 
 %   limite   [scalar]   max time allowed for relocation trips (default: no limit)
@@ -87,7 +88,7 @@ if ~isempty(x)
         % find candidate vehicles for the task with enough soc and idle, give
         % priority to non-charging vehicles
         candidates=(1+soc-charging*Par.chargepenalty).*(position==Fs(dstnid(ka))).* ...
-            (soc/Par.ad >= delay+ReloDistanceSorted(ka)).*(relocating==0).*(delay+ReloDistanceSorted(ka)<=Par.limite); 
+            (soc/(Par.consumption/Par.battery) >= delay+ReloDistanceSorted(ka)).*(relocating==0).*(delay+ReloDistanceSorted(ka)<=Par.limite); 
 
         % remove unavailable vehicles
         candidates(candidates==0)=NaN;

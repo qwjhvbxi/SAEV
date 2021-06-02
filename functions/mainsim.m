@@ -76,10 +76,10 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 %% setup internal parameters
 
 Pricing=P.Pricing;
-Par=struct('e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
+Par=struct('e',P.Sim.e,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
-    'fcr',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
+    'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
 Par.ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
 Par.ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
 
@@ -119,7 +119,7 @@ end
 
 if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
     
-    Par.fcr=true;
+    Par.csp=true;
     if isfield(P.FCR,'aggregatechargeratio')
         Par.aggregateratio=P.FCR.aggregatechargeratio; % charge rate at aggregate level optimization
     end
@@ -128,9 +128,8 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     f=average2(fraw,P.Sim.e/fresolution);
     
     Par.LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
-    Par.af=P.FCR.contracted*1000/P.Tech.battery/60*P.Sim.e;    % FCR rate per time step (normalized)
-    Par.H=P.Charging.beta/P.Sim.e;
-    Par.limits=P.FCR.limits;
+    Par.fcrcontracted=P.FCR.contracted;
+    Par.fcrlimits=P.FCR.limits;
     Par.fastchargesoc=P.FCR.fastchargesoc;
     Par.slowchargeratio=P.FCR.slowchargeratio;
     
@@ -270,12 +269,12 @@ for i=1:tsim
     %% calculate current distance matrix
     
     if isstruct(T)
-        [thisT]=gettraveltimenow(T,i*Par.e);
+        [thisT]=gettraveltimenow(T,i*Par.Epsilon);
         Tr=max(1,round(thisT/P.Sim.e));% distance matrix in steps
         Trs=Tr(chargingStations,chargingStations);
         Par.Tr=Tr;
         % function to calculate probability of acceptance given a certain price for each OD pair
-        Pricing.c=Trs*Par.e;
+        Pricing.c=Trs*Par.Epsilon;
     end
     
     
@@ -289,32 +288,6 @@ for i=1:tsim
         s(2,IdleReached)=0;
         s(5,IdleReached)=1;
         relodist(i)=relodist(i)+sum(relodistCS);
-    end
-    
-    
-    %% charging optimization
-    
-    if dynamicCharging 
-        
-        if rem(i,Beta/P.Sim.e)==1
-
-            % index of energy layer
-            t=(i-1)/(Beta/P.Sim.e)+1;
-            
-            dktripnow=dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
-            melepnow=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
-            mco2now=mco2(t:t+chargingHorizon-1); % [g/kWh]
-
-            currentsp=chargingmodule(Par,q(i,:),dktripnow,melepnow,mco2now);
-            
-            zmacro(:,t)=currentsp;
-
-        end
-        
-    else
-        
-        t=i;
-        
     end
     
     
@@ -392,14 +365,15 @@ for i=1:tsim
         available=sum(s(1:2,:))';
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
-        Vin=[clusters(ui) , di' , available.*q(i,:)' , s(1,:)' , logical(s(4,:)+s(5,:))' ];
+        Vin=[clusters(ui) , Par.Epsilon*di' , available.*q(i,:)' , s(1,:)' , logical(s(4,:)+s(5,:))' ];
         ParRel.dw=dw; % number of passengers waiting at each station
         ParRel.a_ts=round(sum(fd(i:i+ts,:)))'; % expected arrivals between now and now+ts
         ParRel.a_to=round(sum(fo(i:i+ts+tr,:)))'; % expected requests between now and now+ts+tr
-        ParRel.Trs=Trs;
+        ParRel.Trs=Trs*Par.Epsilon;
         ParRel.limite=P.Relocation.ts;
         ParRel.bmin=bmin;
-        ParRel.ad=Par.ad;
+        ParRel.consumption=P.Tech.consumption;
+        ParRel.battery=P.Tech.battery;
         ParRel.LimitFCR=Par.LimitFCR;
         ParRel.chargepenalty=Par.chargepenalty;
         
@@ -440,7 +414,7 @@ for i=1:tsim
         
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
-        tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.e;
+        tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.Epsilon;
         pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariffkm*tripDistancesKm(trips); % trip distances in minutes+...
             surchargeMat(selectorClusters);
         alte=exp(-Aaltp(trips));
@@ -485,14 +459,40 @@ for i=1:tsim
     end
     
     
+    %% charging optimization
+    
+    if dynamicCharging 
+        
+        if rem(i,Beta/P.Sim.e)==1
+
+            % index of energy layer
+            t=(i-1)/(Beta/P.Sim.e)+1;
+            
+            dktripnow=dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
+            melepnow=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
+            mco2now=mco2(t:t+chargingHorizon-1); % [g/kWh]
+
+            currentsp=chargingmodule(Par,q(i,:),dktripnow,melepnow,mco2now);
+            
+            zmacro(:,t)=currentsp;
+
+        end
+        
+    else
+        
+        t=i;
+        
+    end
+    
+    
     %% simulation variables update
     
-    [ei,efi]=chargingsetpoints(Par,q(i,:),s(1,:),zmacro(1:3,t),f(i),(rem(i,Beta/P.Sim.e)==1));
+    [ei,efi]=chargingsetpoints(Par,q(i,:),s(1,:),zmacro(1:3,t),(rem(i,Beta/P.Sim.e)==1),f(i));
     e(i,:)=ei;
     ef(i,:)=efi;
     
     % update SOC 
-    q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/P.Tech.efficiency-(di>0).*Par.ad;
+    q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/P.Tech.efficiency-(di>0).*(P.Tech.consumption/P.Tech.battery*P.Sim.e);
 
     % update position
     u(i+1,:)=ui;

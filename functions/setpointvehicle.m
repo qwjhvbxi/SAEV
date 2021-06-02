@@ -34,10 +34,12 @@ e=CapUp*eRatioUp-CapDown*eRatioDown;
 
 %% FCR provision
 
+af=Par.fcrcontracted*1000/Par.battery/60*Par.Epsilon;    % FCR rate per time step (normalized)
+
 % needed FCR power
-FCRNeed=(f-50)/(Par.limits(2)-Par.limits(1))*2;
-FCRNeedUp=Par.af*min(1,max(0,FCRNeed)); % charge
-FCRNeedDown=Par.af*min(1,max(0,-FCRNeed)); % discharge
+FCRNeed=(f-50)/(Par.fcrlimits(2)-Par.fcrlimits(1))*2;
+FCRNeedUp=af*min(1,max(0,FCRNeed)); % charge
+FCRNeedDown=af*min(1,max(0,-FCRNeed)); % discharge
 
 % available power from fleet
 AvailableUp=s.*min(Par.ac-max(0,e),1-(q+e)); % charge
