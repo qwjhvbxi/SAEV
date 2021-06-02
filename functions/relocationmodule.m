@@ -1,6 +1,8 @@
 %% [V,b]=RELOCATIONMODULE(Vin,Par)
 % Finds optimal relocation actions
-% Vin: vehicles information in the form: [station delay soc charging relocating]
+% 
+% == Input ==
+% Vin: [m x 4]      vehicles information in the form: [station delay soc charging relocating]
 % Par: struct with parameters:
 %   Trs  [n x n]    travel time between nodes
 %   dw   [n x 1]    number of passengers waiting at each node
@@ -12,6 +14,10 @@
 %   limite   [scalar]   max time allowed for relocation trips (default: no limit)
 %   bmin     [scalar]   minimum extra vehicles at nodes (default: 0)
 %   LimitFCR [scalar]   minimum numbers of vehicles that must remain connected (default: 0)
+% 
+% == Output == 
+% V: [m x 2]    vehicle relocation actions in the form: [ destination , used?(0/1) ] (if not used the destination is the same as original position)
+% b: [n x 1]    expected original vehicle imbalance at nodes before relocation 
 % 
 % See also: mainsim
 
