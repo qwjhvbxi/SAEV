@@ -78,7 +78,8 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 Pricing=P.Pricing;
 Par=struct('e',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
-    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'fcr',false,'refillmaxsoc',0,'aggregateratio',1);
+    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
+    'fcr',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
 Par.ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
 Par.ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
 
@@ -126,8 +127,7 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
     f=average2(fraw,P.Sim.e/fresolution);
     
-    fcrLimit=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
-    Par.LimitFCR=fcrLimit;
+    Par.LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
     Par.af=P.FCR.contracted*1000/P.Tech.battery/60*P.Sim.e;    % FCR rate per time step (normalized)
     Par.H=P.Charging.beta/P.Sim.e;
     Par.limits=P.FCR.limits;
@@ -184,7 +184,7 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         Par.cyclingcost=P.Tech.cyclingcost;
         Par.m=P.m;
         Par.carbonprice=P.carbonprice;
-        Par.extrasoc=P.Charging.extrasoc;
+        Par.minsocfleet=Par.minsoc+P.Charging.extrasoc;
         
         % matrix of optimal control variables for energy layer
         zmacro=zeros(4,etsim+chargingHorizon); 
@@ -529,7 +529,7 @@ end
 % vehicle related
 Sim.u=uint16(u); % final destination of vehicles (station) [tsim x m]
 Sim.q=single(q); % state of charge 
-Sim.e=sparse(e/Par.ac*P.Tech.chargekw);
+Sim.e=datacompactor(e*P.Tech.battery*60/P.Sim.e);
 Sim.ef=datacompactor(ef*P.Tech.battery*60/P.Sim.e);
 Sim.status=status;
 
