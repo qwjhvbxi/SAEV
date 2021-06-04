@@ -2,7 +2,7 @@
 % Querying Google Maps Distance Matrix API
 % traveldate: dd/MM/yyyy HH:mm
 
-function [d,resvec]=getdistancesgoogle(apikey,lat1,lon1,lat2,lon2,traveldate,mode)
+function [resvec]=getdistancesgoogle(apikey,lat1,lon1,lat2,lon2,traveldate,mode)
 
 if nargin<7
     mode='driving'; % or transit
@@ -22,12 +22,6 @@ origintime=num2str(posixtime(datetime(traveldate,'inputFormat','dd/MM/yyyy HH:mm
 url1 = ['https://maps.google.co.jp/maps/api/distancematrix/json?origins=',originstr,'&destinations=',destinstr,'&departure_time=',origintime,'&mode=',mode,'&key=' apikey];
 str1 = urlread(url1,'Charset','UTF-8');
 resvec = loadjson(str1);
-
-% if result found
-d=NaN;
-if strcmp(resvec.status,'OK')
-    d=resvec.rows{1}.elements{1}.duration.value;
-end
 
 end
 
