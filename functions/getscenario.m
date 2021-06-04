@@ -1,9 +1,9 @@
-%% [T,clusters,chargingStations]=GETSCENARIO(scenario)
+%% [T,D,clusters,chargingStations]=GETSCENARIO(scenario)
 % Retrieve scenario files.
 % 
 % See also: mainsim
 
-function [T,clusters,chargingStations,D]=getscenario(scenario)
+function [T,D,clusters,chargingStations]=getscenario(scenario)
 
 DataFolder=getdatafolder();
 
@@ -40,11 +40,11 @@ end
 %% distance
 
 if ~exist('D','var') 
-    if exist('C','var')
-        D=[]; % TODO: calculate approximate distance from coordinates
-    else
-        D=[];
-    end
+%     if exist('C','var')
+%         D=[]; % TODO: calculate approximate distance from coordinates
+%     else
+    [thisT]=gettraveltimenow(T,0);
+    D=30*(thisT/60)*1000; % distance (meters) with average speed of 30 km/h
 end
 
 

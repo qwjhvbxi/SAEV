@@ -17,7 +17,7 @@ DataFolder=getdatafolder();
 %% load external files: scenario, trips 
 
 % load distance matrix
-[T,clusters,chargingStations,D]=getscenario(P.scenario);
+[T,D,clusters,chargingStations]=getscenario(P.scenario);
 
 % load trips
 [A,Atimes,cumulativeTripArrivals,~]=gettrips(P);
@@ -92,12 +92,7 @@ if ~isstruct(T)
     Pricing.c=Trs*P.Sim.e;
 end
 tripDistances=nan(r,1);
-if exist('D','var') && ~isempty(D)
-    tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
-else 
-    tripDistancesKm=zeros(r,1);
-    Pricing.basetariffkm=0;
-end
+tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
 
 
 %% setup relocation module
