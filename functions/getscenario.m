@@ -36,6 +36,10 @@ if ~exist('Clusters','var')
     clusters=(1:n)';
 end
 
+if size(chargingStations,2)==1
+    chargingStations=[chargingStations , Inf(length(chargingStations),1)];
+end
+
 if ~exist('clusterIDs','var')
     clusterIDs=chargingStations;
 end

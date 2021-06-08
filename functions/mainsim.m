@@ -226,14 +226,14 @@ q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
 if isfield(P.Operations,'uinit')
     u(1,:)=P.Operations.uinit;
 else
-    u(1,:)=chargingStations(randi(nc,1,P.m));                 % initial position of vehicles
+    u(1,:)=chargingStations(randi(nc,1,P.m),1);                 % initial position of vehicles
 end
 if isfield(P.Operations,'dinit')
     d(1,:)=P.Operations.dinit;
 end
 
 % initial status
-atChargingStation=sum(u(1,:)==chargingStations);
+atChargingStation=sum(u(1,:)==chargingStations(:,1));
 s(1,:)=logical(atChargingStation.*(d(1,:)==0));
 s(2,:)=logical(~atChargingStation.*(d(1,:)==0));
 
@@ -270,7 +270,7 @@ for i=1:tsim
         Par.Tr=Tr;
         % function to calculate probability of acceptance given a certain price for each OD pair
         Pricing.c=Trs*Par.Epsilon;
-        [~,closestCS]=min(Tr(:,chargingStations),[],2); % closest charging station to each node
+        [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
     end
     
     
@@ -279,7 +279,7 @@ for i=1:tsim
     if nc<n
         idleTime=g.*(1-atChargingStation);
         IdleReached=(idleTime>=P.Operations.maxidle/P.Sim.e);
-        ui(IdleReached)=chargingStations(closestCS(ui(IdleReached)));
+        ui(IdleReached)=chargingStations(closestCS(ui(IdleReached)),1);
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
         di(IdleReached)=relodistCS;
         s(2,IdleReached)=0;
@@ -500,7 +500,7 @@ for i=1:tsim
     % update delay
     d(i+1,:)=max(0,di-1);
     
-    atChargingStation=sum(u(i+1,:)==chargingStations);
+    atChargingStation=sum(u(i+1,:)==chargingStations(:,1));
     
     % update current statuses
     s(1,:)=logical(atChargingStation.*(d(i+1,:)==0));
