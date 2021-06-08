@@ -40,7 +40,7 @@ function Aforecast=matrixform(As,Atimes,nc,Pbratio)
 % compute matrix form
 maxt=max(Atimes(:));
 As2ind=sub2ind([nc,nc],As(:,1),As(:,2));
-Aforecast=sparse(Atimes,As2ind,1,maxt,nc^2)/Pbratio;
+Aforecast=sparse(Atimes(:,1),As2ind,1,maxt,nc^2)/Pbratio;
 
 end
 
