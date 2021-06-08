@@ -2,6 +2,9 @@
 % Generate matrices of results from simulations specifying the parameters
 % to test. Useful to then plot the values as lines.
 % 
+% mapscenario is the name of the scenario to use. If mapscenario is a
+%   struct, it will be treated directly as the input parameter struct.
+% 
 % If outfieldname is a char, the Resmat is a vector with the values of the
 %   field associated with that name and takes the results from saved files.
 %   If results are not found, it returns NaN.
@@ -22,20 +25,24 @@
 
 function [Pmat,Resmat]=generateplotline3(mapscenario,outfieldname,varargin)
 
+DataFolder=getdatafolder();
+
 % default behavior
 if nargin<2 || isempty(outfieldname)
     outfieldname=1;
 end
-if nargin>0  
-    if isempty(mapscenario)
-        clear mapscenario;
-    end
+
+% check input
+if isstruct(mapscenario)
+    S=mapscenario;
+elseif ischar(mapscenario)
+    % generate input matrix of struct
+    S=getp(mapscenario);
+else
+    warning('Invalid mapscenario input.')
+    return
 end
 
-DataFolder=getdatafolder();
-
-% generate input matrix of struct
-S=getp(mapscenario);
 [Pmat,varparams]=modifystruct(S,varargin);
 
 N=numel(Pmat);
