@@ -17,7 +17,7 @@ DataFolder=getdatafolder();
 %% load external files: scenario, trips 
 
 % load distance matrix
-[T,D,clusters,chargingStations]=getscenario(P.scenario);
+[T,D,clusters,clusterIDs,chargingStations]=getscenario(P.scenario);
 
 % load trips
 [A,Atimes,cumulativeTripArrivals,~]=gettrips(P);
@@ -30,7 +30,7 @@ DataFolder=getdatafolder();
 
 n=size(clusters,1);             % number of nodes 
 As=clusters(A(:,1:2));          % OD at clusters
-nc=length(chargingStations);    % number of clusters
+nc=length(clusterIDs);    % number of clusters
 
 
 %% load predictions
@@ -87,7 +87,7 @@ Par.ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time s
 if ~isstruct(T)
     Tr=max(1,round(T/P.Sim.e));% distance matrix in steps
     Tr(1:n+1:end)=0;          % no distance between same node
-    Trs=Tr(chargingStations,chargingStations);
+    Trs=Tr(clusterIDs,clusterIDs);
     Par.Tr=Tr;
     Pricing.c=Trs*P.Sim.e;
 end
@@ -165,7 +165,7 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
             load(emdFileName,'dkemd','dkod','dktrip');
         else
             dkod=computetraveltime(A,Atimes,T,Beta);% TODO: should be on prediction
-            [dkemd,~]=computeemd(fo,fd,T,Beta,chargingStations); 
+            [dkemd,~]=computeemd(fo,fd,T,Beta,clusterIDs); 
             dktrip=dkod+dkemd;
             save(emdFileName,'dkemd','dkod','dktrip');
         end
@@ -266,18 +266,20 @@ for i=1:tsim
     if isstruct(T)
         [thisT]=gettraveltimenow(T,i*Par.Epsilon);
         Tr=max(1,round(thisT/P.Sim.e));% distance matrix in steps
-        Trs=Tr(chargingStations,chargingStations);
+        Trs=Tr(clusterIDs,clusterIDs);
         Par.Tr=Tr;
         % function to calculate probability of acceptance given a certain price for each OD pair
         Pricing.c=Trs*Par.Epsilon;
+        [~,closestCS]=min(Tr(:,chargingStations),[],2); % closest charging station to each node
     end
     
     
     %% move idle vehicles back to charging stations
     
     if nc<n
-        IdleReached=(g.*(1-atChargingStation)>=P.Operations.maxidle/P.Sim.e);
-        ui(IdleReached)=chargingStations(clusters(ui(IdleReached)));
+        idleTime=g.*(1-atChargingStation);
+        IdleReached=(idleTime>=P.Operations.maxidle/P.Sim.e);
+        ui(IdleReached)=chargingStations(closestCS(ui(IdleReached)));
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
         di(IdleReached)=relodistCS;
         s(2,IdleReached)=0;
@@ -376,7 +378,7 @@ for i=1:tsim
         
         % update vehicles position
         used=logical(Vout(:,2));
-        relodestinations=chargingStations(Vout(used,1));
+        relodestinations=clusterIDs(Vout(used,1));
         relodisti=Tr(sub2ind(size(Tr),ui(used),relodestinations'));
         
         ui(used)=relodestinations; 

@@ -3,13 +3,13 @@
 % 
 % See also: mainsim
 
-function [T,D,clusters,chargingStations]=getscenario(scenario)
+function [T,D,clusters,clusterIDs,chargingStations]=getscenario(scenario)
 
 DataFolder=getdatafolder();
 
 %% load distance matrix
 
-load([DataFolder 'scenarios/' scenario '.mat'],'T','C','D','Clusters','chargingStations');
+load([DataFolder 'scenarios/' scenario '.mat'],'T','C','D','Clusters','clusterIDs','chargingStations');
 
 
 %% setup clustering
@@ -34,6 +34,10 @@ end
 if ~exist('Clusters','var')
     chargingStations=(1:n)';
     clusters=(1:n)';
+end
+
+if ~exist('clusterIDs','var')
+    clusterIDs=chargingStations;
 end
 
 
