@@ -6,7 +6,14 @@ Shared Autonomous Electric Vehicles simulation and optimization model.
 
 If you use this code in your research, please cite:
 
+1. R.Iacobucci et al., Integrated optimisation-simulation framework for scalable smart charging and relocation of shared autonomous electric vehicles. 2021
+
+If you use the FCR module, please additionally cite:
+
 1. R.Iacobucci et al., Frequency Control Reserve Provision from a Fleet of Shared Autonomous Electric Vehicles. IEEE MT-ITS 2021
+
+If you use the pricing module, please additionally cite:
+
 1. R.Iacobucci, J.D.Schmöcker. Dynamic pricing for ride-hailing services considering relocation and mode choice. IEEE MT-ITS 2021
 
 ## Quick start
@@ -108,17 +115,37 @@ Additional optional fields:
 | alg | char | Name of algorithm |
 | ... | ... | Parameters for specific algorithm | 
 
+For 'Simplified' algorithm, which uses aggregate predictions:
+
+| Field         | format| description |
+| ------------- | ------------- | ------------- |
+| tx    | double | Period of optimization call (minutes) | 
+| ts    | double | Prediction delay | 
+| tr    | double | Prediction horizon | 
+| bmin  | double | Extra vehicles at nodes | 
+
 #### `Pricing`
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-| ... | ... | ... | 
+| tp            | double | Period of pricing module call (minutes) | 
+| relocationcost| double | Relocation cost (per minute) | 
+| basetariff    | double | Base tariff (per minute) | 
+| alternative   | double | Alternative mode cost (per minute) | 
+| VOT           | double | Value of time (per hour) | 
+| pricingwaiting| logical | Consider waiting time in mode choice model? | 
+| dynamic       | logical | Optimize pricing dynamically?  | 
 
 #### `FCR`
 
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
-| ... | ... | ... | 
+| filename      | char | ... | 
+| limits        | double [1x2] | ... | 
+| contracted        | double | Service contract amount (MW) | 
+| fastchargesoc     | double | SoC at which vehicles start charging slower | 
+| slowchargeratio   | double | Ratio of slow to fast charging | 
+| aggregatechargeratio  | double | Equivalent power exchange visible by charging module aggregator | 
 
 ### Data preparation
 
@@ -188,8 +215,8 @@ The main required toolbox is the *Optimization Toolbox*.
 Other used toolboxes for minor functions (that can be replaced or ignored) is the *Statistics and Machine Learning Toolbox*.
 Some functions run faster with *Parallel Computing Toolbox*.
 
-The model is designed for Matlab 2018 or newer. 
-However, the code can be run with previous versions with some minor modifications (mostly explicit matrix expansions).
+The model is tested for Matlab 2017b or newer. 
+The code can be run with older versions with some minor modifications (mostly explicit matrix expansions).
 
 
 
