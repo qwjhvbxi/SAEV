@@ -90,6 +90,7 @@ if ~isstruct(T)
     Trs=Tr(clusterIDs,clusterIDs);
     Par.Tr=Tr;
     Pricing.c=Trs*P.Sim.e;
+    [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
 end
 tripDistances=nan(r,1);
 tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
@@ -300,9 +301,9 @@ for i=1:tsim
             % expected trips
             selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
 
-            % TODO: change pricing with per km? Can be calculated from the start and
+            % TODO / PRICING: change pricing with per km? Can be calculated from the start and
             %       they do not change
-            % TODO: reorganize for imperfect prediction!
+            % TODO / PRICING: reorganize for imperfect prediction!
             %       price of alternative option should be dependent on OD, not single
             %       passenger (the one seen by optimization). Specific cost only for
             %       mode choice module
@@ -334,7 +335,7 @@ for i=1:tsim
             multiplier=option1./(option1+exp(-altp));
 
             % expected OD matrices for different future horizons
-            % TODO: remove reshape, treat all pricing variables as reshaped (from
+            % TODO / PRICING: remove reshape, treat all pricing variables as reshaped (from
             % pricingmodule)
             a_ts=multiplier.*reshape(sum(Aforecast(i:i+ts,:)),nc,nc);
             a_to=multiplier.*reshape(sum(Aforecast(i:i+ts+tr,:)),nc,nc);
@@ -406,8 +407,6 @@ for i=1:tsim
     queue(:)=0;
     
     if ~isempty(trips)
-    
-        % TODO: fix pooling option 
         
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));

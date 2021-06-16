@@ -41,7 +41,7 @@ if size(chargingStations,2)==1
 end
 
 if ~exist('clusterIDs','var')
-    clusterIDs=chargingStations;
+    clusterIDs=chargingStations(:,1);
 end
 
 
