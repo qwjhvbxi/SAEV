@@ -411,7 +411,7 @@ for i=1:tsim
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.Epsilon;
-        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariffkm*tripDistancesKm(trips); % trip distances in minutes+...
+        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariff*tripDistancesKm(trips); % trip distances in minutes+...
             surchargeMat(selectorClusters);
         alte=exp(-Aaltp(trips));
         
