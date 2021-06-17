@@ -6,15 +6,15 @@ Shared Autonomous Electric Vehicles simulation and optimization model.
 
 If you use this code in your research, please cite:
 
-1. R.Iacobucci et al., Integrated optimisation-simulation framework for scalable smart charging and relocation of shared autonomous electric vehicles. 2021
+1. R.Iacobucci, R.Bruno, J.D.Schmöcker. *Integrated optimisation-simulation framework for scalable smart charging and relocation of shared autonomous electric vehicles*. Energies, 2021
 
 If you use the FCR module, please additionally cite:
 
-1. R.Iacobucci et al., Frequency Control Reserve Provision from a Fleet of Shared Autonomous Electric Vehicles. IEEE MT-ITS 2021
+1. R.Iacobucci, J. Donhauser, J.D.Schmöcker, M. Pruckner. *Frequency Control Reserve Provision from a Fleet of Shared Autonomous Electric Vehicles*. IEEE MT-ITS 2021
 
 If you use the pricing module, please additionally cite:
 
-1. R.Iacobucci, J.D.Schmöcker. Dynamic pricing for ride-hailing services considering relocation and mode choice. IEEE MT-ITS 2021
+1. R.Iacobucci, J.D.Schmöcker. *Dynamic pricing for ride-hailing services considering relocation and mode choice*. IEEE MT-ITS 2021
 
 ## Quick start
 
