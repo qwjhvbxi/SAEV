@@ -1,16 +1,18 @@
-
+%% [fo,fd,ft,Aforecast]=LOADPREDICTIONS(P,As,Atimes)
 % TODO: cleanup call to secondary trip file (real vs expected/forecasted)
 % for simulations with modechoice, OD prediction is needed, but can be
 % probability distributions. For other simulations, aggregates are enough
+% 
 % 2 options: 1) OD probability distributions in matrix form
 %            2) aggregates at nodes in the form fo,fd
 % option 2) can be easily calculated from 1) and used by relocation,
 % pricing etc.
 % option 1) only for pricing
 
-function [fo,fd,Aforecast]=loadpredictions(P,As,Atimes)
+function [fo,fd,ft,Aforecast]=loadpredictions(P,As,Atimes)
 
 nc=max(As(:));
+ft=NaN;
 
 switch double(P.Sim.mpcpredict)
     case 0 % legacy 

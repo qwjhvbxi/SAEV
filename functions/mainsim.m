@@ -35,7 +35,7 @@ nc=length(clusterIDs);    % number of clusters
 
 % Aforecast is a t x n^2 matrix with probabilities of each OD pair at each
 % time interval (needed only for pricing optimization)
-[fo,fd,Aforecast]=loadpredictions(P,As,Atimes);
+[fo,fd,dkod,Aforecast]=loadpredictions(P,As,Atimes);
 
 
 %% initialize parameters of simulation
