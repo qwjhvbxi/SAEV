@@ -17,6 +17,7 @@
 % See also: getp, mainsim
 %
 % Riccardo Iacobucci 
+% https://riccardoiacobucci.com
 
 function [Res]=main(P,extsave,dispiter)
 
