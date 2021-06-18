@@ -12,6 +12,7 @@ addpath('utilities/jsonlab');
 
 if exist('loadjson','file')~=2
     warning('Need jsonlab (https://uk.mathworks.com/matlabcentral/fileexchange/33381-jsonlab-a-toolbox-to-encode-decode-json-files).')
+    resvec=[];
     return
 end
 

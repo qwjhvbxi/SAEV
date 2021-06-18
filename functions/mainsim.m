@@ -167,7 +167,7 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
             load(emdFileName,'dkemd','dkod','dktrip');
         else
             dkod=computetraveltime(A,Atimes,T,Beta);% TODO: should be on prediction
-            [dkemd,~]=computeemd(fo,fd,T,Beta,clusterIDs); 
+            dkemd=computeemd(fo,fd,T,Beta,clusterIDs); 
             dktrip=dkod+dkemd;
             save(emdFileName,'dkemd','dkod','dktrip');
         end

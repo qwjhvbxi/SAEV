@@ -1,4 +1,4 @@
-%% [dkemd,dkod]=COMPUTEEMD(fo,fd,T,Beta,relocationNodes)
+%% dkemd=COMPUTEEMD(fo,fd,T,Beta,relocationNodes)
 % Compute travel time for relocation during time horizon.
 % 'fo' and 'fd' are respectively the number of departures and arrivals at
 % each node at each time interval. Size: [minutes x no. nodes]
@@ -9,7 +9,7 @@
 % 
 % See also: mainsim, computetraveltime
 
-function [dkemd,dkod]=computeemd(fo,fd,T,Beta,relocationNodes)
+function dkemd=computeemd(fo,fd,T,Beta,relocationNodes)
 
 fprintf('\n Calculating approximate relocation distance\n\n')
 
@@ -48,9 +48,6 @@ for kt=1:mtsim
 
     % distance of relocation
     dkemd(kt)=sum(thisTrelocation(sub2ind(size(thisTrelocation),Fs,Rs)).*Vr);
-    
-    % distance to travel
-    dkod(kt)=sum(thisTrelocation(sub2ind(size(thisTrelocation),A(thisStep,1),A(thisStep,2))));
 
 end
 
