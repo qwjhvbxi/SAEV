@@ -199,7 +199,6 @@ end
 addpath functions/pricing
 
 % add info to Pricing struct
-Pricing.n=nc;
 Pricing.relocation=autoRelocation;
 
 % initializations
@@ -208,7 +207,7 @@ surchargeMat=zeros(nc,nc);  % surcharges per stations
 Aaltp=nan(r,1);             % alternative prices
 altp=0;
 
-if Pricing.dynamic    
+if Pricing.dynamic
     tp=round(Pricing.tp/P.Sim.e);       % pricing interval
     tpH=round(Pricing.horizon/P.Sim.e); % pricing horizon
 else
@@ -412,7 +411,7 @@ for i=1:tsim
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.Epsilon;
         pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariff*tripDistancesKm(trips); % trip distances in minutes+...
-            surchargeMat(selectorClusters);
+            surchargeMat(selectorClusters); % TODO: fix!
         alte=exp(-Aaltp(trips));
         
         % offered prices

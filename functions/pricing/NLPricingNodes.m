@@ -1,9 +1,9 @@
 %% [prices,k,m]=NLPricing(m)
 % Non-linear pricing at nodes
 % 
-% m is a struct with variables: c,v,a,gamma_r,gamma_alt,fixedprice
+% m is a struct with variables: c,v,a,relocationcost,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
-% demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
+% demand matrix; relocationcost is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
 function [prices,k,m,reloc]=NLPricingNodes(m)
@@ -88,9 +88,9 @@ m.a=[0 10 0
 % m.a=[0 10 0
 %      10 0 0
 %      0  0 0];
-m.gamma_r=0.1;
+m.relocationcost=0.1;
 m.gamma_alt=0.25;
-m.gamma_d=bestp((1:50)',m.gamma_r,m.gamma_alt);
+m.gamma_d=bestp((1:50)',m.relocationcost,m.gamma_alt);
 [prices,k,m,reloc]=NLPricing2(m)
 
 %%
@@ -106,8 +106,8 @@ p1=Fare+Surcharges;
 Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a
 Aeff.*p1
 
-sum(sum(Aeff0.*Fare-m.gamma_r*m.c))
-sum(sum(Aeff.*p1-m.gamma_r*m.c))
+sum(sum(Aeff0.*Fare-m.relocationcost*m.c))
+sum(sum(Aeff.*p1-m.relocationcost*m.c))
 
 s=m.v+sum(Aeff)'-sum(Aeff,2);
 r=sum(reloc)'-sum(reloc,2);

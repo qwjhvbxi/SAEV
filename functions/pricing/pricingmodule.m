@@ -1,6 +1,9 @@
+% TODO: output should just be OD pricing, either calculated directly for
+% each OD, or by distance+inboud/outboud node
+
 function [perDistanceTariff,surcharges,altp]=pricingmodule(Pricing,forecastOD,alternativeCosts,ui)
 
-n=Pricing.n;
+n=size(Pricing.c,1);
     
 % initialize matrix of fare per minute
 perDistanceTariff=ones(n,n).*Pricing.basetariff;
