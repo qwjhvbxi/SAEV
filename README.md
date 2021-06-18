@@ -10,7 +10,7 @@ https://riccardoiacobucci.com
 
 If you use this code in your research, please cite:
 
-1. R.Iacobucci, R.Bruno, J.D.Schmöcker. *Integrated optimisation-simulation framework for scalable smart charging and relocation of shared autonomous electric vehicles*. Energies, 2021
+1. R.Iacobucci, R.Bruno, J.D.Schmöcker. *Integrated optimisation-simulation framework for scalable smart charging and relocation of shared autonomous electric vehicles*. Energies, 2021. doi: [10.3390/en14123633](https://doi.org/10.3390/en14123633)
 
 If you use the FCR module, please additionally cite:
 
