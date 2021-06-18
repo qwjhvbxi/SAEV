@@ -1,4 +1,4 @@
-%% [X,prices]=RelocationPricing3(m)
+%% [X,prices]=RelocationPricing9(m)
 % m is a struct with variables: c,v,a,gamma_r,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
 % demand matrix; gamma_r is the cost of relocation per minute; fixedprice is the
