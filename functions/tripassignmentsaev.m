@@ -1,4 +1,4 @@
-%% [V,B,tripdist,relodist,queue]=tripassignmentsaev(Vin,Bin,Par)
+%% [V,B,tripdist,tripdistkm,relodist,relodistkm,queue]=tripassignmentsaev(Vin,Bin,Par)
 % Trip assignment for SAEV simulation with active rebalancing
 % 
 % input
@@ -19,10 +19,12 @@
 %
 % See also: main
 
-function [V,B,tripdist,relodist,queue]=tripassignmentsaev(Vin,Bin,Par)
+function [V,B,tripdist,tripdistkm,relodist,relodistkm,queue]=tripassignmentsaev(Vin,Bin,Par)
 
 tripdist=0;
+tripdistkm=0;
 relodist=0;
+relodistkm=0;
 queue=zeros(100,1);
 ql=0;
 
@@ -45,6 +47,7 @@ if ~isempty(Bin)
     
     distancepickup=Par.Tr(ui,Bin(:,1))';
     distancetomove=Par.Tr(sub2ind(size(Par.Tr),Bin(:,1),Bin(:,2)));
+    distancetomovekm=Par.D(sub2ind(size(Par.D),Bin(:,1),Bin(:,2)));
     
     EnergyReq=(distancepickup+(distancetomove+di'))*Par.ad+Par.minsoc;
     
@@ -121,10 +124,13 @@ if ~isempty(Bin)
 
                     % update travelled distance
                     tripdist=tripdist+distancetomove(tripID);
+                    tripdistkm=tripdistkm+distancetomovekm(tripID);
 
                     % update additional travel distance to pickup
                     pickupdist=Par.Tr(ui(uids),Bin(tripID,1));
+                    pickupdistkm=Par.D(ui(uids),Bin(tripID,1));
                     relodist=relodist+pickupdist;
+                    relodistkm=relodistkm+pickupdistkm;
 
                     % accept request and update vehicle position
                     ui(uids)=Bin(tripID,2); % position

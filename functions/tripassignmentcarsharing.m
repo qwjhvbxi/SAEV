@@ -19,9 +19,10 @@
 %
 % See also: main
 
-function [V,B,tripdist,relodist,queue]=tripassignmentcarsharing(Vin,Bin,Par)
+function [V,B,tripdist,tripdistkm,relodist,queue]=tripassignmentcarsharing(Vin,Bin,Par)
 
 tripdist=0;
+tripdistkm=0;
 relodist=0;
 queue=zeros(100,1);
 
@@ -67,6 +68,7 @@ if ~isempty(Bin)
 
             % distance of each trip
             distancetomove=Par.Tr(j,destinations);
+            distancetomovekm=Par.D(j,destinations);
 
             % trip priority: highest waiting first, then longest travel time
             trippriority=distancetomove+waiting(tripsK)'*max(Par.Tr(:));
@@ -76,6 +78,7 @@ if ~isempty(Bin)
 
             % sort trip distances
             distancetomovesorted=distancetomove(sortid);
+            distancetomovekmsorted=distancetomovekm(sortid);
 
             % for each trip
             for ka=1:length(distancetomovesorted)
@@ -137,6 +140,7 @@ if ~isempty(Bin)
                         
                         % update travelled distance
                         tripdist=tripdist+distancetomovesorted(ka);
+                        tripdistkm=tripdistkm+distancetomovekmsorted(ka);
 
                     else
 

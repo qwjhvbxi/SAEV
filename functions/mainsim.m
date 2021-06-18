@@ -69,7 +69,9 @@ chosenmode=false(r,1);          % which mode is chosen?
 offeredprices=zeros(r,1);       % price offered to each passenger
 status=zeros(tsim,P.m);         % vehicle status
 relodist=zeros(tsim,1);         % distances of relocation (at moment of decision)
+relodistkm=zeros(tsim,1);       % distances of relocation in km (at moment of decision)
 tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
+tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
 
 
@@ -266,6 +268,7 @@ for i=1:tsim
     ui=double(u(i,:));
     di=double(d(i,:));
     relodist(i)=0;
+    relodistkm(i)=0;
     
     
     %% calculate current distance matrix
@@ -286,10 +289,12 @@ for i=1:tsim
         IdleReached=(idleTime>=P.Operations.maxidle/P.Sim.e);
         ui(IdleReached)=chargingStations(closestCS(ui(IdleReached)),1);
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
+        relodistCSkm=D(sub2ind(size(D),u(i,IdleReached),ui(IdleReached)))/1000;
         di(IdleReached)=relodistCS;
         s(2,IdleReached)=0;
         s(5,IdleReached)=1;
         relodist(i)=relodist(i)+sum(relodistCS);
+        relodistkm(i)=relodistkm(i)+relodistCSkm;
     end
     
     
@@ -376,6 +381,7 @@ for i=1:tsim
         used=logical(Vout(:,2));
         relodestinations=clusterIDs(Vout(used,1));
         relodisti=Tr(sub2ind(size(Tr),ui(used),relodestinations'));
+        relodistkmi=D(sub2ind(size(D),ui(used),relodestinations'))/1000;
         
         ui(used)=relodestinations; 
         di(used)=di(used)+relodisti;
@@ -388,6 +394,7 @@ for i=1:tsim
         % update results
         b(kt,:)=bkt;
         relodist(i)=relodist(i)+sum(relodisti);
+        relodistkm(i)=relodistkm(i)+sum(relodistkmi);
         
     end
 
@@ -423,9 +430,10 @@ for i=1:tsim
         Bin=[A(trips,1:2) , waiting(trips) , pp , alte ];
 
         if autoRelocation
-            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripassignmentsaev(Vin,Bin,Par);
+            [Vout,Bout,tripdisti,tripdistkmi,relodistiPU,relodistkmiPU,queuei]=tripassignmentsaev(Vin,Bin,Par);
         else
-            [Vout,Bout,tripdisti,relodistiPU,queuei]=tripassignmentcarsharing(Vin,Bin,Par);
+            [Vout,Bout,tripdisti,tripdistkmi,relodistiPU,queuei]=tripassignmentcarsharing(Vin,Bin,Par);
+            relodistkmiPU=0;
         end
         
         % update vehicles positions
@@ -439,7 +447,9 @@ for i=1:tsim
         
         % update results
         tripdist(i)=tripdisti;
+        tripdistkm(i)=tripdistkmi;
         relodist(i)=relodist(i)+relodistiPU;
+        relodistkm(i)=relodistkm(i)+relodistkmiPU;
         chosenmode(trips)=Bout(:,1);
         waiting(trips)=Bout(:,2);
         dropped(trips)=Bout(:,3);
@@ -533,12 +543,14 @@ Sim.modalshare=sum(chosenmode)/r;
 
 % general info
 Sim.relodist=relodist*P.Sim.e; % relocation minutes
+Sim.relodistkm=relodistkm; % relocation km
 Sim.tripdist=tripdist*P.Sim.e; % trip minutes
+Sim.tripdistkm=tripdistkm; % trip minutes
 Sim.emissions=(sum(Sim.e/60*P.Sim.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
 % pricing info
 Sim.revenues=sum((offeredprices-Pricing.movingcostkm.*tripDistancesKm(1:r)).*chosenmode.*(1-dropped));
-Sim.relocationcosts=sum(relodist)*P.Sim.e*Pricing.relocationcost;
+Sim.relocationcosts=sum(relodistkm)*Pricing.movingcostkm;
 Sim.offeredprices=datacompactor(offeredprices);
 Sim.tariff=datacompactor(tariff);
 Sim.surcharge=datacompactor(surcharge);
