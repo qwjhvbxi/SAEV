@@ -2,6 +2,10 @@
 
 Shared Autonomous Electric Vehicles simulation and optimization model.
 
+Code by Riccardo Iacobucci
+
+https://riccardoiacobucci.com
+
 ## Cite
 
 If you use this code in your research, please cite:
@@ -30,7 +34,9 @@ How to launch a simulation:
 
 `Result=main(P,extsave,info)`
 
-The first input variable `P` is a struct-type with the parameters of the simulation, the second variable `extsave` indicates whether to save/load the results, the third variable `info` indicates what level of information to show during a simulation run. See below for more information.
+The first input variable `P` is a struct-type with the parameters of the simulation. 
+The second variable `extsave` indicates whether to save/load the results (to use this functionality first include `DataHash` in the path. You can find it at https://uk.mathworks.com/matlabcentral/fileexchange/31272-datahash).
+The third variable `info` indicates what level of information to show during a simulation run. See below for more information.
 A typical call would be:
 
 `Result=main(P,1,2)`
@@ -217,9 +223,5 @@ Some functions run faster with *Parallel Computing Toolbox*.
 
 The model is tested for Matlab 2017b or newer. 
 The code can be run with older versions with some minor modifications (mostly explicit matrix expansions).
-
-
-
-
 
 

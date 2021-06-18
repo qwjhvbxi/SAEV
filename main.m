@@ -46,14 +46,19 @@ end
 
 %% generate unique Hash for savefile
 
-Hash=DataHash(P);
-simname=[DataFolder 'out/' Hash '.mat'];
-if extsave<2
-    if extsave>=0 && exist(simname,'file')
-        % if the file already exists, just return the previous result
-        load(simname,'Res');
-        return
+if exist('DataHash','file')==2
+    Hash=DataHash(P);
+    simname=[DataFolder 'out/' Hash '.mat'];
+    if extsave<2
+        if extsave>=0 && exist(simname,'file')
+            % if the file already exists, just return the previous result
+            load(simname,'Res');
+            return
+        end
     end
+else
+    warning('DataHash not found. Using extsave=-1.')
+    extsave=-1;
 end
 
 
