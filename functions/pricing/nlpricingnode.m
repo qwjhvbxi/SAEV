@@ -1,4 +1,4 @@
-%% [prices,k,m]=NLPricing(m)
+%% [prices,k,m]=NLPRICINGNODE(m)
 % Non-linear pricing at nodes
 % 
 % m is a struct with variables: c,v,a,relocationcost,gamma_alt,fixedprice
@@ -6,7 +6,7 @@
 % demand matrix; relocationcost is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
-function [prices,k,m,reloc]=NLPricingNodes(m)
+function [prices,k,m,reloc]=nlpricingnode(m)
 
 %% initializations
 

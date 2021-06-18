@@ -1,4 +1,4 @@
-%% [prices,k,m]=NLPricing5(m)
+%% [prices,k,m]=NLPRICINGOD(m)
 % Non-linear pricing with continuous approximation
 % 
 % m is a struct with variables: c,v,a,relocationcost,gamma_alt,fixedprice
@@ -6,7 +6,7 @@
 % demand matrix; relocationcost is the cost of relocation per minute; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
-function [prices,k,m,reloc,revenues]=NLPricing5(m)
+function [prices,k,m,reloc,revenues]=nlpricingod(m)
 
 
 %% initializations

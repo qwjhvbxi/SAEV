@@ -34,11 +34,11 @@ if ~isempty(forecastOD)
 
         if ~nodebased
 
-            [perDistanceTariff,~,~]=NLPricing5(Pricing); % OD-pair-based pricing
+            [perDistanceTariff,~,~]=nlpricingod(Pricing); % OD-pair-based pricing
 
         else 
 
-            [surcharges,~,~]=NLPricingNodes(Pricing); % node-based pricing
+            [surcharges,~,~]=nlpricingnode(Pricing); % node-based pricing
 
         end
 
