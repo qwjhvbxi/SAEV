@@ -57,7 +57,7 @@ if exist('DataHash','file')==2
         end
     end
 else
-    warning('DataHash not found. Using extsave=-1.')
+    Warn=(extsave>=0);
     extsave=-1;
 end
 
@@ -125,4 +125,7 @@ if dispiter<0
 end
 fprintf('successfully completed \n');
 
+if Warn
+    warning('DataHash not found. Used extsave=-1.')
+end
 
