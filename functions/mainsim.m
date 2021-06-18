@@ -199,7 +199,7 @@ addpath functions/pricing
 
 % add info to Pricing struct
 Pricing.relocation=autoRelocation;
-Pricing.c=D(clusterIDs,clusterIDs);
+Pricing.c=D(clusterIDs,clusterIDs)/1000;
 
 % initializations
 perDistanceTariff=ones(nc,nc).*Pricing.basetariffkm; % matrix of fare per minute
@@ -406,8 +406,8 @@ for i=1:tsim
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.Epsilon;
-        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariffkm*tripDistancesKm(trips); % trip distances in minutes+...
-            surchargeMat(selectorClusters); % TODO: fix!
+        pp=perDistanceTariff(selectorClusters).*tripDistancesKm(trips); 
+%             surchargeMat(selectorClusters); % TODO: fix!
         alte=exp(-Aaltp(trips));
         
         % offered prices
