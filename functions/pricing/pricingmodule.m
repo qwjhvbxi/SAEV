@@ -6,7 +6,7 @@ function [perDistanceTariff,surcharges,altp]=pricingmodule(Pricing,forecastOD,al
 n=size(Pricing.c,1);
     
 % initialize matrix of fare per minute
-perDistanceTariff=ones(n,n).*Pricing.basetariff;
+perDistanceTariff=ones(n,n).*Pricing.basetariffkm;
 
 % initialize surcharges per stations
 surcharges=zeros(2*n,1);
@@ -24,12 +24,9 @@ if ~isempty(forecastOD)
         a_tp(1:n+1:end)=0;
         Pricing.a=a_tp;
 
-        if numel(Pricing.alternative)>1
-            [a,Ib,~]=unique(forecastOD,'rows','stable');
-            altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),n,n);
-        else
-            altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
-        end
+        [a,Ib,~]=unique(forecastOD,'rows','stable');
+        altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),n,n);
+        
         Pricing.altp=altp;
 
         if ~nodebased
@@ -45,12 +42,8 @@ if ~isempty(forecastOD)
     else
 
         % expected trips
-        if numel(Pricing.alternative)>1
-            [a,Ib,~]=unique(forecastOD,'rows','stable');
-            altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),n,n);
-        else
-            altp=Pricing.alternative.*Pricing.c; % alternative price for each OD
-        end
+        [a,Ib,~]=unique(forecastOD,'rows','stable');
+        altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),n,n);
 
     end
 

@@ -89,11 +89,10 @@ if ~isstruct(T)
     Tr(1:n+1:end)=0;          % no distance between same node
     Trs=Tr(clusterIDs,clusterIDs);
     Par.Tr=Tr;
-    Pricing.c=Trs*P.Sim.e;
     [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
 end
 tripDistances=nan(r,1);
-tripDistancesKm=D(sub2ind(size(D),A(1:r,1),A(1:r,2)))/1000;
+tripDistancesKm=D(sub2ind(size(D),A(:,1),A(:,2)))/1000;
 
 
 %% setup relocation module
@@ -200,11 +199,19 @@ addpath functions/pricing
 
 % add info to Pricing struct
 Pricing.relocation=autoRelocation;
+Pricing.c=D(clusterIDs,clusterIDs);
 
 % initializations
-perDistanceTariff=ones(nc,nc).*Pricing.basetariff; % matrix of fare per minute
+perDistanceTariff=ones(nc,nc).*Pricing.basetariffkm; % matrix of fare per minute
 surchargeMat=zeros(nc,nc);  % surcharges per stations
-Aaltp=nan(r,1);             % alternative prices
+
+if isempty(Pricing.alternativecost)
+    % alternative price for each user calculated with trip distances in km
+    Aaltp=Pricing.alternativecostkm*tripDistancesKm; 
+else
+    Aaltp=Pricing.alternativecost;
+end
+
 altp=0;
 
 if Pricing.dynamic
@@ -216,7 +223,7 @@ else
 end
 
 % initialization for dynamic pricing
-tariff=ones(nc^2,ceil(tsim/tp))*Pricing.basetariff;
+tariff=ones(nc^2,ceil(tsim/tp))*Pricing.basetariffkm;
 surcharge=zeros(nc*2,ceil(tsim/tp));
 
 
@@ -268,8 +275,6 @@ for i=1:tsim
         Tr=max(1,round(thisT/P.Sim.e));% distance matrix in steps
         Trs=Tr(clusterIDs,clusterIDs);
         Par.Tr=Tr;
-        % function to calculate probability of acceptance given a certain price for each OD pair
-        Pricing.c=Trs*Par.Epsilon;
         [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
     end
     
@@ -307,15 +312,6 @@ for i=1:tsim
             %       passenger (the one seen by optimization). Specific cost only for
             %       mode choice module
             
-            % price of alternative option 
-            if numel(Pricing.alternative)>1
-                % alternative price for each user is given as input 
-                Aaltp(selection0)=Pricing.alternative(selection0);
-            else
-                % alternative price for each user calculated with trip distances in minutes
-                Aaltp(selection0)=Pricing.alternative*Tr(sub2ind(size(Tr),A(selection0,1),A(selection0,2)))*P.Sim.e; 
-            end
-
             AsNow=As(selection0,:);
             altpNow=Aaltp(selection0);
 
@@ -410,7 +406,7 @@ for i=1:tsim
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.Epsilon;
-        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariff*tripDistancesKm(trips); % trip distances in minutes+...
+        pp=perDistanceTariff(selectorClusters).*tripDistances(trips)+Pricing.basetariffkm*tripDistancesKm(trips); % trip distances in minutes+...
             surchargeMat(selectorClusters); % TODO: fix!
         alte=exp(-Aaltp(trips));
         
@@ -541,7 +537,7 @@ Sim.tripdist=tripdist*P.Sim.e; % trip minutes
 Sim.emissions=(sum(Sim.e/60*P.Sim.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
 % pricing info
-Sim.revenues=sum((offeredprices-Pricing.relocationcost.*tripDistances(1:r)).*chosenmode.*(1-dropped));
+Sim.revenues=sum((offeredprices-Pricing.movingcostkm.*tripDistancesKm(1:r)).*chosenmode.*(1-dropped));
 Sim.relocationcosts=sum(relodist)*P.Sim.e*Pricing.relocationcost;
 Sim.offeredprices=datacompactor(offeredprices);
 Sim.tariff=datacompactor(tariff);

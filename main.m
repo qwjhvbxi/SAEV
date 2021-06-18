@@ -68,7 +68,36 @@ end
 
 % check optional info
 if ~isfield(P,'Pricing') || isempty(P.Pricing)
-    P.Pricing=struct('relocationcost',0,'basetariff',0,'basetariffkm',0,'VOT',0,'pricingwaiting',1,'alternative',0,'dynamic',0);
+    P.Pricing=struct('movingcostkm',0,'basetariffkm',0,'VOT',0,'pricingwaiting',1,'alternativecostkm',0,'alternativecost',[],'dynamic',0);
+end
+
+
+%% legacy pricing conversions
+
+if isfield(P.Pricing,'alternative') 
+    
+    % convert price per minutes to prices per km;
+    avgspeedkmh=30;
+    mintokm=60/avgspeedkmh;
+    P.Pricing.movingcostkm=P.Pricing.relocationcost*mintokm; % TODO: add km traveled!
+    P.Pricing.basetariffkm=P.Pricing.basetariff*mintokm;
+    
+    % convert trip alternative to OD pricing
+    if numel(P.Pricing.alternative)==1
+        P.Pricing.alternativecostkm=P.Pricing.alternative*mintokm;
+        P.Pricing.alternativecost=[];
+    else
+        P.Pricing.alternativecost=P.Pricing.alternative;
+    end
+    
+    % convert dynamic/nodebased to algs;
+    % P.Pricing.alg=[];
+    % if P.Pricing.dynamic && ~P.Pricing.nodebased
+    %     P.Pricing.alg='od';
+    % end
+    % if P.Pricing.dynamic && P.Pricing.nodebased
+    %     P.Pricing.alg='nodes';
+    % end
 end
 
 

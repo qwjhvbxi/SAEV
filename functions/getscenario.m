@@ -52,7 +52,8 @@ if ~exist('D','var')
 %         D=[]; % TODO: calculate approximate distance from coordinates
 %     else
     [thisT]=gettraveltimenow(T,0);
-    D=30*(thisT/60)*1000; % distance (meters) with average speed of 30 km/h
+    avgspeedkmh=30; % average speed of 30 km/h
+    D=avgspeedkmh*(thisT/60)*1000; % distance (meters) with average speed 
 end
 
 

@@ -1,9 +1,9 @@
 %% [prices,k,m]=NLPRICINGOD(m)
 % Non-linear pricing with continuous approximation
 % 
-% m is a struct with variables: c,v,a,relocationcost,gamma_alt,fixedprice
+% m is a struct with variables: c,v,a,movingcostkm,gamma_alt,fixedprice
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
-% demand matrix; relocationcost is the cost of relocation per minute; fixedprice is the
+% demand matrix; movingcostkm is the cost of relocation per km; fixedprice is the
 % fixed price for optimizing relocation only (optional).
 
 function [prices,k,m,reloc,revenues]=nlpricingod(m)
@@ -107,11 +107,11 @@ function ThisRevenue=CalcRevenue(m,prices,reloc)
     p1=prices.*m.c;
     Aeff=( exp(-p1)./(exp(-p1)+exp(-m.altp))  ).*m.a;
     if ~isempty(reloc)
-        relocation=sum(sum(reloc.*m.c))*m.relocationcost;
+        relocation=sum(sum(reloc.*m.c))*m.movingcostkm;
     else 
         relocation=0;
     end
-    ThisRevenue=full(sum(sum(Aeff.*(p1-m.relocationcost*m.c))))-relocation;
+    ThisRevenue=full(sum(sum(Aeff.*(p1-m.movingcostkm*m.c))))-relocation;
 end
 
 
@@ -208,7 +208,7 @@ end
 
 % cost function
 H=2*diag([zeros(n^2,1);a.*c.*h]);
-f=[  c*m.relocationcost ;   -a.*c.*(  s(:) + h*m.relocationcost  )  ];
+f=[  c*m.movingcostkm ;   -a.*c.*(  s(:) + h*m.movingcostkm  )  ];
 
 options=optimoptions('quadprog','display','none');
 
@@ -237,7 +237,7 @@ m.c=[0 2 3
 m.a=[0 10 0
      5  0 0
      0  2 0];
-m.relocationcost=0.1;
+m.movingcostkm=0.1;
 m.gamma_alt=0.25;
 m.relocation=0;
 [prices,k,m,reloc]=NLPricing4(m)
@@ -254,8 +254,8 @@ p1=prices.*m.c;
 Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a
 Aeff.*p1
 
-sum(sum(Aeff0.*(Fare-m.relocationcost*m.c)))
-sum(sum(Aeff.*(p1-m.relocationcost*m.c)))
+sum(sum(Aeff0.*(Fare-m.movingcostkm*m.c)))
+sum(sum(Aeff.*(p1-m.movingcostkm*m.c)))
 
 s=m.v+sum(Aeff)'-sum(Aeff,2);
 r=sum(reloc)'-sum(reloc,2);
