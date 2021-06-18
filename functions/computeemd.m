@@ -36,7 +36,7 @@ for kt=1:mtsim
     [thisT]=gettraveltimenow(T,kt*Beta);
     thisTrelocation=thisT(relocationNodes,relocationNodes);
 
-    thisStep=(kt-1)*Beta+1:kt*Beta;
+    thisStep=(kt-1)*Beta+1:min(t,kt*Beta);
     F=sum(fd(thisStep,:));
     R=sum(fo(thisStep,:));
 
