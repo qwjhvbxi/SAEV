@@ -10,6 +10,11 @@ end
 
 addpath('utilities/jsonlab');
 
+if exist('loadjson','file')~=2
+    warning('Need jsonlab (https://uk.mathworks.com/matlabcentral/fileexchange/33381-jsonlab-a-toolbox-to-encode-decode-json-files).')
+    return
+end
+
 % input formatting
 originvec=reshape([lat1,lon1]',[1,length(lat1)*2])';
 destinvec=reshape([lat2,lon2]',[1,length(lat2)*2])';
