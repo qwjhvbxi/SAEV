@@ -1,7 +1,12 @@
-% TODO: output should just be OD pricing, either calculated directly for
-% each OD, or by distance+inboud/outboud node
+%% [perDistanceTariff,surcharges,altp]=PRICINGMODULE(Pricing,forecastOD,alternativeCosts,ui)
+% Launch pricing module optimization.
+%
+% See also: mainsim
 
 function [perDistanceTariff,surcharges,altp]=pricingmodule(Pricing,forecastOD,alternativeCosts,ui)
+
+% TODO: output should just be OD pricing, either calculated directly for
+% each OD, or by distance+inboud/outboud node
 
 n=size(Pricing.c,1);
     

@@ -13,8 +13,10 @@
 %     3 moving
 %     4 moving for relocation
 %     5 moving to charging station
-% 
+%
 % See also: getp, mainsim
+%
+% Riccardo Iacobucci 
 
 function [Res]=main(P,extsave,dispiter)
 
