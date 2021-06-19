@@ -77,13 +77,10 @@ tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of accepta
 
 %% setup internal parameters
 
-Pricing=P.Pricing;
-Par=struct('e',P.Sim.e,'D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
-    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',Pricing.VOT,'WaitingCostToggle',Pricing.pricingwaiting,...
+Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
+    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,'WaitingCostToggle',P.Pricing.pricingwaiting,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
     'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
-Par.ac=P.Tech.chargekw/P.Tech.battery/60*P.Sim.e;    % charge rate per time step (normalized)
-Par.ad=P.Tech.consumption/P.Tech.battery*P.Sim.e;    % discharge rate per time step (normalized)
 
 % distances
 if ~isstruct(T)
@@ -200,32 +197,32 @@ end
 addpath functions/pricing
 
 % add info to Pricing struct
-Pricing.relocation=autoRelocation;
-Pricing.c=D(clusterIDs,clusterIDs)/1000;
+P.Pricing.relocation=autoRelocation;
+P.Pricing.c=D(clusterIDs,clusterIDs)/1000;
 
 % initializations
-perDistanceTariff=ones(nc,nc).*Pricing.basetariffkm; % matrix of fare per minute
+perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm; % matrix of fare per minute
 surchargeMat=zeros(nc,nc);  % surcharges per stations
 
-if isempty(Pricing.alternativecost)
+if isempty(P.Pricing.alternativecost)
     % alternative price for each user calculated with trip distances in km
-    Aaltp=Pricing.alternativecostkm*tripDistancesKm; 
+    Aaltp=P.Pricing.alternativecostkm*tripDistancesKm; 
 else
-    Aaltp=Pricing.alternativecost;
+    Aaltp=P.Pricing.alternativecost;
 end
 
 altp=0;
 
-if Pricing.dynamic
-    tp=round(Pricing.tp/P.Sim.e);       % pricing interval
-    tpH=round(Pricing.horizon/P.Sim.e); % pricing horizon
+if P.Pricing.dynamic
+    tp=round(P.Pricing.tp/P.Sim.e);       % pricing interval
+    tpH=round(P.Pricing.horizon/P.Sim.e); % pricing horizon
 else
     tpH=0;
     tp=tsim;
 end
 
 % initialization for dynamic pricing
-tariff=ones(nc^2,ceil(tsim/tp))*Pricing.basetariffkm;
+tariff=ones(nc^2,ceil(tsim/tp))*P.Pricing.basetariffkm;
 surcharge=zeros(nc*2,ceil(tsim/tp));
 
 
@@ -294,7 +291,7 @@ for i=1:tsim
         s(2,IdleReached)=0;
         s(5,IdleReached)=1;
         relodist(i)=relodist(i)+sum(relodistCS);
-        relodistkm(i)=relodistkm(i)+relodistCSkm;
+        relodistkm(i)=relodistkm(i)+sum(relodistCSkm);
     end
     
     
@@ -302,7 +299,7 @@ for i=1:tsim
 
     if P.modechoice
         
-        if ~Pricing.dynamic || mod(i-1,tp)==0
+        if ~P.Pricing.dynamic || mod(i-1,tp)==0
             
             % current pricing number
             kp=ceil(i/tp);
@@ -320,7 +317,7 @@ for i=1:tsim
             AsNow=As(selection0,:);
             altpNow=Aaltp(selection0);
 
-            [perDistanceTariff,surchargeNodes,altp]=pricingmodule(Pricing,AsNow,altpNow,clusters(ui));
+            [perDistanceTariff,surchargeNodes,altp]=pricingmodule(P.Pricing,AsNow,altpNow,clusters(ui));
 
             tariff(:,kp)=perDistanceTariff(:);
             surcharge(:,kp)=surchargeNodes;
@@ -331,7 +328,7 @@ for i=1:tsim
 
         if autoRelocation
         
-            option1=exp(-perDistanceTariff.*Pricing.c-surchargeMat);
+            option1=exp(-perDistanceTariff.*P.Pricing.c-surchargeMat);
             multiplier=option1./(option1+exp(-altp));
 
             % expected OD matrices for different future horizons
@@ -549,8 +546,8 @@ Sim.tripdistkm=tripdistkm; % trip minutes
 Sim.emissions=(sum(Sim.e/60*P.Sim.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
 % pricing info
-Sim.revenues=sum((offeredprices-Pricing.movingcostkm.*tripDistancesKm(1:r)).*chosenmode.*(1-dropped));
-Sim.relocationcosts=sum(relodistkm)*Pricing.movingcostkm;
+Sim.revenues=sum((offeredprices-P.Pricing.movingcostkm.*tripDistancesKm(1:r)).*chosenmode.*(1-dropped));
+Sim.relocationcosts=sum(relodistkm)*P.Pricing.movingcostkm;
 Sim.offeredprices=datacompactor(offeredprices);
 Sim.tariff=datacompactor(tariff);
 Sim.surcharge=datacompactor(surcharge);

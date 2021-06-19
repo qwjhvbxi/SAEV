@@ -46,6 +46,7 @@ end
 
 %% generate unique Hash for savefile
 
+Warn=0;
 if exist('DataHash','file')==2
     Hash=DataHash(P);
     simname=[DataFolder 'out/' Hash '.mat'];

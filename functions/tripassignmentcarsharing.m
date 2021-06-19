@@ -7,7 +7,7 @@
 % Bin: passengers info in the form:
 % [O D waiting]
 % Par: parameters:
-%     Tr, ad, e, minsoc, maxwait, modechoice 
+%     Tr, Epsilon, consumption, battery, minsoc, maxwait, modechoice 
 % 
 % output 
 % V: vehicle movements in the form [station delay used]
@@ -25,6 +25,8 @@ tripdist=0;
 tripdistkm=0;
 relodist=0;
 queue=zeros(100,1);
+
+ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
 
 % if there are trips
 if ~isempty(Bin)
@@ -87,12 +89,12 @@ if ~isempty(Bin)
                 tripID=tripsK(sortid(ka));
 
                 % candidate vehicles
-                usortedi=find(qj>=distancetomovesorted(ka)*Par.ad+Par.minsoc,1);
+                usortedi=find(qj>=distancetomovesorted(ka)*ad+Par.minsoc,1);
                 uids=uid(usortid(usortedi));
 
                 if ~isempty(uids)
 
-                    WaitingTime=Vin(uids,2)*Par.e;
+                    WaitingTime=Vin(uids,2)*Par.Epsilon;
 
                 else
 
@@ -106,7 +108,6 @@ if ~isempty(Bin)
 
                     if Par.modechoice
                         
-                        % Tariff=distancetomovesorted(ka)*Par.e*Bin(tripID,4);
                         Tariff=Bin(tripID,4);
                         
                         UtilitySAEV=-Tariff-WaitingTime*Par.VOT/60*Par.WaitingCostToggle;
@@ -148,7 +149,7 @@ if ~isempty(Bin)
                         if waiting(tripID)<Par.maxwait
 
                             % increase waiting time (minutes) for this trip
-                            waiting(tripID)=waiting(tripID)+Par.e;
+                            waiting(tripID)=waiting(tripID)+Par.Epsilon;
 
                             % add this trip to the queue
                             ql=ql+1;  % current trip

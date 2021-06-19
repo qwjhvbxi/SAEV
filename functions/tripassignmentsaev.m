@@ -7,7 +7,7 @@
 % Bin: passengers info in the form:
 % [O D waiting]
 % Par: parameters:
-%     Tr, ad, e, minsoc, maxwait, modechoice 
+%     Tr, Epsilon, consumption, battery, minsoc, maxwait, modechoice 
 % 
 % output 
 % V: vehicle movements in the form [station delay used]
@@ -27,6 +27,8 @@ relodist=0;
 relodistkm=0;
 queue=zeros(100,1);
 ql=0;
+
+ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
 
 % if there are trips
 if ~isempty(Bin)
@@ -49,7 +51,7 @@ if ~isempty(Bin)
     distancetomove=Par.Tr(sub2ind(size(Par.Tr),Bin(:,1),Bin(:,2)));
     distancetomovekm=Par.D(sub2ind(size(Par.D),Bin(:,1),Bin(:,2)));
     
-    EnergyReq=(distancepickup+(distancetomove+di'))*Par.ad+Par.minsoc;
+    EnergyReq=(distancepickup+(distancetomove+di'))*ad+Par.minsoc;
     
     % create matrix X
     X=(distancepickup + ... distance from passenger
@@ -74,7 +76,7 @@ if ~isempty(Bin)
         
         % if there is a possible vehicle
         if ~isnan(Delay)
-            WaitingTime=floor(Delay)*Par.e;
+            WaitingTime=floor(Delay)*Par.Epsilon;
         else
             WaitingTime=NaN;
         end
@@ -90,7 +92,6 @@ if ~isempty(Bin)
                     
                 else
                     
-                    % Tariff=distancetomove(tripID)*Par.e*Bin(tripID,4);
                     Tariff=Bin(tripID,4);
 
                     UtilitySAEV=-Tariff-(Par.WaitingCostToggle*WaitingTime+distancetomove(tripID))*Par.VOT/60;
@@ -141,7 +142,7 @@ if ~isempty(Bin)
                             di(uids)+... updated delay
                             0.1 + ... indicate the vehicle is available
                             (1-Vin(uids,3))*0.25).* ... penalty for low soc vehicles
-                            (EnergyReq(:,uids)+(Par.ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
+                            (EnergyReq(:,uids)+(ad*(pickupdist+distancetomove(tripID)))<Vin(uids,3)');
                     X(X(:,uids)==0,uids)=NaN;
 
                     % remove vehicles that are needed for FCR
@@ -155,7 +156,7 @@ if ~isempty(Bin)
                 else
 
                     % increase waiting time (minutes) for this trip
-                    waiting(tripID)=waiting(tripID)+Par.e;
+                    waiting(tripID)=waiting(tripID)+Par.Epsilon;
 
                     % add this trip to the queue
                     ql=ql+1;  % current trip
