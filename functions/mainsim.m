@@ -34,7 +34,7 @@ nc=length(clusterIDs);    % number of clusters
 %% load predictions
 
 % Aforecast is a t x n^2 matrix with probabilities of each OD pair at each
-% time interval (needed only for pricing optimization)
+% time interval (needed only for pricing optimization/modechoice)
 [fo,fd,dkod,Aforecast]=loadpredictions(P,As,Atimes);
 
 
@@ -100,8 +100,7 @@ if isfield(P,'Relocation') && ~isempty(P.Relocation)
     ts=round(P.Relocation.ts/P.Sim.e);
     tr=round(P.Relocation.tr/P.Sim.e);
     tx=round(P.Relocation.tx/P.Sim.e);
-    bmin=P.Relocation.bmin;
-    b=zeros(ceil(tsim/tx),nc,'double');             % imbalance
+    b=zeros(ceil(tsim/tx),nc,'double');  % imbalance
     autoRelocation=1;
 else
     b=NaN;
@@ -251,7 +250,8 @@ cumulativeTripArrivals=cumulativeTripArrivals(1:P.Sim.e:end);
 
 S.starttime=cputime;
 S.lasttime=S.starttime;
-S.comptime=[cputime;zeros(tsim,1)];
+S.comptime=[S.starttime;zeros(tsim,1)];
+S.clocktime=zeros(tsim,1);
 
 
 %% start of iterations
@@ -261,7 +261,8 @@ for i=1:tsim
     
 	%% display progress
     
-    displayprogress(i,tsim,dispiter,S.comptime(i)-S.comptime(1),40)
+    startclock=tic;
+    displayprogress(i,tsim,dispiter,sum(S.clocktime),40)
     ui=double(u(i,:));
     di=double(d(i,:));
     relodist(i)=0;
@@ -307,8 +308,6 @@ for i=1:tsim
             % expected trips
             selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
 
-            % TODO / PRICING: change pricing with per km? Can be calculated from the start and
-            %       they do not change
             % TODO / PRICING: reorganize for imperfect prediction!
             %       price of alternative option should be dependent on OD, not single
             %       passenger (the one seen by optimization). Specific cost only for
@@ -328,7 +327,7 @@ for i=1:tsim
 
         if autoRelocation
         
-            option1=exp(-perDistanceTariff.*P.Pricing.c-surchargeMat);
+            option1=exp(-max(P.Pricing.mintariff,perDistanceTariff.*P.Pricing.c)-surchargeMat);
             multiplier=option1./(option1+exp(-altp));
 
             % expected OD matrices for different future horizons
@@ -366,7 +365,7 @@ for i=1:tsim
         ParRel.a_to=round(sum(fo(i:i+ts+tr,:)))'; % expected requests between now and now+ts+tr
         ParRel.Trs=Trs*Par.Epsilon;
         ParRel.limite=P.Relocation.ts;
-        ParRel.bmin=bmin;
+        ParRel.bmin=P.Relocation.bmin;
         ParRel.consumption=P.Tech.consumption;
         ParRel.battery=P.Tech.battery;
         ParRel.LimitFCR=Par.LimitFCR;
@@ -410,8 +409,7 @@ for i=1:tsim
         % calculate pricing    
         selectorClusters=sub2ind(size(Trs),As(trips,1),As(trips,2));
         tripDistances(trips)=Tr(sub2ind(size(Tr),A(trips,1),A(trips,2)))*Par.Epsilon;
-        pp=perDistanceTariff(selectorClusters).*tripDistancesKm(trips); 
-%             surchargeMat(selectorClusters); % TODO: fix!
+        pp=max(P.Pricing.mintariff , perDistanceTariff(selectorClusters).*tripDistancesKm(trips)); % +surchargeMat(selectorClusters); % TODO: fix!
         alte=exp(-Aaltp(trips));
         
         % offered prices
@@ -466,7 +464,7 @@ for i=1:tsim
             % index of energy layer
             t=(i-1)/(Beta/P.Sim.e)+1;
             
-            dktripnow=dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
+            dktripnow=Trips.dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
             melepnow=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
             mco2now=mco2(t:t+chargingHorizon-1); % [g/kWh]
 
@@ -516,8 +514,9 @@ for i=1:tsim
     % record time
     S.lasttime=cputime;
     
-    % update cputime of this step
+    % update cputime and clocktime of this step
 	S.comptime(i+1)=cputime;
+    S.clocktime(i)=toc(startclock);
     
 end
 
