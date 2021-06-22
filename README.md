@@ -135,11 +135,12 @@ For 'Simplified' algorithm, which uses aggregate predictions:
 | Field         | format| description |
 | ------------- | ------------- | ------------- |
 | tp            | double | Period of pricing module call (minutes) | 
-| relocationcost| double | Relocation cost (per minute) | 
-| basetariff    | double | Base tariff (per minute) | 
-| alternative   | double | Alternative mode cost (per minute) | 
-| VOT           | double | Value of time (per hour) | 
-| pricingwaiting| logical | Consider waiting time in mode choice model? | 
+| movingcostkm  | double | Relocation cost (per km) | 
+| basetariffkm  | double | Base tariff (per km) | 
+| alternativecostkm | double | Alternative mode cost (per km) | 
+| alternativecost   | double | Alternative mode cost (for each trip). Leave empty if using `alternativecostkm` | 
+| mintariff     | double | Minimum tariff | 
+| VOT           | double | Value of time (per hour) |
 | dynamic       | logical | Optimize pricing dynamically?  | 
 
 #### `FCR`

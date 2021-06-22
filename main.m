@@ -77,7 +77,7 @@ end
 
 % check optional info
 if ~isfield(P,'Pricing') || isempty(P.Pricing)
-    P.Pricing=struct('movingcostkm',0,'basetariffkm',0,'VOT',0,'pricingwaiting',1,'alternativecostkm',0,'alternativecost',[],'dynamic',0,'mintariff',0);
+    P.Pricing=struct('movingcostkm',0,'basetariffkm',0,'VOT',0,'alternativecostkm',0,'alternativecost',[],'dynamic',0,'mintariff',0);
 end
 
 
