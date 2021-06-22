@@ -1,3 +1,8 @@
+%% SAVEP(P[,pname])
+% Save input parameter struct in folder 'data/par/'
+% 
+% See also: main, getp
+
 function savep(P,pname)
 
 addpath functions utilities
@@ -10,9 +15,5 @@ end
 Paddr=[DataFolder 'par/' pname];
 
 save(Paddr,'P');
-
-% if exist(Paddr,'file')
-%     load(Paddr,'P');
-% end
 
 end

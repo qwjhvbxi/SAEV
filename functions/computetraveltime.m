@@ -6,30 +6,38 @@
 
 function dkod=computetraveltime(A,Atimes,T,Beta)
 
-% last minute
-t=double(max(Atimes(:)));
+if ~isempty(Beta) && Beta>0
+    
+    % last minute
+    t=double(max(Atimes(:)));
 
-% length of total interval
-mtsim=round(t/Beta);
-% t=Beta*mtsim;
+    % length of total interval
+    mtsim=round(t/Beta);
+    % t=Beta*mtsim;
 
-% initialize
-dk=zeros(mtsim,1);
+    % initialize
+    dk=zeros(mtsim,1);
 
-for kt=1:mtsim
+    for kt=1:mtsim
+
+        % progress report
+        clc
+        fprintf('\n %d/%d\n\n',kt,mtsim)
+
+        [thisT]=gettraveltimenow(T,kt*Beta);
+
+        % find trips in this time step
+        thisStep=logical((Atimes(:,1)>=(kt-1)*Beta+1).*(Atimes(:,1)<=kt*Beta));
+        dk(kt)=sum(thisT(sub2ind(size(thisT),A(thisStep,1),A(thisStep,2))));
+
+    end
+
+    dkod=dk;
+
+else
     
-    % progress report
-    clc
-    fprintf('\n %d/%d\n\n',kt,mtsim)
-    
-    [thisT]=gettraveltimenow(T,kt*Beta);
-    
-    % find trips in this time step
-    thisStep=logical((Atimes(:,1)>=(kt-1)*Beta+1).*(Atimes(:,1)<=kt*Beta));
-    dk(kt)=sum(thisT(sub2ind(size(thisT),A(thisStep,1),A(thisStep,2))));
-    
+    dkod=[];
+
 end
-
-dkod=dk;
 
 end

@@ -9,45 +9,47 @@
 % 
 % See also: mainsim, computetraveltime
 
-function dkemd=computeemd(fo,fd,T,Beta,relocationNodes)
+function dkemd=computeemd(fo,fd,T,Beta)
 
-fprintf('\n Calculating approximate relocation distance\n\n')
+if ~isempty(Beta) && Beta>0
 
-[thisT]=gettraveltimenow(T,0);
-if nargin<5
-    n=size(thisT,1);
-    relocationNodes=(1:n)';
-end
-nr=length(relocationNodes);
-approx=(nr>100);
+    fprintf('\n Calculating approximate relocation distance\n\n')
 
-t=size(fo,1);
-mtsim=round(t/Beta);
+    [thisT]=gettraveltimenow(T,0);
+    nr=size(thisT,1);
+    approx=(nr>100);
 
-dkemd=zeros(mtsim,1);
-dkod=zeros(mtsim,1);
+    t=size(fo,1);
+    mtsim=round(t/Beta);
 
-for kt=1:mtsim
+    dkemd=zeros(mtsim,1);
+
+    for kt=1:mtsim
+
+        % progress report
+        clc
+        fprintf('\n %d/%d\n\n',kt,mtsim)
+
+        [thisT]=gettraveltimenow(T,kt*Beta);
+
+        thisStep=(kt-1)*Beta+1:min(t,kt*Beta);
+        F=sum(fd(thisStep,:));
+        R=sum(fo(thisStep,:));
+
+        % identify optimal relocation flux
+        x=optimalrelocationfluxes(F,R,thisT,60,approx);
+
+        % read results
+        [Fs,Rs,Vr]=find(x);
+
+        % distance of relocation
+        dkemd(kt)=sum(thisT(sub2ind(size(thisT),Fs,Rs)).*Vr);
+
+    end
+
+else 
     
-    % progress report
-    clc
-    fprintf('\n %d/%d\n\n',kt,mtsim)
-    
-    [thisT]=gettraveltimenow(T,kt*Beta);
-    thisTrelocation=thisT(relocationNodes,relocationNodes);
-
-    thisStep=(kt-1)*Beta+1:min(t,kt*Beta);
-    F=sum(fd(thisStep,:));
-    R=sum(fo(thisStep,:));
-
-    % identify optimal relocation flux
-    x=optimalrelocationfluxes(F,R,thisTrelocation,60,approx);
-
-    % read results
-    [Fs,Rs,Vr]=find(x);
-
-    % distance of relocation
-    dkemd(kt)=sum(thisTrelocation(sub2ind(size(thisTrelocation),Fs,Rs)).*Vr);
+    dkemd=[];
 
 end
 

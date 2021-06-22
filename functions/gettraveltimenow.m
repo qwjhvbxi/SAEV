@@ -8,13 +8,17 @@
 function [thisT]=gettraveltimenow(T,k)
 
 if isstruct(T)
-    k=rem(k,1440);
-    traveltimes=[0,T.hour,24.1]*60;
-    nextIndex=find(traveltimes>k,1);
-    minutePast=traveltimes(nextIndex-1);
-    minuteNext=traveltimes(nextIndex);
-    hourNextWeight=(k-minutePast)/(minuteNext-minutePast);
-    thisT=T(max(1,nextIndex-2)).traveltime*(1-hourNextWeight)+T(min(length(T),nextIndex-1)).traveltime*hourNextWeight;
+    if length(T)==1
+        thisT=T(1).traveltime;
+    else
+        k=rem(k,1440);
+        traveltimes=[0,T.hour,24.1]*60;
+        nextIndex=find(traveltimes>k,1);
+        minutePast=traveltimes(nextIndex-1);
+        minuteNext=traveltimes(nextIndex);
+        hourNextWeight=(k-minutePast)/(minuteNext-minutePast);
+        thisT=T(max(1,nextIndex-2)).traveltime*(1-hourNextWeight)+T(min(length(T),nextIndex-1)).traveltime*hourNextWeight;
+    end
 else
     thisT=T;
     %thisT(1:length(thisT)+1:end)=0;          % no distance between same node

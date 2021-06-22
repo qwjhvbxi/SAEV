@@ -5,6 +5,8 @@
 % Problem: pricing cannot be run with charging because of how EMD is
 % calculated right now
 % Problem: OD-based pricing cannot run with aggregate prediction
+% TODO: - T should be a matrix not struct
+%       - 
 % 
 % See also: main
 
@@ -15,7 +17,7 @@ DataFolder=getdatafolder();
 %% load external files: scenario, trips 
 
 % load distance matrix
-[T,D,clusters,clusterIDs,chargingStations]=getscenario(P.scenario);
+[T,D,clusters,clusterCenters,chargingStations]=getscenario(P.scenario);
 
 % load trips
 [A,Atimes,cumulativeTripArrivals,~]=gettrips(P);
@@ -28,7 +30,7 @@ DataFolder=getdatafolder();
 
 n=size(clusters,1);             % number of nodes 
 As=clusters(A(:,1:2));          % OD at clusters
-nc=length(clusterIDs);    % number of clusters
+nc=length(clusterCenters);    % number of clusters
 
 
 %% load predictions
@@ -36,6 +38,7 @@ nc=length(clusterIDs);    % number of clusters
 % Aforecast is a t x n^2 matrix with probabilities of each OD pair at each
 % time interval (needed only for pricing optimization/modechoice)
 [fo,fd,dkod,Aforecast]=loadpredictions(P,As,Atimes);
+% [fo,fd,dkod,dkemd,Aforecast]=loadpredictions(P,As,Atimes,Ts);
 
 
 %% initialize parameters of simulation
@@ -86,9 +89,15 @@ Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Opera
 if ~isstruct(T)
     Tr=max(1,round(T/P.Sim.e));% distance matrix in steps
     Tr(1:n+1:end)=0;          % no distance between same node
-    Trs=Tr(clusterIDs,clusterIDs);
+    Trs=Tr(clusterCenters,clusterCenters);
     Par.Tr=Tr;
     [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
+else
+    Ts=T;
+    for i=1:length(T)
+        Ts(i).traveltime=T(i).traveltime(clusterCenters,clusterCenters);
+        Ts(i).hour=T(i).hour;
+    end
 end
 tripDistances=nan(r,1);
 tripDistancesKm=D(sub2ind(size(D),A(:,1),A(:,2)))/1000;
@@ -132,7 +141,6 @@ end
 %% setup charging module
 
 dynamicCharging=false;
-Trips=[];
 Beta=0;
 
 if isfield(P,'Charging') && ~isempty(P.Charging)
@@ -156,18 +164,6 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         etsim=floor(1440/Beta); % number of charging decisions
         melep=average2(elepMinute,Beta);
         mco2=average2(co2Minute,Beta);
-
-        % generate aggregate trip statistics
-        emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Beta) '.mat'];
-        if exist(emdFileName,'file')
-            load(emdFileName,'dkemd','dkod','dktrip');
-        else
-            dkod=computetraveltime(A,Atimes,T,Beta);% TODO: should be on prediction
-            dkemd=computeemd(fo,fd,T,Beta,clusterIDs); 
-            dktrip=dkod+dkemd;
-            save(emdFileName,'dkemd','dkod','dktrip');
-        end
-        Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dktrip);
         
         % energy layer variable: static values
         Par.Beta=P.Charging.beta;
@@ -191,13 +187,24 @@ else
 end
 
 
+%% generate aggregate trip statistics
+emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Beta) '.mat'];
+if exist(emdFileName,'file')
+    load(emdFileName,'dkemd','dkod');
+else
+    dkod=computetraveltime(A,Atimes,T,Beta);% TODO: should be on prediction
+    dkemd=computeemd(fo,fd,Ts,Beta); 
+    save(emdFileName,'dkemd','dkod');
+end
+
+
 %% setup pricing module 
 
 addpath functions/pricing
 
 % add info to Pricing struct
 P.Pricing.relocation=autoRelocation;
-P.Pricing.c=D(clusterIDs,clusterIDs)/1000;
+P.Pricing.c=D(clusterCenters,clusterCenters)/1000;
 
 % initializations
 perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm; % matrix of fare per minute
@@ -274,7 +281,7 @@ for i=1:tsim
     if isstruct(T)
         [thisT]=gettraveltimenow(T,i*Par.Epsilon);
         Tr=max(1,round(thisT/P.Sim.e));% distance matrix in steps
-        Trs=Tr(clusterIDs,clusterIDs);
+        Trs=Tr(clusterCenters,clusterCenters);
         Par.Tr=Tr;
         [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
     end
@@ -375,7 +382,7 @@ for i=1:tsim
         
         % update vehicles position
         used=logical(Vout(:,2));
-        relodestinations=clusterIDs(Vout(used,1));
+        relodestinations=clusterCenters(Vout(used,1));
         relodisti=Tr(sub2ind(size(Tr),ui(used),relodestinations'));
         relodistkmi=D(sub2ind(size(D),ui(used),relodestinations'))/1000;
         
@@ -464,7 +471,7 @@ for i=1:tsim
             % index of energy layer
             t=(i-1)/(Beta/P.Sim.e)+1;
             
-            dktripnow=Trips.dktrip(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
+            dktripnow=dkod(t:t+chargingHorizon-1)+dkemd(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
             melepnow=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
             mco2now=mco2(t:t+chargingHorizon-1); % [g/kWh]
 
@@ -568,7 +575,7 @@ Params.tsim=tsim;
 
 % Res struct generation
 Res.Params=Params;
-Res.Trips=Trips;
+Res.Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dkod+dkemd);
 Res.Sim=Sim;
 Res.Internals=Internals;
 Res.CPUtimes=S;

@@ -1,3 +1,8 @@
+%% P=GETP(Pname)
+% List available input parameter structs in folder 'data/par/'
+% 
+% See also: main, savep
+
 function P=getp(Pname)
 
 addpath functions utilities
