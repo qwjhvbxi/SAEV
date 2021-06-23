@@ -6,7 +6,9 @@
 % calculated right now
 % Problem: OD-based pricing cannot run with aggregate prediction
 % TODO: - T should be a matrix not struct
-%       - 
+%       - faster trip assignment 
+%       - can avoid using Par, instead just use P?
+%       - D should be in km, not m
 % 
 % See also: main
 
@@ -80,7 +82,7 @@ tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of accepta
 
 %% setup internal parameters
 
-Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
+Par=struct('D',D/1000,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
     'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
@@ -121,14 +123,11 @@ end
 
 if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
     
-    Par.csp=true;
-    if isfield(P.FCR,'aggregatechargeratio')
-        Par.aggregateratio=P.FCR.aggregatechargeratio; % charge rate at aggregate level optimization
-    end
-    
     [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
     f=average2(fraw,P.Sim.e/fresolution);
     
+    Par.csp=true;
+    Par.aggregateratio=P.FCR.aggregatechargeratio; % charge rate at aggregate level optimization
     Par.LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
     Par.fcrcontracted=P.FCR.contracted;
     Par.fcrlimits=P.FCR.limits;
@@ -188,11 +187,12 @@ end
 
 
 %% generate aggregate trip statistics
+
 emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Beta) '.mat'];
 if exist(emdFileName,'file')
     load(emdFileName,'dkemd','dkod');
 else
-    dkod=computetraveltime(A,Atimes,T,Beta);% TODO: should be on prediction
+    dkod=computetraveltime(A,Atimes,T,Beta); % TODO: should be on prediction
     dkemd=computeemd(fo,fd,Ts,Beta); 
     save(emdFileName,'dkemd','dkod');
 end
@@ -207,8 +207,8 @@ P.Pricing.relocation=autoRelocation;
 P.Pricing.c=D(clusterCenters,clusterCenters)/1000;
 
 % initializations
-perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm; % matrix of fare per minute
-surchargeMat=zeros(nc,nc);  % surcharges per stations
+perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm;  % matrix of fares
+surchargeMat=zeros(nc,nc);                              % matrix of surcharges per stations
 
 if isempty(P.Pricing.alternativecost)
     % alternative price for each user calculated with trip distances in km
@@ -234,12 +234,17 @@ surcharge=zeros(nc*2,ceil(tsim/tp));
 
 %% initial states
 
-q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      % initial state of charge
+% initial state of charge
+q(1,:)=P.Operations.initialsoc.*ones(1,P.m);      
+
+% initial position of vehicles
 if isfield(P.Operations,'uinit')
     u(1,:)=P.Operations.uinit;
 else
-    u(1,:)=chargingStations(randi(nc,1,P.m),1);                 % initial position of vehicles
+    u(1,:)=chargingStations(randi(nc,1,P.m),1);                 
 end
+
+% initial delay
 if isfield(P.Operations,'dinit')
     d(1,:)=P.Operations.dinit;
 end
@@ -320,9 +325,10 @@ for i=1:tsim
             %       passenger (the one seen by optimization). Specific cost only for
             %       mode choice module
             
-            AsNow=As(selection0,:);
-            altpNow=Aaltp(selection0);
+            AsNow=As(selection0,:);     % current ODs
+            altpNow=Aaltp(selection0);  % current costs for alternative mode 
 
+            % launch pricing optimization
             [perDistanceTariff,surchargeNodes,altp]=pricingmodule(P.Pricing,AsNow,altpNow,clusters(ui));
 
             tariff(:,kp)=perDistanceTariff(:);
@@ -548,7 +554,7 @@ Sim.modalshare=sum(chosenmode)/r;
 Sim.relodist=relodist*P.Sim.e; % relocation minutes
 Sim.relodistkm=relodistkm; % relocation km
 Sim.tripdist=tripdist*P.Sim.e; % trip minutes
-Sim.tripdistkm=tripdistkm; % trip minutes
+Sim.tripdistkm=tripdistkm; % trip km
 Sim.emissions=(sum(Sim.e/60*P.Sim.e,2)')*co2(1:tsim)/10^6; % emissions [ton]
 
 % pricing info
@@ -562,6 +568,13 @@ Sim.surcharge=datacompactor(surcharge);
 Internals.b=b;
 Internals.d=uint8(d);
 Internals.zmacro=zmacro;
+
+% stats
+Stats.vehicletrips=(r-sum(dropped))/P.m; % trips per vehicle per day
+Stats.vkt=(sum(tripdistkm)+sum(relodistkm))/P.m; % km driven per vehicle per day
+Stats.evktshare=sum(relodistkm)/(sum(tripdistkm)+sum(relodistkm)); % share of empty km driven
+Stats.runtime=(sum(tripdist)+sum(relodist))/60/P.m; % average vehicle use per day (hours)
+% Stats.cycles= % average battery cycles per vehicle per day % TODO: how to consider different SOC at start and end?
 
 
 %% create Res struct and save results
@@ -577,6 +590,7 @@ Params.tsim=tsim;
 Res.Params=Params;
 Res.Trips=struct('dkod',dkod,'dkemd',dkemd,'dktrip',dkod+dkemd);
 Res.Sim=Sim;
+Res.Stats=Stats;
 Res.Internals=Internals;
 Res.CPUtimes=S;
 Res.cputime=cputime-S.starttime;

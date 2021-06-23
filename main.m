@@ -80,6 +80,10 @@ if ~isfield(P,'Pricing') || isempty(P.Pricing)
     P.Pricing=struct('movingcostkm',0,'basetariffkm',0,'VOT',0,'alternativecostkm',0,'alternativecost',[],'dynamic',0,'mintariff',0);
 end
 
+if isfield(P,'FCR') && ~isfield(P.FCR,'aggregatechargeratio')
+   	P.FCR.aggregatechargeratio=1;
+end
+
 
 %% legacy pricing conversions
 
