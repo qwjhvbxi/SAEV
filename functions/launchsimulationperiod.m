@@ -1,16 +1,15 @@
-%% [Summary,R]=LAUNCHSIMULATIONPERIOD(Period,P[,GridOffset,ResultsOut,varargin])
+%% [Results]=LAUNCHSIMULATIONPERIOD(Period,P[,GridOffset,ResultsOut,varargin])
 % launch simulations over multiple days.
 % Period is the consecutive days
 % P is the parameter struct
 % GridOffset is the offset of the griddays over the Period
 % ResultsOut is a logical variable to indicate if the full results should be
-%   outputted (warning: large memory use)
-% Summary is a struct with a summary of the results
-% R is the optional full results struct if ResultsOut==true
+%   outputted (warning: large memory use). If ResultsOut==false, the output
+%   will be struct Summary with a summary of the results.
 %
 % See also: main, generateplotline3
 
-function [Summary,R]=launchsimulationperiod(Period,P,GridOffset,ResultsOut,OutSave,varargin)
+function [Results]=launchsimulationperiod(Period,P,GridOffset,ResultsOut,OutSave,varargin)
 
 Extended=false;
 
@@ -40,24 +39,16 @@ DataFolder=getdatafolder();
 % initial parameters
 SOC=zeros(length(Period)+1,P.m);
 Uinit=zeros(length(Period)+1,P.m);
-load([DataFolder 'scenarios/' P.scenario '.mat'],'T','Clusters','chargingStations');
-n=size(T,1);
+[~,~,clusters,~,chargingStations]=getscenario(P.scenario);
+n=length(clusters);
 
 % load or create start variables
-StartFile=[DataFolder 'temp/StartFile_' num2str(n) '-' num2str(P.m) '.mat'];
+StartFile=[DataFolder 'temp/StartFile_' P.scenario '-m' num2str(P.m) '.mat'];
 if exist(StartFile,'file')
     load(StartFile,'StartSoc','StartPos');
 else
     StartSoc=ones(1,P.m)*0.7;
-    if isfield(P,'chargingStations')
-        chargingStations=P.chargingStations;
-    end
-    if exist('chargingStations','var')
-        nc=length(chargingStations);
-    else
-        chargingStations=(1:n)';
-        nc=n;
-    end
+	nc=length(chargingStations);
     StartPos=chargingStations(randi(nc,1,P.m));
     save(StartFile,'StartSoc','StartPos');
 end
@@ -158,6 +149,12 @@ Summary.totdropped=totdropped/totreq;
 Summary.totavgwait=totwait/totreq;
 Summary.totwaitprctile=full(prctile(Summary.waiting,[50 97.5 99 100]));
 Summary.totminutes=totminutes;
+
+if ResultsOut
+    Results=R;
+else
+    Results=Summary;
+end
 
 end
 
