@@ -39,8 +39,8 @@ switch PlotType
         end
         
         % power exchanged
-        figure('Units','centimeters','Position',[10,7,10,7])
-        stairs(x,full(sum(Res.Sim.e,2)+ef)/1000)
+        prettyfigure
+        stairs(x,(full(sum(Res.Sim.e,2))+full(ef))/1000)
         ylabel('power (MW)')
         hold on
         yyaxis right
@@ -50,10 +50,22 @@ switch PlotType
         xlabel('hours')
         ylabel(['electricity price ' priceUnits])
         legend({'power','price'},'Orientation','horizontal')
-        set(gca,'FontUnits','points','FontWeight','normal','FontName','Times')
         if ~isempty(FolderName)
             print([DataFolder 'figures/' FolderName '/power' FileID],Format,Resolution);
         end
+        
+    case 'status'        
+        
+        % status
+        fleetstat=histc(Res.Sim.status',1:5);
+
+        prettyfigure
+        plot(x,fleetstat')
+        xlim([0,24])
+        xticks(xt)
+        xlabel('hours')
+        ylabel('vehicles')
+        legend({'connected';'idle';'moving';'relocating';'reloc. to CS'})
         
 end
 
