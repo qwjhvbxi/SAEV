@@ -123,7 +123,7 @@ end
 
 if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
     
-    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename],P.gridday,false);
+    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename '.csv'],P.gridday,false);
     f=average2(fraw,P.Sim.e/fresolution);
     
     Par.csp=true;
@@ -241,7 +241,7 @@ q(1,:)=P.Operations.initialsoc.*ones(1,P.m);
 if isfield(P.Operations,'uinit')
     u(1,:)=P.Operations.uinit;
 else
-    u(1,:)=chargingStations(randi(nc,1,P.m),1);                 
+    u(1,:)=chargingStations(randi(nc,1,P.m),1);
 end
 
 % initial delay
@@ -470,7 +470,7 @@ for i=1:tsim
     
     %% charging optimization
     
-    if dynamicCharging 
+    if dynamicCharging
         
         if rem(i,Beta/P.Sim.e)==1
 
@@ -496,7 +496,13 @@ for i=1:tsim
     
     %% simulation variables update
     
-    [ei,efi]=chargingsetpoints(Par,q(i,:),s(1,:),zmacro(1:3,t),(rem(i,Beta/P.Sim.e)==1),f(i));
+    if Par.csp && rem(i,Beta/P.Sim.e)==1
+        
+        setPoints=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:3,t));
+        
+    end
+    
+    [ei,efi]=chargingsetpoints(Par,q(i,:),s(1,:),zmacro(1:3,t),setPoints,f(i));
     e(i,:)=ei;
     ef(i,:)=efi;
     
@@ -574,6 +580,13 @@ Stats.vehicletrips=(r-sum(dropped))/P.m; % trips per vehicle per day
 Stats.vkt=(sum(tripdistkm)+sum(relodistkm))/P.m; % km driven per vehicle per day
 Stats.evktshare=sum(relodistkm)/(sum(tripdistkm)+sum(relodistkm)); % share of empty km driven
 Stats.runtime=(sum(tripdist)+sum(relodist))/60/P.m; % average vehicle use per day (hours)
+Stats.dropped=sum(dropped)/r;
+Stats.peakwait=max(waiting);
+Stats.avgwait=mean(waiting);
+Stats.chargingcost=(sum(Sim.e/60/1000*P.Sim.e,2)')*elep(1:tsim)+Sim.emissions*P.carbonprice;
+Stats.modalshare=sum(chosenmode)/r;
+Stats.cputime=cputime-S.starttime;
+Stats.clocktime=sum(S.clocktime);
 % Stats.cycles= % average battery cycles per vehicle per day % TODO: how to consider different SOC at start and end?
 
 

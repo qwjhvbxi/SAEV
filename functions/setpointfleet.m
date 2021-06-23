@@ -7,8 +7,10 @@ function [SetPoints]=setpointfleet(Par,q,s,z)
 
 H=Par.Beta/Par.Epsilon;
 
+ac=Par.chargekw/Par.battery/60*Par.Epsilon;    % charge rate per time step (normalized)
+
 % power exchanged for vehicles charging
-acv=(q<Par.fastchargesoc)*Par.ac+(q>=Par.fastchargesoc)*Par.ac*Par.slowchargeratio;
+acv=(q<Par.fastchargesoc)*ac+(q>=Par.fastchargesoc)*ac*Par.slowchargeratio;
 
 % aggregate set point (kWh)
 SetPointUpPeriod=(z(1));  % set point of aggregate fleet (kWh)

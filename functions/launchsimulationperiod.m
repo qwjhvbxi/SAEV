@@ -135,7 +135,7 @@ for j=1:length(Period)
     end
 
     if isfield(P,'FCR')
-        FCRres=testFCR(P,Res);
+        FCRres=fcrtest(P,Res);
         Summary.FCRfails(j)=FCRres.FailMinutes;
         Summary.FCRenergy(j,:)=FCRres.Totals;
     end

@@ -1,4 +1,4 @@
-%% [e,ef]=CHARGINGSETPOINTS(Par,qi,s,Z[,newSetPoint,f])
+%% [e,ef]=CHARGINGSETPOINTS(Par,qi,s,Z[,setPoints,f])
 % Finds charging set points for each vehicle.
 % 
 % == Input == 
@@ -33,41 +33,34 @@
 % 
 % See also: chargingmodule, mainsim
 
-function [e,ef]=chargingsetpoints(Par,q,s,Z,newSetPoint,f)
+function [e,ef]=chargingsetpoints(Par,q,s,Z,setPoints,f)
 
 if nargin<6
     f=0;
-end
-if nargin<5
-    newSetPoint=0;
 end
 if ~isfield(Par,'refillmaxsoc')
     Par.refillmaxsoc=0;
 end
 
 Par.ac=Par.chargekw/Par.battery/60*Par.Epsilon;    % charge rate per time step (normalized)
-Par.ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
+% Par.ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
 
 if Par.csp  % setpoint based
 
-    % default values
-    if ~isfield(Par,'fastchargesoc')
-        Par.fastchargesoc=1;
-    end
-    if ~isfield(Par,'slowchargeratio')
-        Par.slowchargeratio=1;
-    end
-    if ~isfield(Par,'fcrlimits')
-        Par.fcrlimits=[0,0];
-    end
-    if ~isfield(Par,'fcrcontracted')
-        Par.fcrcontracted=0;
-    end    
+%     % default values
+%     if ~isfield(Par,'fastchargesoc')
+%         Par.fastchargesoc=1;
+%     end
+%     if ~isfield(Par,'slowchargeratio')
+%         Par.slowchargeratio=1;
+%     end
+%     if ~isfield(Par,'fcrlimits')
+%         Par.fcrlimits=[0,0];
+%     end
+%     if ~isfield(Par,'fcrcontracted')
+%         Par.fcrcontracted=0;
+%     end    
     
-    if newSetPoint
-        [setPoints]=setpointfleet(Par,q,s,Z(1:2));
-    end
-
     [e,ef]=setpointvehicle(Par,q,s,f,setPoints);
 
 
