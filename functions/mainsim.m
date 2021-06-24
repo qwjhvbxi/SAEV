@@ -141,6 +141,7 @@ end
 
 dynamicCharging=false;
 Beta=0;
+setPoints=[];
 
 if isfield(P,'Charging') && ~isempty(P.Charging)
     
