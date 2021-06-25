@@ -92,6 +92,7 @@ if ~isstruct(T)
     Tr=max(1,round(T/P.Sim.e));% distance matrix in steps
     Tr(1:n+1:end)=0;          % no distance between same node
     Trs=Tr(clusterCenters,clusterCenters);
+    Ts=T(clusterCenters,clusterCenters);
     Par.Tr=Tr;
     [~,closestCS]=min(Tr(:,chargingStations(:,1)),[],2); % closest charging station to each node
 else
@@ -309,9 +310,14 @@ for i=1:tsim
     end
     
     
-    %% pricing optimization
+    %% mode choice and pricing optimization
 
     if P.modechoice
+        
+        % TODO: altp calculation should be here, and given in input to
+        % pricing module
+        % TODO: alternative should be as OD matrix, not associated with
+        % each trip
         
         if ~P.Pricing.dynamic || mod(i-1,tp)==0
             
@@ -325,6 +331,9 @@ for i=1:tsim
             %       price of alternative option should be dependent on OD, not single
             %       passenger (the one seen by optimization). Specific cost only for
             %       mode choice module
+            
+            % TODO / MODECHOICE: prediction should be independent of
+            % pricing module!
             
             AsNow=As(selection0,:);     % current ODs
             altpNow=Aaltp(selection0);  % current costs for alternative mode 
@@ -370,22 +379,22 @@ for i=1:tsim
         % number of waiting passenger at station
         dw=histcounts(As(queue(queue>0),1),1:nc+1)';
         
+        % available vehicles
         available=sum(s(1:2,:))';
         
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[clusters(ui) , Par.Epsilon*di' , available.*q(i,:)' , s(1,:)' , logical(s(4,:)+s(5,:))' ];
-        ParRel.dw=dw; % number of passengers waiting at each station
-        ParRel.a_ts=round(sum(fd(i:i+ts,:)))'; % expected arrivals between now and now+ts
-        ParRel.a_to=round(sum(fo(i:i+ts+tr,:)))'; % expected requests between now and now+ts+tr
+        
+        Nin=[dw , round(sum(fd(i:i+ts,:)))' , round(sum(fo(i:i+ts+tr,:)))'];
+        
         ParRel.Trs=Trs*Par.Epsilon;
         ParRel.limite=P.Relocation.ts;
-        ParRel.bmin=P.Relocation.bmin;
-        ParRel.consumption=P.Tech.consumption;
-        ParRel.battery=P.Tech.battery;
+        ParRel.consumption=Par.consumption;
+        ParRel.battery=Par.battery;
         ParRel.LimitFCR=Par.LimitFCR;
         ParRel.chargepenalty=Par.chargepenalty;
         
-        [Vout,bkt]=relocationmodule(Vin,ParRel);
+        [Vout,bkt]=relocationmodule(Vin,Nin,ParRel);
         
         % update vehicles position
         used=logical(Vout(:,2));

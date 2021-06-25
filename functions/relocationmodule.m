@@ -1,13 +1,11 @@
-%% [V,b]=RELOCATIONMODULE(Vin,Par)
+%% [V,b]=RELOCATIONMODULE(Vin,Nin,Par)
 % Finds optimal relocation actions
 % 
 % == Input ==
 % Vin: [m x 4]      vehicles information in the form: [station delay soc charging relocating]
+% Nin: [n x 3]      passenger information in the form: [number waiting, arrivals expected, departures expected]
 % Par: struct with parameters:
 %   Trs  [n x n]    travel time between nodes (minutes)
-%   dw   [n x 1]    number of passengers waiting at each node
-%   a_ts [n x 1]    number of passenger expected to arrive during horizon
-%   a_to [n x 1]    number of requests expected during horizon
 %   consumption     [scalar]   vehicle consumption (kWh/minute)
 %   battery         [scalar]   vehicle battery capacity (kWh)
 %   chargepenalty   [scalar logical]    give priority to non-charging vehicles?    
@@ -22,7 +20,7 @@
 % 
 % See also: mainsim
 
-function [V,b]=relocationmodule(Vin,Par)
+function [V,b]=relocationmodule(Vin,Nin,Par)
 
 nc=size(Par.Trs);
 nv=size(Vin,1);
@@ -57,7 +55,7 @@ uv=histc(uci,1:nc);
 uvr=histc(ucr,1:nc);
 
 % expected imbalance at stations
-b=uv-Par.dw+Par.a_ts-Par.a_to+uvr;
+b=uv-Nin(:,1)+Nin(:,2)-Nin(:,3)+uvr;
 
 % identify feeder and receiver stations
 F=min(uv,(b-Par.bmin).*(b>=Par.bmin)); % feeders
