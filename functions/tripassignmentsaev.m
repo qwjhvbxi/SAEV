@@ -33,19 +33,36 @@ ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (n
 % if there are trips
 if ~isempty(Bin)
     
-    %n=size(Par.Tr,1);
-    %v=size(Vin,1);
     m=size(Bin,1);
+    waiting=Bin(:,3);
+    chosenmode=(waiting>0);
+    waitingestimated=zeros(m,1);
+    modeutilities=zeros(m,2);
+    dropped=zeros(m,1);
+    
+    % limit of assignments per minute
+    v=round(size(Vin,1)/2);
+    queueextended=[];
+    if size(Bin,1)>v
+
+        queueextended=(v+1:m)';
+        waiting(v+1:m)=waiting(v+1:m)+Par.Epsilon;
+        
+        % if waiting exceeds maximum, reject directly and remove from queue
+        queueextended=queueextended.*(waiting(v+1:m)<Par.maxwait);
+        
+        Bin=Bin(1:v,:);
+        
+    end
+    
+    %n=size(Par.Tr,1);
     
     ui=Vin(:,1);
     di=Vin(:,2);
     Used=zeros(length(ui),1);
     Connected=logical(Vin(:,4));
     
-    waiting=Bin(:,3);
-    chosenmode=(waiting>0);
-    waitingestimated=zeros(m,1);
-    dropped=zeros(m,1);
+    m=size(Bin,1);
     
     distancepickup=Par.Tr(ui,Bin(:,1))';
     distancetomove=Par.Tr(sub2ind(size(Par.Tr),Bin(:,1),Bin(:,2)));
@@ -98,6 +115,8 @@ if ~isempty(Bin)
                     
                 end
                 
+                modeutilities(tripID,:)=[UtilitySAEV , Bin(tripID,5)];
+                
             else
 
                 AcceptProbability=1;
@@ -107,7 +126,7 @@ if ~isempty(Bin)
             chosenmode(tripID)=(rand()<AcceptProbability);
 
             waitingestimated(tripID)=WaitingTime;
-
+            
         end
 
 
@@ -185,11 +204,13 @@ if ~isempty(Bin)
         
     end
     
+    queue=[queue(queue>0);queueextended(queueextended>0)];
+    
     
     %% report results
     
     V=[ui , di , Used];
-    B=[chosenmode , waiting , dropped , waitingestimated ];
+    B=[chosenmode , waiting , dropped , waitingestimated , modeutilities];
     
 else
     
