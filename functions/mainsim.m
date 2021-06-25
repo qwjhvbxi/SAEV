@@ -78,7 +78,7 @@ relodistkm=zeros(tsim,1);       % distances of relocation in km (at moment of de
 tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
-
+modeutilities=zeros(r,2);
 
 %% setup internal parameters
 
@@ -475,6 +475,8 @@ for i=1:tsim
         
         queue=trips(queuei(queuei>0));
         
+        modeutilities(trips)=Bout(:,5);
+        
     end
     
     
@@ -565,6 +567,7 @@ Sim.dropped=sparse(dropped); % dropped requests
 Sim.chosenmode=chosenmode; % chosen mode
 Sim.waitingestimated=sparse(waitingestimated); % estimated waiting time (only mode choice)
 Sim.modalshare=sum(chosenmode)/r;
+Sim.modeutilities=modeutilities;
 
 % general info
 Sim.relodist=relodist*P.Sim.e; % relocation minutes
