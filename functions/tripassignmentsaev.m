@@ -115,7 +115,7 @@ if ~isempty(Bin)
                     
                 end
                 
-                modeutilities(tripID,:)=[UtilitySAEV , Bin(tripID,5)];
+                modeutilities(tripID,:)=[UtilitySAEV , log(Bin(tripID,5))];
                 
             else
 

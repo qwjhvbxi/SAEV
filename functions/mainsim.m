@@ -72,13 +72,13 @@ waiting=zeros(r,1);             % minutes waited for each request
 dropped=false(r,1);             % request is dropped?
 chosenmode=false(r,1);          % which mode is chosen?
 offeredprices=zeros(r,1);       % price offered to each passenger
+modeutilities=zeros(r,2);       % utility of each mode from passenger
 status=zeros(tsim,P.m);         % vehicle status
 relodist=zeros(tsim,1);         % distances of relocation (at moment of decision)
 relodistkm=zeros(tsim,1);       % distances of relocation in km (at moment of decision)
 tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
-modeutilities=zeros(r,2);
 
 %% setup internal parameters
 
