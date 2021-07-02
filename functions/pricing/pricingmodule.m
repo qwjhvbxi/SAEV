@@ -3,7 +3,7 @@
 %
 % See also: mainsim
 
-function [perDistanceTariff,surcharges,altp]=pricingmodule(Pricing,forecastOD,alternativeCosts,ui)
+function [perDistanceTariff,surcharges]=pricingmodule(Pricing,forecastOD,altp,ui)
 
 % TODO: output should just be OD pricing, either calculated directly for
 % each OD, or by distance+inboud/outboud node
@@ -28,10 +28,6 @@ if ~isempty(forecastOD)
         a_tp=sparse(forecastOD(:,1),forecastOD(:,2),1,n,n);%+q_t;
         a_tp(1:n+1:end)=0;
         Pricing.a=a_tp;
-
-        [a,Ib,~]=unique(forecastOD,'rows','stable');
-        altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),n,n);
-        
         Pricing.altp=altp;
 
         if ~nodebased
@@ -44,18 +40,8 @@ if ~isempty(forecastOD)
 
         end
 
-    else
-
-        % expected trips
-        [a,Ib,~]=unique(forecastOD,'rows','stable');
-        altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),n,n);
-
     end
 
-else
-    
-    altp=zeros(n,n);
-    
 end
 
 end

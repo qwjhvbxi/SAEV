@@ -6,7 +6,6 @@
 % calculated right now
 % Problem: OD-based pricing cannot run with aggregate prediction
 % TODO: - T should be a matrix not struct
-%       - faster trip assignment 
 %       - can avoid using Par, instead just use P?
 % 
 % See also: main
@@ -211,7 +210,7 @@ P.Pricing.c=D(clusterCenters,clusterCenters);
 perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm;  % matrix of fares
 surchargeMat=zeros(nc,nc);                              % matrix of surcharges per stations
 
-if isempty(P.Pricing.alternativecost)
+if ~isfield(P.Pricing,'alternativecost') || isempty(P.Pricing.alternativecost)
     % alternative price for each user calculated with trip distances in km
     Aaltp=P.Pricing.alternativecostkm*tripDistancesKm; 
 else
@@ -313,8 +312,8 @@ for i=1:tsim
 
     if P.modechoice
         
-        % TODO: altp calculation should be here, and given in input to
-        % pricing module
+        % TODO: altp calculation should be here and independent of pricing module
+        %  
         % TODO: alternative should be as OD matrix, not associated with
         % each trip
         
@@ -331,19 +330,26 @@ for i=1:tsim
             %       passenger (the one seen by optimization). Specific cost only for
             %       mode choice module
             
+            % TODO / PRICING: at the end should be only OD pricing, no matter how it's
+            % found! (OD based or node based)
+            
             % TODO / MODECHOICE: prediction should be independent of
             % pricing module!
             
             AsNow=As(selection0,:);     % current ODs
-            altpNow=Aaltp(selection0);  % current costs for alternative mode 
+            alternativeCosts=Aaltp(selection0);  % current costs for alternative mode 
+            [a,Ib,~]=unique(AsNow,'rows','stable');
+            altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),nc,nc);
 
             % launch pricing optimization
-            [perDistanceTariff,surchargeNodes,altp]=pricingmodule(P.Pricing,AsNow,altpNow,clusters(ui));
+            [perDistanceTariff,surchargeNodes]=pricingmodule(P.Pricing,AsNow,altp,clusters(ui));
 
             tariff(:,kp)=perDistanceTariff(:);
             surcharge(:,kp)=surchargeNodes;
 
             surchargeMat=surchargeNodes(1:nc)+surchargeNodes(nc+1:2*nc)';
+            
+            % odpricing=perDistanceTariff(:)+surchargeNodes(1:nc)+surchargeNodes(nc+1:2*nc)';
             
         end
 
