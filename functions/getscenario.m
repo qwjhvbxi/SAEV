@@ -53,7 +53,7 @@ if ~exist('D','var')
 %     else
     [thisT]=gettraveltimenow(T,0);
     avgspeedkmh=30; % average speed of 30 km/h
-    D=avgspeedkmh*(thisT/60)*1000; % distance (meters) with average speed 
+    D=avgspeedkmh*(thisT/60); % distance (meters) with average speed 
 end
 
 
