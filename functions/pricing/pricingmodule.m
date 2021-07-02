@@ -1,9 +1,9 @@
-%% [perDistanceTariff,surcharges,altp]=PRICINGMODULE(Pricing,forecastOD,alternativeCosts,ui)
+%% [perDistanceTariff,surcharges]=PRICINGMODULE(Pricing,forecastOD,alternativeCosts,ui)
 % Launch pricing module optimization.
 %
 % See also: mainsim
 
-function [perDistanceTariff,surcharges]=pricingmodule(Pricing,forecastOD,altp,ui)
+function [perDistanceTariff,surcharges]=pricingmodule(Pricing,forecastOD,alternativeCosts,ui)
 
 % TODO: output should just be OD pricing, either calculated directly for
 % each OD, or by distance+inboud/outboud node
@@ -28,7 +28,7 @@ if ~isempty(forecastOD)
         a_tp=sparse(forecastOD(:,1),forecastOD(:,2),1,n,n);%+q_t;
         a_tp(1:n+1:end)=0;
         Pricing.a=a_tp;
-        Pricing.altp=altp;
+        Pricing.altp=alternativeCosts;
 
         if ~nodebased
 

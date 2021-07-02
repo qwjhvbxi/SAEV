@@ -314,17 +314,15 @@ for i=1:tsim
         
         % TODO: altp calculation should be here and independent of pricing module
         %  
+        
         % TODO: alternative should be as OD matrix, not associated with
         % each trip
         
+        % TODO / MODECHOICE: prediction should be independent of
+        % pricing module!
+        
         if ~P.Pricing.dynamic || mod(i-1,tp)==0
             
-            % current pricing number
-            kp=ceil(i/tp);
-            
-            % expected trips
-            selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
-
             % TODO / PRICING: reorganize for imperfect prediction!
             %       price of alternative option should be dependent on OD, not single
             %       passenger (the one seen by optimization). Specific cost only for
@@ -333,8 +331,11 @@ for i=1:tsim
             % TODO / PRICING: at the end should be only OD pricing, no matter how it's
             % found! (OD based or node based)
             
-            % TODO / MODECHOICE: prediction should be independent of
-            % pricing module!
+            % current pricing number
+            kp=ceil(i/tp);
+            
+            % expected trips
+            selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
             
             AsNow=As(selection0,:);     % current ODs
             alternativeCosts=Aaltp(selection0);  % current costs for alternative mode 
@@ -477,10 +478,9 @@ for i=1:tsim
         waiting(trips)=Bout(:,2);
         dropped(trips)=Bout(:,3);
         waitingestimated(trips)=waitingestimated(trips)+Bout(:,4);
+        modeutilities(trips,:)=Bout(:,5:6);
         
         queue=trips(queuei(queuei>0));
-        
-        modeutilities(trips)=Bout(:,5);
         
     end
     
