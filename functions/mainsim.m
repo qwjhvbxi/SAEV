@@ -8,7 +8,6 @@
 % TODO: - T should be a matrix not struct
 %       - faster trip assignment 
 %       - can avoid using Par, instead just use P?
-%       - D should be in km, not m
 % 
 % See also: main
 
@@ -82,7 +81,7 @@ tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of accepta
 
 %% setup internal parameters
 
-Par=struct('D',D/1000,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
+Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
     'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
@@ -103,7 +102,7 @@ else
     end
 end
 tripDistances=nan(r,1);
-tripDistancesKm=D(sub2ind(size(D),A(:,1),A(:,2)))/1000;
+tripDistancesKm=D(sub2ind(size(D),A(:,1),A(:,2)));
 
 
 %% setup relocation module
@@ -206,7 +205,7 @@ addpath functions/pricing
 
 % add info to Pricing struct
 P.Pricing.relocation=autoRelocation;
-P.Pricing.c=D(clusterCenters,clusterCenters)/1000;
+P.Pricing.c=D(clusterCenters,clusterCenters);
 
 % initializations
 perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm;  % matrix of fares
@@ -301,7 +300,7 @@ for i=1:tsim
         IdleReached=(idleTime>=P.Operations.maxidle/P.Sim.e);
         ui(IdleReached)=chargingStations(closestCS(ui(IdleReached)),1);
         relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
-        relodistCSkm=D(sub2ind(size(D),u(i,IdleReached),ui(IdleReached)))/1000;
+        relodistCSkm=D(sub2ind(size(D),u(i,IdleReached),ui(IdleReached)));
         di(IdleReached)=relodistCS;
         s(2,IdleReached)=0;
         s(5,IdleReached)=1;
@@ -400,7 +399,7 @@ for i=1:tsim
         used=logical(Vout(:,2));
         relodestinations=clusterCenters(Vout(used,1));
         relodisti=Tr(sub2ind(size(Tr),ui(used),relodestinations'));
-        relodistkmi=D(sub2ind(size(D),ui(used),relodestinations'))/1000;
+        relodistkmi=D(sub2ind(size(D),ui(used),relodestinations'));
         
         ui(used)=relodestinations; 
         di(used)=di(used)+relodisti;
