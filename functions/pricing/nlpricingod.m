@@ -1,7 +1,8 @@
-%% [prices,k,m]=NLPRICINGOD(m)
+%% [prices,k,m,reloc]=NLPRICINGOD(m)
 % Non-linear pricing with continuous approximation
 % 
-% m is a struct with variables: c,v,a,movingcostkm,gamma_alt,fixedprice
+% m is a struct with variables:
+% c,v,a,altp,movingcostkm,fixedprice,maxiter
 % c is the distance matrix; v is the vehicles at nodes; a is the latent
 % demand matrix; movingcostkm is the cost of relocation per km; fixedprice is the
 % fixed price for optimizing relocation only (optional).
@@ -11,51 +12,36 @@ function [prices,k,m,reloc,revenues]=nlpricingod(m)
 
 %% initializations
 
-m.c=max(1,m.c);
-n=size(m.c,1);    % nodes
-if isfield(m,'maxiter')
-    maxiter=m.maxiter;      % max number of iterations
-else
-    maxiter=5;      % max number of iterations
-end
-
-if ~isfield(m,'altp')
-    m.altp=m.gamma_alt.*m.c;
-end
-
-prices=m.altp./m.c;
+m.c=max(0.1,m.c);   % distance matrix (km)
+n=size(m.c,1);      % number of nodes
+prices=m.altp./m.c; % initial prices
 
 % revenues=zeros(maxiter+1,1);
 % ThisRevenue=CalcRevenue(m,prices);
 % revenues(1)=ThisRevenue;
 
+
 %% useful functions
 
-% price at certain probability: given a trip distance d, find the price at
-% which the probability of acceptance is x
-q=@(d,x) -(log(  (  x.*exp(-m.altp)  )./(1-x)  ))./d;
-g=@(a,s) exp(s)./(exp(s)+a);        % value at s
-d=@(a,z,c) -(a.*c.*exp(z.*c))./((1+a.*exp(z.*c)).^2); % derivative at s
-Points=g(exp(0),-4.5:4.5);          % probability linearization intervals (7 intervals, 8 limits)
-PL=length(Points)/2;
+% value at s
+g=@(a,s) exp(s)./(exp(s)+a);       
+
+% derivative at s
+d=@(a,z,c) -(a.*c.*exp(z.*c))./((1+a.*exp(z.*c)).^2); 
 
 
 %% iterations
 
-delta=zeros(n^2,maxiter);
-priceshist=zeros(n^2,maxiter);
+delta=zeros(n^2,m.maxiter);
+priceshist=zeros(n^2,m.maxiter);
 
 fprintf('\n iterations: ')
 
-for k=1:maxiter
+for k=1:m.maxiter
 
     % coefficients of y=Dx+C
     D=d(exp(-m.altp),prices,m.c);
     C=g(exp(-m.altp),-prices.*m.c)-D.*prices;
-    
-    % alternative
-    
-    p1=(1-C)./D;
     p0=-C./D;
     
     % m.pmin=p1;
@@ -103,18 +89,6 @@ end
 end
 
 
-function ThisRevenue=CalcRevenue(m,prices,reloc)
-    p1=prices.*m.c;
-    Aeff=( exp(-p1)./(exp(-p1)+exp(-m.altp))  ).*m.a;
-    if ~isempty(reloc)
-        relocation=sum(sum(reloc.*m.c))*m.movingcostkm;
-    else 
-        relocation=0;
-    end
-    ThisRevenue=full(sum(sum(Aeff.*(p1-m.movingcostkm*m.c))))-relocation;
-end
-
-
 function [X,prices,fval]=RelocationPricing9(m)
 %% [X,prices]=RelocationPricing9(m)
 % m is a struct with variables: c,v,a,gamma_r,fixedprice
@@ -127,11 +101,14 @@ function [X,prices,fval]=RelocationPricing9(m)
 % prices is the price metrix, with prices(i,j) the optimal pricing of a
 % trip from i to j. 
 
+%% input check
+
 InputCheck=((m.pmax>=m.pmin).*(m.amax>=m.amin));
 if prod(InputCheck(:))==0
     warning('impossible')
     return
 end
+
 
 %% initializations
 
@@ -140,8 +117,6 @@ a=m.a(:);
 c=m.c(:);
 pmin=m.pmin(:);
 pmax=m.pmax(:);
-amin=m.amin(:);
-amax=m.amax(:);
 Da=m.amax-m.amin;
 Dp=m.pmax-m.pmin;
 Dp(Da==0)=1;
@@ -228,6 +203,18 @@ end
 end
 
 
+function ThisRevenue=CalcRevenue(m,prices,reloc)
+    p1=prices.*m.c;
+    Aeff=( exp(-p1)./(exp(-p1)+exp(-m.altp))  ).*m.a;
+    if ~isempty(reloc)
+        relocation=sum(sum(reloc.*m.c))*m.movingcostkm;
+    else 
+        relocation=0;
+    end
+    ThisRevenue=full(sum(sum(Aeff.*(p1-m.movingcostkm*m.c))))-relocation;
+end
+
+
 function debug1
 
 m.v=[0 0 0]';
@@ -238,23 +225,22 @@ m.a=[0 10 0
      5  0 0
      0  2 0];
 m.movingcostkm=0.1;
-m.gamma_alt=0.25;
+m.altp=0.25*m.c;
 m.relocation=0;
-[prices,k,m,reloc]=NLPricing4(m)
+[prices,k,m,reloc]=nlpricingod(m)
 
 %===%===%===%===%===%===%===%===%===%===%===%===%===%===%===%===%===%===%
 
 n=size(m.c,1);
 
-Fare=m.gamma_alt.*m.c;
-Aeff0=( exp(-Fare)./(exp(-Fare)+exp(-m.gamma_alt*m.c))  ).*m.a
-Aeff0.*Fare
+Aeff0=( exp(-m.altp)./(exp(-m.altp)+exp(-m.altp))  ).*m.a
+Aeff0.*m.altp
 
 p1=prices.*m.c;
-Aeff=( exp(-p1)./(exp(-p1)+exp(-m.gamma_alt*m.c))  ).*m.a
+Aeff=( exp(-p1)./(exp(-p1)+exp(-m.altp))  ).*m.a
 Aeff.*p1
 
-sum(sum(Aeff0.*(Fare-m.movingcostkm*m.c)))
+sum(sum(Aeff0.*(m.altp-m.movingcostkm*m.c)))
 sum(sum(Aeff.*(p1-m.movingcostkm*m.c)))
 
 s=m.v+sum(Aeff)'-sum(Aeff,2);

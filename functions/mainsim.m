@@ -70,7 +70,7 @@ waiting=zeros(r,1);             % minutes waited for each request
 dropped=false(r,1);             % request is dropped?
 chosenmode=false(r,1);          % which mode is chosen?
 offeredprices=zeros(r,1);       % price offered to each passenger
-modeutilities=zeros(r,2);       % utility of each mode from passenger
+modeutilities=zeros(r,2);       % utility of each mode from passenger [saev, alternative]
 status=zeros(tsim,P.m);         % vehicle status
 relodist=zeros(tsim,1);         % distances of relocation (at moment of decision)
 relodistkm=zeros(tsim,1);       % distances of relocation in km (at moment of decision)
@@ -81,7 +81,7 @@ tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of accepta
 %% setup internal parameters
 
 Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
-    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,...
+    'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,'traveltimecost',P.Pricing.traveltimecost,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
     'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
 
@@ -217,8 +217,6 @@ else
     Aaltp=P.Pricing.alternativecost;
 end
 
-altp=0;
-
 if P.Pricing.dynamic
     tp=round(P.Pricing.tp/P.Sim.e);       % pricing interval
     tpH=round(P.Pricing.horizon/P.Sim.e); % pricing horizon
@@ -312,16 +310,8 @@ for i=1:tsim
 
     if P.modechoice
         
-        % TODO: altp calculation should be here and independent of pricing module
-        %  
-        
-        % TODO: alternative should be as OD matrix, not associated with
-        % each trip
-        
-        % TODO / MODECHOICE: prediction should be independent of
-        % pricing module!
-        
-        if ~P.Pricing.dynamic || mod(i-1,tp)==0
+        % launch pricing optimization
+        if P.Pricing.dynamic && mod(i-1,tp)==0
             
             % TODO / PRICING: reorganize for imperfect prediction!
             %       price of alternative option should be dependent on OD, not single
@@ -335,15 +325,14 @@ for i=1:tsim
             kp=ceil(i/tp);
             
             % expected trips
-            selection0=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
-            
-            AsNow=As(selection0,:);     % current ODs
-            alternativeCosts=Aaltp(selection0);  % current costs for alternative mode 
-            [a,Ib,~]=unique(AsNow,'rows','stable');
-            altp=sparse(a(:,1),a(:,2),alternativeCosts(Ib),nc,nc);
+            tripsExpected=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));
+            AsExpected=As(tripsExpected,:);     % current ODs
+            alternativeCosts=Aaltp(tripsExpected);  % current costs for alternative mode 
+            [a,Ib,~]=unique(AsExpected,'rows','stable');
+            alternativeCostsMat=sparse(a(:,1),a(:,2),alternativeCosts(Ib),nc,nc);
 
             % launch pricing optimization
-            [perDistanceTariff,surchargeNodes]=pricingmodule(P.Pricing,AsNow,altp,clusters(ui));
+            [perDistanceTariff,surchargeNodes]=pricingmodule(P.Pricing,AsExpected,alternativeCostsMat,clusters(ui));
 
             tariff(:,kp)=perDistanceTariff(:);
             surcharge(:,kp)=surchargeNodes;
@@ -354,10 +343,19 @@ for i=1:tsim
             
         end
 
-        if autoRelocation
+        % adjust relocation predictions with mode choice 
+        if autoRelocation && mod(i-1,tx)==0
+            
+            % expected trips
+            tripsExpected=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+ts+tr));
+            
+            AsExpected=As(tripsExpected,:);     % current ODs
+            alternativeCosts=Aaltp(tripsExpected);  % current costs for alternative mode 
+            [a,Ib,~]=unique(AsExpected,'rows','stable');
+            alternativeCostsMat=sparse(a(:,1),a(:,2),alternativeCosts(Ib),nc,nc);
         
             option1=exp(-max(P.Pricing.mintariff,perDistanceTariff.*P.Pricing.c)-surchargeMat);
-            multiplier=option1./(option1+exp(-altp));
+            multiplier=option1./(option1+exp(-alternativeCostsMat));
 
             % expected OD matrices for different future horizons
             % TODO / PRICING: remove reshape, treat all pricing variables as reshaped (from

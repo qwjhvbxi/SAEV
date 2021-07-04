@@ -91,6 +91,10 @@ if ~isfield(P.Pricing,'mintariff')
     P.Pricing.mintariff=0;
 end
 
+if ~isfield(P.Pricing,'traveltimecost') 
+    P.Pricing.traveltimecost=true;
+end
+
 if isfield(P.Pricing,'alternative') 
     
     % convert price per minutes to prices per km;
