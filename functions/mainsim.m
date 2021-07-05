@@ -283,6 +283,7 @@ for i=1:tsim
     
     if isstruct(T)
         [thisT]=gettraveltimenow(T,i*Par.Epsilon);
+        Ts=thisT(clusterCenters,clusterCenters);
         Tr=max(1,round(thisT/P.Sim.e));% distance matrix in steps
         Trs=Tr(clusterCenters,clusterCenters);
         Par.Tr=Tr;
@@ -323,6 +324,8 @@ for i=1:tsim
             
             % current pricing number
             kp=ceil(i/tp);
+            
+            P.Pricing.T=Ts;
             
             % expected trips
             tripsExpected=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+tpH+1));

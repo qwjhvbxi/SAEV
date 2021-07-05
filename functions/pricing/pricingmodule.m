@@ -29,6 +29,7 @@ if ~isempty(forecastOD)
         a_tp(1:n+1:end)=0;
         Pricing.a=a_tp;
         Pricing.altp=alternativeCosts;
+        Pricing.K=Pricing.T*Pricing.VOT/60*Pricing.traveltimecost;
 
         if ~nodebased
 
