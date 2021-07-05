@@ -139,6 +139,7 @@ For 'Simplified' algorithm, which uses aggregate predictions:
 | basetariffkm  | double | Base tariff (per km) | 
 | alternativecostkm | double | Alternative mode cost (per km) | 
 | alternativecost   | double | Alternative mode cost (for each trip). Leave empty if using `alternativecostkm` | 
+| traveltimecost   | logical | Consider perceived cost of travel time with SAEV in mode choice? | 
 | mintariff     | double | Minimum tariff | 
 | VOT           | double | Value of time (per hour) |
 | dynamic       | logical | Optimize pricing dynamically?  | 
@@ -173,6 +174,9 @@ Scenario files are .mat Matlab files with variables:
 1. (optional) `chargingStations`, [nc x 1], list of nodes which have charging stations;
 
 These files are stored in folder `data/scenarios/`.
+
+For variable travel time during the day, `T` can also be given as a struct with fields `traveltime` and `hour` where each entry is a snapshot of the travel time matrix at the specified hour.
+The model will calculate the travel time at each interval as linear interpolation between these points.
 
 #### Trip files
 
