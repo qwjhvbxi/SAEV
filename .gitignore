@@ -6,14 +6,5 @@ run/*
 *.eps
 *.mat
 utilities/DataHash.m
-utilities/jsonlab/AUTHORS.txt
-utilities/jsonlab/ChangeLog.txt
-utilities/jsonlab/jsonopt.m
-utilities/jsonlab/LICENSE_BSD.txt
-utilities/jsonlab/loadjson.m
-utilities/jsonlab/loadubjson.m
-utilities/jsonlab/mergestruct.m
-utilities/jsonlab/README.txt
-utilities/jsonlab/savejson.m
-utilities/jsonlab/saveubjson.m
-utilities/jsonlab/varargin2struct.m
+utilities/jsonlab/*
+tests/*
