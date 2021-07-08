@@ -1,3 +1,4 @@
+%% [A,Atimes,AbuckC,Distances]=GETTRIPS(tripfolder,tripday)
 %% [A,Atimes,AbuckC,Distances]=GETTRIPS(P)
 % Get trip files from information in parameter struct. 
 % P struct contains fields 'tripfolder' and optionally 'tripday'.
@@ -7,23 +8,43 @@
 %
 % See also: main
 
-function [A,Atimes,AbuckC,Distances]=gettrips(P)
+function [A,Atimes,AbuckC,Distances]=gettrips(varargin)
+
+if nargin==0
+    return
+end
+if nargin==1
+    P=varargin{1};
+    if isfield(P,'tripfolder')
+        tripfolder=P.tripfolder;
+    else
+        tripfolder=[];
+    end
+    if isfield(P,'tripday')
+        tripday=P.tripday;
+    else
+        tripday=[];
+    end
+else
+    tripfolder=varargin{1};
+    tripday=varargin{2};
+end
 
 % set external data folder
 DataFolder=getdatafolder();
 
 % determine file name
-if isfield(P,'tripfolder') && ~isempty(P.tripfolder)
-    if isfield(P,'tripday') && ~isempty(P.tripday)
+if ~isempty(tripfolder)
+    if ~isempty(tripday)
         
         % tripfolder represents a folder with days inside
-        tripFileLocation=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday) '.mat'];
+        tripFileLocation=[DataFolder 'trips/' tripfolder '/d' num2str(tripday) '.mat'];
         
         % load files
         [A,Atimes,Distances]=loadFile(tripFileLocation);
         
         % load next day if it exists
-        tripFileLocation2=[DataFolder 'trips/' P.tripfolder '/d' num2str(P.tripday+1) '.mat'];
+        tripFileLocation2=[DataFolder 'trips/' tripfolder '/d' num2str(tripday+1) '.mat'];
         if exist(tripFileLocation2,'file')
             [A2,Atimes2,~]=loadFile(tripFileLocation2);
         else
