@@ -106,6 +106,7 @@ if ~isempty(Bin)
                 if isnan(WaitingTime)
                     
                     AcceptProbability=0;
+                    UtilitySAEV=nan;
                     
                 else
                     
