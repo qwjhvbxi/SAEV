@@ -7,6 +7,9 @@
 % Variables with text values should be inserted between double
 % quotation marks ( " " ).
 %   example: (...,'FieldName',"text",...)
+%
+% Non-scalar variables (matrices) should be passed as cell arrays. 
+%   example: (...,'FieldName',{[1,2,3],[4,5]},...)
 
 function [Pmat,varparams]=modifystruct(S,varargin)
 
@@ -63,6 +66,10 @@ for k=1:varparams(1)
             
             if isstring(ThisValue)
                 ThisValue=char(ThisValue);
+            end
+            
+            if iscell(ThisValue)
+                ThisValue=ThisValue{1};
             end
             
             for VarL=1:length(FieldNames)
