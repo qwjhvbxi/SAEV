@@ -321,6 +321,7 @@ for i=1:tsim
             
             % TODO / PRICING: at the end should be only OD pricing, no matter how it's
             % found! (OD based or node based)
+            % TODO / PRICING: mintariff in pricing optimization module
             
             % current pricing number
             kp=ceil(i/tp);
@@ -351,7 +352,7 @@ for i=1:tsim
             
             % expected trips
             tripsExpected=cumulativeTripArrivals(i)+1:cumulativeTripArrivals(min(length(cumulativeTripArrivals),i+ts+tr));
-            
+            tripsExpected=unique(min(tripsExpected,length(Aaltp))); % remove trips not covered by pricing
             AsExpected=As(tripsExpected,:);     % current ODs
             alternativeCosts=Aaltp(tripsExpected);  % current costs for alternative mode 
             [a,Ib,~]=unique(AsExpected,'rows','stable');
