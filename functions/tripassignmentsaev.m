@@ -28,6 +28,10 @@ relodistkm=0;
 queue=zeros(100,1);
 ql=0;
 
+% limit of assignments per minute
+AssignmentLimit=inf;
+% AssignmentLimit=round(size(Vin,1)/2);
+
 ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
 
 % if there are trips
@@ -40,18 +44,16 @@ if ~isempty(Bin)
     modeutilities=zeros(m,2);
     dropped=zeros(m,1);
     
-    % limit of assignments per minute
-    v=round(size(Vin,1)/2);
     queueextended=[];
-    if size(Bin,1)>v
+    if size(Bin,1)>AssignmentLimit
 
-        queueextended=(v+1:m)';
-        waiting(v+1:m)=waiting(v+1:m)+Par.Epsilon;
+        queueextended=(AssignmentLimit+1:m)';
+        waiting(AssignmentLimit+1:m)=waiting(AssignmentLimit+1:m)+Par.Epsilon;
         
         % if waiting exceeds maximum, reject directly and remove from queue
-        queueextended=queueextended.*(waiting(v+1:m)<Par.maxwait);
+        queueextended=queueextended.*(waiting(AssignmentLimit+1:m)<Par.maxwait);
         
-        Bin=Bin(1:v,:);
+        Bin=Bin(1:AssignmentLimit,:);
         
     end
     
