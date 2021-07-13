@@ -6,11 +6,15 @@
 % ResultsOut is a logical variable to indicate if the full results should be
 %   outputted (warning: large memory use). If ResultsOut==false, the output
 %   will be struct Summary with a summary of the results.
+% 
+% LAUNCHSIMULATIONPERIOD(...,'parameter',value) 
+%   add variable parameter values
 %
 % See also: main, generateplotline3
 
 function [Results]=launchsimulationperiod(Period,P,GridOffset,ResultsOut,OutSave,varargin)
 
+% extended information for each vehicle?
 Extended=false;
 
 if prod(Period(2:end)-Period(1:end-1)==1)==0
@@ -55,6 +59,7 @@ end
 SOC(1,:)=StartSoc;
 Uinit(1,:)=StartPos;
 
+% summary variables
 Summary.cost=zeros(length(Period),1);
 Summary.dropped=zeros(length(Period),1);
 Summary.peakwait=zeros(length(Period),1);
@@ -63,7 +68,12 @@ Summary.emissions=zeros(length(Period),1);
 Summary.cputime=zeros(length(Period),1);
 Summary.FCRfails=zeros(length(Period),1);
 Summary.FCRenergy=zeros(length(Period),2);
+
+% passenger information variables
 Summary.waiting=[];
+Summary.chosenmode=[];
+
+% fleet variables
 Summary.soc=[];
 Summary.e=[];
 Summary.elep=[];
@@ -120,7 +130,10 @@ for j=1:length(Period)
     Summary.avgwait(j)=Res.avgwait;
     Summary.emissions(j)=Res.Sim.emissions;
     Summary.cputime(j)=Res.cputime;
+    
     Summary.waiting=[Summary.waiting;Res.Sim.waiting];
+    Summary.chosenmode=[Summary.chosenmode;Res.Sim.chosenmode];
+    
     Summary.soc=[Summary.soc;mean(Res.Sim.q,2)];
     Summary.e=[Summary.e;sum(Res.Sim.e,2)];
     Summary.elep=[Summary.elep;Res.Params.elep(1:Res.Params.tsim)];
