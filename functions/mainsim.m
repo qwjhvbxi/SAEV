@@ -562,7 +562,7 @@ end
 %% final results
 
 % passengers still in queue should be dropped
-dropped(queue)=1;
+dropped(queue(queue>0))=1;
 
 % vehicle related
 Sim.u=uint16(u); % final destination of vehicles (station) [tsim x m]
