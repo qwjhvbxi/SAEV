@@ -51,7 +51,9 @@ if ~isempty(Bin)
         waiting(AssignmentLimit+1:m)=waiting(AssignmentLimit+1:m)+Par.Epsilon;
         
         % if waiting exceeds maximum, reject directly and remove from queue
-        queueextended=queueextended.*(waiting(AssignmentLimit+1:m)<Par.maxwait);
+        ToReject=(waiting(AssignmentLimit+1:m)>=Par.maxwait);
+        queueextended=queueextended.*(1-ToReject);
+        dropped(ToReject)=1;
         
         Bin=Bin(1:AssignmentLimit,:);
         
@@ -189,22 +191,17 @@ if ~isempty(Bin)
                 % TODO: fix pooling
 
                 % if max waiting exceeded, request dropped
-%                             if pooling(tripID)>0
-%                                 tripsdropped=find(pooling==pooling(tripID));
-%                             else
-                    tripsdropped=tripID;
-%                             end
+                % if pooling(tripID)>0
+                % 	tripsdropped=find(pooling==pooling(tripID));
+                % else
+                  	tripsdropped=tripID;
+                % end
 
                 % register this as a dropped request
                 dropped(tripsdropped)=1;
 
             end
-        else
-
-            % walking
-
         end
-        
     end
     
     queue=[queue(queue>0);queueextended(queueextended>0)];
