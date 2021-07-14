@@ -20,7 +20,9 @@ end
 originvec=reshape([lat1,lon1]',[1,length(lat1)*2])';
 destinvec=reshape([lat2,lon2]',[1,length(lat2)*2])';
 originstr=sprintf('%3.4f,%3.4f|',originvec);
+originstr=originstr(1:end-1);
 destinstr=sprintf('%3.4f,%3.4f|',destinvec);
+destinstr=destinstr(1:end-1);
 origintime=num2str(posixtime(datetime(traveldate,'inputFormat','dd/MM/yyyy HH:mm')));
 
 % url1 = ['https://maps.google.co.jp/maps/api/geocode/json?address=' , urlencode([Codesraw.prefectures{i}{1} , Codesraw.wards{i}{1} , addr1{k}]) , '&sensor=false&language=ja&region=JP&key=' apikey];
