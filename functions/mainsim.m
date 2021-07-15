@@ -599,7 +599,7 @@ Internals.d=uint8(d);
 Internals.zmacro=zmacro;
 
 % stats
-Stats.vehicletrips=(r-sum(dropped))/P.m; % trips per vehicle per day
+Stats.vehicletrips=sum(chosenmode.*(1-dropped))/P.m; % trips per vehicle per day
 Stats.vkt=(sum(tripdistkm)+sum(relodistkm))/P.m; % km driven per vehicle per day
 Stats.evktshare=sum(relodistkm)/(sum(tripdistkm)+sum(relodistkm)); % share of empty km driven
 Stats.runtime=(sum(tripdist)+sum(relodist))/60/P.m; % average vehicle use per day (hours)
@@ -610,6 +610,7 @@ Stats.chargingcost=(sum(Sim.e/60/1000*P.Sim.e,2)')*elep(1:tsim)+Sim.emissions*P.
 Stats.modalshare=sum(chosenmode)/r;
 Stats.cputime=cputime-S.starttime;
 Stats.clocktime=sum(S.clocktime);
+Stats.avgtriplength=sum(tripdistkm)/sum(chosenmode.*(1-dropped));
 % Stats.cycles= % average battery cycles per vehicle per day % TODO: how to consider different SOC at start and end?
 
 
