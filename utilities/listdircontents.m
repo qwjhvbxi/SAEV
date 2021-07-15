@@ -1,3 +1,7 @@
+%% Files=LISTDIRCONTENTS(folderaddress)
+% Print to screen all files in a folder numbered and return the list as
+% output. 
+
 function Files=listdircontents(folderaddress)
 
 DirFiles=dir(folderaddress);

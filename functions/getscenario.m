@@ -1,4 +1,4 @@
-%% [T,D,clusters,chargingStations]=GETSCENARIO(scenario)
+%% [T,D,clusters,clusterIDs,chargingStations]=GETSCENARIO(scenario)
 % Retrieve scenario files.
 % 
 % See also: mainsim

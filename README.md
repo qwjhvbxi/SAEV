@@ -171,7 +171,8 @@ Scenario files are .mat Matlab files with variables:
 1. (optional) `C`, [n x 2], list of coordinates of the nodes;
 1. (optional) `D`, [n x n], travel distance between each node in km;
 1. (optional) `Clusters`, [n x 1], cluster ID for each node;
-1. (optional) `chargingStations`, [nc x 1], list of nodes which have charging stations;
+1. (optional) `clusterIDs`, [nc x 1], node representing center of each cluster;
+1. (optional) `chargingStations`, [ns x 1], list of nodes which have charging stations;
 
 These files are stored in folder `data/scenarios/`.
 
