@@ -137,12 +137,15 @@ For 'Simplified' algorithm, which uses aggregate predictions:
 | tp            | double | Period of pricing module call (minutes) | 
 | movingcostkm  | double | Relocation cost (per km) | 
 | basetariffkm  | double | Base tariff (per km) | 
-| alternativecostkm | double | Alternative mode cost (per km) | 
+| alternativecostfile   | double | File with alternative mode cost for each trip (see below for details). Leave empty if using `alternativecost` or `alternativecostkm` | 
 | alternativecost   | double | Alternative mode cost (for each trip). Leave empty if using `alternativecostkm` | 
+| alternativecostkm | double | Alternative mode cost (per km) | 
 | traveltimecost   | logical | Consider perceived cost of travel time with SAEV in mode choice? | 
 | mintariff     | double | Minimum tariff | 
 | VOT           | double | Value of time (per hour) |
 | dynamic       | logical | Optimize pricing dynamically?  | 
+
+`alternativecostfile` is the name of a .mat file in the same folder as the trip files, with a variable of type cell named `alternativecost`. Each tripday correspond to an entry in the cell, which contains the alternative cost for each trip. Each array in the cell element must be the same length as the corresponding trip file for that day.
 
 #### `FCR`
 

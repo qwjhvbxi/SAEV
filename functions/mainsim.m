@@ -210,11 +210,14 @@ P.Pricing.c=D(clusterCenters,clusterCenters);
 perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm;  % matrix of fares
 surchargeMat=zeros(nc,nc);                              % matrix of surcharges per stations
 
-if ~isfield(P.Pricing,'alternativecost') || isempty(P.Pricing.alternativecost)
+if isfield(P.Pricing,'alternativecost') && ~isempty(P.Pricing.alternativecost)
+    Aaltp=P.Pricing.alternativecost;
+elseif isfield(P.Pricing,'alternativecostfile') && ~isempty(P.Pricing.alternativecostfile)
+    load([DataFolder 'trips/' P.tripfolder '/' P.Pricing.alternativecostfile],'alternativecost');
+    Aaltp=alternativecost{P.tripday};
+else
     % alternative price for each user calculated with trip distances in km
     Aaltp=P.Pricing.alternativecostkm*tripDistancesKm; 
-else
-    Aaltp=P.Pricing.alternativecost;
 end
 
 if P.Pricing.dynamic
