@@ -1,6 +1,6 @@
 %% generateClusters(scenario,K,Plots)
 % generate a new scenario file with K charging stations/clusters found with
-% k-means. The new scenario is named 'scenario-K'
+% k-means. The new scenario is named 'scenario_K'
 % If Plots==true, it plots the corresponding scenario
 
 function generatescenarioclusters(scenario,K,Plots)

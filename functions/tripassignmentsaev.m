@@ -5,9 +5,10 @@
 % Vin: vehicles information in the form:
 % [station delay soc connected]
 % Bin: passengers info in the form:
-% [O D waiting]
+% [O , D , waiting , tariff , utility_alternative]
 % Par: parameters:
-%     Tr, Epsilon, consumption, battery, minsoc, maxwait, modechoice 
+%     Tr, D, Epsilon, consumption, battery, minsoc, maxwait, modechoice,
+%     chargepenalty, LimitFCR, traveltimecost, VOT
 % 
 % output 
 % V: vehicle movements in the form [station delay used]
