@@ -18,8 +18,10 @@
 % vector values for sensitivity analysis and an unlimited number of
 % parameters with scalar values (same for all simulations). 
 % 
-% Warning: variables with text values should be inserted between double
+% Variables with text values should be inserted between double
 % quotation marks ( " " ) 
+%   example: (...,'FieldName',"text",...)
+%            (...,'FieldName',["text1","text2"],...)
 % 
 % See also: main, launchsimulationperiod
 
