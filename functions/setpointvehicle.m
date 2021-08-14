@@ -3,7 +3,16 @@
 % 
 % See also: mainsim, setpointfleet
 
-function [e,ef]=setpointvehicle(Par,q,s,f,SetPoints)
+function [e,ef]=setpointvehicle(Par,q,s,SetPoints,f)
+
+if nargin<5
+    f=0;
+end
+
+Par.ac=Par.chargekw/Par.battery/60*Par.Epsilon;    % charge rate per time step (normalized)
+% Par.ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
+
+%% charging
 
 % power exchanged for vehicles charging
 acv=(q<Par.fastchargesoc)*Par.ac+(q>=Par.fastchargesoc)*Par.ac*Par.slowchargeratio;

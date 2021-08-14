@@ -518,18 +518,28 @@ for i=1:tsim
     
     %% simulation variables update
     
-    if Par.csp && rem(i,Beta/P.Sim.e)==1
+    if Par.csp 
         
-        setPoints=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:3,t));
+        if rem(i,Beta/P.Sim.e)==1
         
+            setPoints=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:3,t));
+            
+        end
+        
+        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),zmacro(1:3,t),setPoints,f(i));
+        
+    else
+    
+        ei=simplecharging(Par,q(i,:),s(1,:),zmacro(1:3,t));
+        efi=0;
+    
     end
     
-    [ei,efi]=chargingsetpoints(Par,q(i,:),s(1,:),zmacro(1:3,t),setPoints,f(i));
     e(i,:)=ei;
     ef(i,:)=efi;
     
     % update SOC 
-    q(i+1,:)=q(i,:)+max(0,e(i,:)+ef(i,:))+min(0,e(i,:)+ef(i,:))/P.Tech.efficiency-(di>0).*(P.Tech.consumption/P.Tech.battery*P.Sim.e);
+    q(i+1,:)=q(i,:) + max(0,e(i,:)+ef(i,:)) + min(0,e(i,:)+ef(i,:))/P.Tech.efficiency  -(di>0).*(P.Tech.consumption/P.Tech.battery*P.Sim.e);
 
     % update position
     u(i+1,:)=ui;
@@ -606,6 +616,8 @@ Stats.vehicletrips=sum(chosenmode.*(1-dropped))/P.m; % trips per vehicle per day
 Stats.vkt=(sum(tripdistkm)+sum(relodistkm))/P.m; % km driven per vehicle per day
 Stats.evktshare=sum(relodistkm)/(sum(tripdistkm)+sum(relodistkm)); % share of empty km driven
 Stats.runtime=(sum(tripdist)+sum(relodist))/60/P.m; % average vehicle use per day (hours)
+Stats.avgtriplength=sum(tripdistkm)/sum(chosenmode.*(1-dropped));
+Stats.avgrevenuevehicle=sum(Sim.revenues)/P.m;
 Stats.dropped=sum(dropped)/r;
 Stats.peakwait=max(waiting);
 Stats.avgwait=mean(waiting);
@@ -613,7 +625,6 @@ Stats.chargingcost=(sum(Sim.e/60/1000*P.Sim.e,2)')*elep(1:tsim)+Sim.emissions*P.
 Stats.modalshare=sum(chosenmode)/r;
 Stats.cputime=cputime-S.starttime;
 Stats.clocktime=sum(S.clocktime);
-Stats.avgtriplength=sum(tripdistkm)/sum(chosenmode.*(1-dropped));
 % Stats.cycles= % average battery cycles per vehicle per day % TODO: how to consider different SOC at start and end?
 
 
