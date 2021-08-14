@@ -526,7 +526,7 @@ for i=1:tsim
             
         end
         
-        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),zmacro(1:3,t),setPoints,f(i));
+        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),setPoints,f(i));
         
     else
     
