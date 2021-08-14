@@ -72,8 +72,8 @@ else     % capacity based
     extracharge=(q<Par.refillmaxsoc);
     chargevector=max(-1,min(1,(ones(1,m)*(Z(1)/Z(3))-v2gallowed*(Z(2)/Z(3))+extracharge)))*Par.ac;
 
-    capUp=s.*min(Par.ac,Par.maxsoc-q); % charge
-    capDown=s.*min(Par.ac,(q-Par.minsoc)*Par.efficiency); % discharge
+    capUp=s.*max(0,min(Par.ac,Par.maxsoc-q)); % charge
+    capDown=s.*max(0,min(Par.ac,(q-Par.minsoc)*Par.efficiency)); % discharge
 
     e=min(capUp,max(0,chargevector))+max(-capDown,min(0,chargevector));
     ef=0;
