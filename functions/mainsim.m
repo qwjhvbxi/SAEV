@@ -30,7 +30,8 @@ DataFolder=getdatafolder();
 
 n=size(clusters,1);             % number of nodes 
 As=clusters(A(:,1:2));          % OD at clusters
-nc=length(clusterCenters);    % number of clusters
+nc=length(clusterCenters);      % number of clusters
+ncs=length(chargingStations);   % number of CS
 
 
 %% load predictions
@@ -83,7 +84,7 @@ tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of accepta
 Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,'traveltimecost',P.Pricing.traveltimecost,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
-    'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption);
+    'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption,'cssize',chargingStations(:,2));
 
 % distances
 if ~isstruct(T)
@@ -518,11 +519,15 @@ for i=1:tsim
     
     %% simulation variables update
     
-    if Par.csp 
+    mat1=(ui==chargingStations(:,1));
+    atChargingStation=sum(mat1);
+    whichcs=(1:ncs)*mat1;
+    
+    if Par.csp
         
         if rem(i,Beta/P.Sim.e)==1
         
-            setPoints=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:3,t));
+            setPoints=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:3,t),whichcs);
             
         end
         
@@ -530,6 +535,7 @@ for i=1:tsim
         
     else
     
+        % does not consider station sizes or frequency reserve
         ei=simplecharging(Par,q(i,:),s(1,:),zmacro(1:3,t));
         efi=0;
     
@@ -549,8 +555,6 @@ for i=1:tsim
     
     % update delay
     d(i+1,:)=max(0,di-1);
-    
-    atChargingStation=sum(u(i+1,:)==chargingStations(:,1));
     
     % update current statuses
     s(1,:)=logical(atChargingStation.*(d(i+1,:)==0));
