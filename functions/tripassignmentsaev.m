@@ -29,9 +29,12 @@ relodistkm=0;
 queue=zeros(100,1);
 ql=0;
 
-% limit of assignments per minute
-AssignmentLimit=inf;
-% AssignmentLimit=round(size(Vin,1)/2);
+% limit of assignments per minute (only for simulations without mode choice)
+if Par.modechoice
+    AssignmentLimit=inf;
+else
+    AssignmentLimit=round(size(Vin,1));
+end
 
 ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
 
@@ -48,11 +51,13 @@ if ~isempty(Bin)
     queueextended=[];
     if size(Bin,1)>AssignmentLimit
 
-        queueextended=(AssignmentLimit+1:m)';
-        waiting(AssignmentLimit+1:m)=waiting(AssignmentLimit+1:m)+Par.Epsilon;
+        Deferred=AssignmentLimit+(1:m);
+        
+        queueextended=Deferred';
+        waiting(Deferred)=waiting(Deferred)+Par.Epsilon;
         
         % if waiting exceeds maximum, reject directly and remove from queue
-        ToReject=(waiting(AssignmentLimit+1:m)>=Par.maxwait);
+        ToReject=(waiting(Deferred)>=Par.maxwait);
         queueextended=queueextended.*(1-ToReject);
         dropped(ToReject)=1;
         
