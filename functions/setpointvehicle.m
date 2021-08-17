@@ -1,20 +1,51 @@
-%% [e,ef]=SETPOINTVEHICLE(Par,q,f,s,SetPoints)
+%% [e,ef]=SETPOINTVEHICLE(Par,q,s,u,SetPoints,f)
 % Return set point for each vehicle given fleet set points 'SetPoints'
 % 
 % See also: mainsim, setpointfleet
 
-function [e,ef]=setpointvehicle(Par,q,s,SetPoints,f)
+function [e,ef]=setpointvehicle(Par,q,s,u,SetPoints,f)
 
-if nargin<5
+if nargin<6
     f=0;
 end
 
-Par.ac=Par.chargekw/Par.battery/60*Par.Epsilon;    % charge rate per time step (normalized)
-% Par.ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
+% charge rate per time step (normalized)
+Par.ac=Par.chargekw/Par.battery/60*Par.Epsilon;    
+
+
+%% select which vehicles are actually connected
+
+% number of charging stations (CS)
+ncs=length(Par.cssize);
+
+% number of vehicles at each CS
+Occupancy=histc(u,1:ncs);
+
+% find overcrowded CS
+Overcrowded=find(Occupancy>Par.cssize');
+for i=1:length(Overcrowded)
+    
+    % find vehicles at overcrowded CS
+    thisStation=Overcrowded(i);
+    atThisStation=find(u==thisStation);
+    
+    % only soc extremes are connected. Set capacity to zero for vehicles that are not available
+    [~,I]=sort(q(atThisStation));
+
+    if SetPoints(2)>0
+        % for discharging, select highest soc vehicles at station within the limit
+        s(atThisStation(I(1:end-Par.cssize(thisStation))))=0;
+    else
+        % for charging, select lowest soc vehicles at station within the limit
+        s(atThisStation(I(Par.cssize(thisStation)+1:end)))=0;
+    end
+    
+end
+
 
 %% charging
 
-% power exchanged for vehicles charging
+% max power exchangeable for vehicles charging
 acv=(q<Par.fastchargesoc)*Par.ac+(q>=Par.fastchargesoc)*Par.ac*Par.slowchargeratio;
 
 % available power from fleet

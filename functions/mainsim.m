@@ -525,17 +525,20 @@ for i=1:tsim
     
     if Par.csp
         
+        % advanced charging algorithm
+        
         if rem(i,Beta/P.Sim.e)==1
         
-            setPoints=setpointfleet(Par,q(i,:),s(1,:),zmacro(1:3,t),whichcs);
+            setPoints=setpointfleet(Par,q(i,:),s(1,:),whichcs,zmacro(1:3,t));
             
         end
         
-        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),setPoints,f(i));
+        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),whichcs,setPoints,f(i));
         
     else
     
-        % does not consider station sizes or frequency reserve
+        % basic legacy charging algorithm: does not consider station sizes or frequency reserve
+        
         ei=simplecharging(Par,q(i,:),s(1,:),zmacro(1:3,t));
         efi=0;
     

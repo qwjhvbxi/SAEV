@@ -1,9 +1,9 @@
-%% [SetPoints]=SETPOINTFLEET(Par,q,s,z)
+%% [SetPoints]=SETPOINTFLEET(Par,q,s,u,z)
 % Create set points (kWh) at beginning of charging period.
 % 
 % See also: mainsim, chargingsetpoints, setpointvehicle
 
-function [SetPoints]=setpointfleet(Par,q,s,z,u)
+function [SetPoints]=setpointfleet(Par,q,s,u,z)
 
 % number of time steps
 H=Par.Beta/Par.Epsilon;
