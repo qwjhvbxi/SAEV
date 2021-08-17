@@ -90,6 +90,10 @@ totdropped=0;
 totwait=0;
 totminutes=0;
 
+relodistkm=0;
+tripdistkm=0;
+revenues=0;
+
 % launch or retrieve simulations
 for j=1:length(Period)
     
@@ -120,6 +124,10 @@ for j=1:length(Period)
     totdropped=totdropped+full(sum(Res.Sim.dropped));
     totwait=totwait+full(sum(Res.Sim.waiting));
     totminutes=totminutes+sum(Res.Sim.tripdist);
+    
+    relodistkm=relodistkm+sum(Res.Sim.relodistkm);
+    tripdistkm=tripdistkm+sum(Res.Sim.tripdistkm);
+    revenues=revenues+sum(Res.Sim.revenues);
     
     etsim=48; % temporary
     
@@ -154,6 +162,14 @@ for j=1:length(Period)
     if ResultsOut
         R(j)=Res;
     end
+end
+
+
+if isfield(Res,'Stats')
+    Summary.vehicletrips=mean(Res.Stats.vehicletrips);
+    Summary.vkt=mean(Res.Stats.vkt);
+    Summary.evktshare=relodistkm/(tripdistkm+relodistkm);
+    Summary.avgrevenuevehicle=revenues/P.m/length(Period);
 end
 
 Summary.totdropped=totdropped/totreq;
