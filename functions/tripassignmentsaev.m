@@ -33,7 +33,7 @@ ql=0;
 if Par.modechoice
     AssignmentLimit=inf;
 else
-    AssignmentLimit=round(size(Vin,1));
+    AssignmentLimit=round(size(Vin,1)/2);
 end
 
 ad=Par.consumption/Par.battery*Par.Epsilon;    % discharge rate per time step (normalized)
@@ -51,7 +51,7 @@ if ~isempty(Bin)
     queueextended=[];
     if size(Bin,1)>AssignmentLimit
 
-        Deferred=AssignmentLimit+(1:m);
+        Deferred=AssignmentLimit:m;
         
         queueextended=Deferred';
         waiting(Deferred)=waiting(Deferred)+Par.Epsilon;
