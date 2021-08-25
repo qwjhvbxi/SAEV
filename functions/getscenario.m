@@ -3,7 +3,7 @@
 % 
 % See also: mainsim
 
-function [T,D,clusters,clusterIDs,chargingStations]=getscenario(scenario)
+function [T,D,clusters,clusterIDs,chargingStations,C]=getscenario(scenario)
 
 DataFolder=getdatafolder();
 
