@@ -61,9 +61,14 @@ e=zeros(tsim,P.m);          % charging
 ef=zeros(tsim,P.m);         % FCR charging
 
 % working variables
-g=zeros(1,P.m);             % current idle time
-s=false(5,P.m);             % current status: [relocating, connected, moving to charging station]
 queue=zeros(100,1);         % temporary variable to store queued arrivals
+g=zeros(1,P.m);             % current idle time
+s=false(5,P.m);             % current status: 
+%     1 charging
+%     2 idle
+%     3 moving
+%     4 moving for relocation
+%     5 moving to charging station
 
 % results variables
 waitingestimated=zeros(r,1);    % estimated minutes to wait for each request
@@ -79,12 +84,14 @@ tripdist=zeros(tsim,1);         % distances of trips (at moment of acceptance)
 tripdistkm=zeros(tsim,1);       % distances of trips in km (at moment of acceptance)
 % pooling=zeros(r,1);             % pool ID of each user (if ride shared)
 
+
 %% setup internal parameters
 
 Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Operations.maxsoc,'modechoice',P.modechoice,...
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,'traveltimecost',P.Pricing.traveltimecost,...
-    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,...
-    'csp',false,'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption,'cssize',chargingStations(:,2));
+    'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'SPlength',1,...
+    'cyclingcost',P.Tech.cyclingcost,'carbonprice',P.carbonprice,'v2g',P.Operations.v2g,'fastchargesoc',0,'slowchargeratio',1,...
+    'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption,'cssize',chargingStations(:,2));
 
 % distances
 if ~isstruct(T)
@@ -119,24 +126,6 @@ else
 end
 
 
-%% setup frequency control reserve module
-
-if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
-    
-    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename '.csv'],P.gridday,false);
-    f=average2(fraw,P.Sim.e/fresolution);
-    
-    Par.csp=true;
-    Par.aggregateratio=P.FCR.aggregatechargeratio; % charge rate at aggregate level optimization
-    Par.LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
-    Par.fcrcontracted=P.FCR.contracted;
-    Par.fcrlimits=P.FCR.limits;
-    Par.fastchargesoc=P.FCR.fastchargesoc;
-    Par.slowchargeratio=P.FCR.slowchargeratio;
-    
-end
-
-
 %% setup charging module
 
 dynamicCharging=false;
@@ -152,6 +141,11 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         Par.refillmaxsoc=0.6;   % min. soc to trigger charging during day
         zmacro=[ [1;0;1;0]*ones(1,60*limitHour/P.Sim.e) , [0;0;1;0]*ones(1,60*(24-limitHour)/P.Sim.e) ];
         
+%         TODO: both night and non dynamic charge as much as possible, but for
+%         night, these parameters change after a certain time:
+%         Par.slowchargeratio=0;
+%         Par.fastchargesoc=0.6;
+        
     else
     
         dynamicCharging=true;
@@ -166,12 +160,8 @@ if isfield(P,'Charging') && ~isempty(P.Charging)
         mco2=average2(co2Minute,Beta);
         
         % energy layer variable: static values
-        Par.Beta=P.Charging.beta;
-        Par.chargingHorizon=round(P.Charging.mthor/Par.Beta);
-        Par.v2g=P.Operations.v2g;
-        Par.cyclingcost=P.Tech.cyclingcost;
-        Par.m=P.m;
-        Par.carbonprice=P.carbonprice;
+        Par.Beta=Beta;
+        Par.chargingHorizon=chargingHorizon;
         Par.minsocfleet=Par.minsoc+P.Charging.extrasoc;
         
         % matrix of optimal control variables for energy layer
@@ -183,6 +173,25 @@ else
     
     % charge as much as possible
     zmacro=[1;0;1;0]*ones(1,tsim);
+    
+end
+
+
+%% setup frequency control reserve module
+
+if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR) 
+    
+    [fraw,~,fresolution]=readexternalfile([DataFolder 'grid/' P.FCR.filename '.csv'],P.gridday,false);
+    f=average2(fraw,P.Sim.e/fresolution);
+    
+    Par.aggregateratio=P.FCR.aggregatechargeratio; % charge rate at aggregate level optimization
+    Par.LimitFCR=ceil(P.FCR.contracted*1000/P.Tech.chargekw);
+    Par.fcrcontracted=P.FCR.contracted;
+    Par.fcrlimits=P.FCR.limits;
+    Par.fastchargesoc=P.FCR.fastchargesoc;
+    Par.slowchargeratio=P.FCR.slowchargeratio;
+    
+    Par.SPlength=Beta;
     
 end
 
@@ -397,16 +406,13 @@ for i=1:tsim
         % Vin: vehicles information in the form: [station delay soc connected relocating]
         Vin=[clusters(ui) , Par.Epsilon*di' , available.*q(i,:)' , s(1,:)' , logical(s(4,:)+s(5,:))' ];
         
+        % Nin: passenger information in the form: [number waiting, arrivals expected, departures expected]
         Nin=[dw , round(sum(fd(i:i+ts,:)))' , round(sum(fo(i:i+ts+tr,:)))'];
         
-        ParRel.Trs=Trs*Par.Epsilon;
-        ParRel.limite=P.Relocation.ts;
-        ParRel.consumption=Par.consumption;
-        ParRel.battery=Par.battery;
-        ParRel.LimitFCR=Par.LimitFCR;
-        ParRel.chargepenalty=Par.chargepenalty;
+        Par.Trs=Ts;
+        Par.limite=P.Relocation.ts;
         
-        [Vout,bkt]=relocationmodule(Vin,Nin,ParRel);
+        [Vout,bkt]=relocationmodule(Vin,Nin,Par);
         
         % update vehicles position
         used=logical(Vout(:,2));
@@ -523,13 +529,15 @@ for i=1:tsim
     atChargingStation=sum(mat1);
     whichcs=(1:ncs)*mat1;
     
-    if Par.csp
+%     Par.slowchargeratio=P.Charging.slowchargeratio(min(ceil(i/60*P.Sim.e),length(P.Charging.slowchargeratio)));
+    
+    if 1 %advancedCharging
         
         % advanced charging algorithm
         
-        if rem(i,Beta/P.Sim.e)==1
+        if rem(i-1,Par.SPlength/P.Sim.e)==0
         
-            setPoints=setpointfleet(Par,q(i,:),s(1,:),whichcs,zmacro(1:3,t));
+            setPoints=setpointfleet(Par,q(i,:),s(1,:),whichcs,zmacro(1:2,t));
             
         end
         

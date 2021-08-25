@@ -21,7 +21,7 @@
 % 
 % == Output ==
 % Z: [4 x 1]    charging set points and info until next call, in the form: 
-%               [relative charging, relative discharging, max charging allowed, energy required by trips]
+%               [charging, discharging, max charging allowed, energy required by trips] (all kWh) 
 % 
 % See also: mainsim
 
@@ -41,7 +41,7 @@ E.maxchargeminute=Par.chargekw/60*Par.aggregateratio;    % energy exchangeable p
 
 actualminsoc=min(Par.minsocfleet,mean(q)*0.99); % soft minsoc: to avoid violating contraints in cases where current soc is lower than minsoc of energy layer
 
-E.storagemin=Par.battery*Par.m*actualminsoc; % kWh
+E.storagemin=Par.battery*m*actualminsoc; % kWh
 E.einit=sum(q)*Par.battery;     % total initial energy [kWh]
 E.etrip=travelMinutes*Par.consumption;   % energy used per step [kWh] 
 

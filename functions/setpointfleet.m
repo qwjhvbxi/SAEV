@@ -6,7 +6,7 @@
 function [SetPoints]=setpointfleet(Par,q,s,u,z)
 
 % number of time steps
-H=Par.Beta/Par.Epsilon;
+H=Par.SPlength/Par.Epsilon;
 
 % number of charging stations
 ncs=length(Par.cssize);
@@ -18,16 +18,16 @@ ac=Par.chargekw/Par.battery/60*Par.Epsilon;
 acv=(q<Par.fastchargesoc)*ac+(q>=Par.fastchargesoc)*ac*Par.slowchargeratio;
 
 % aggregate set point (kWh)
-SetPointUpPeriod=(z(1));  % set point of aggregate fleet (kWh)
-SetPointDownPeriod=(z(2));  % set point of aggregate fleet (kWh)
+SetPointUpPeriod=(z(1)/Par.Beta*Par.SPlength);  % set point of aggregate fleet (kWh)
+SetPointDownPeriod=(z(2)/Par.Beta*Par.SPlength);  % set point of aggregate fleet (kWh)
 
 % expected capacity in the period for each vehicle (kWh)
 CapUpPeriod=max(0,s.*min(acv*H,Par.maxsoc-q)*Par.battery); % charge
 CapDownPeriod=max(0,s.*min(acv*H,(q-Par.v2gminsoc)*Par.efficiency)*Par.battery); % discharge
 
 % expected capacity in the period for each charging station (kWh)
-CapUpPeriodCS=min(accumarray(u(s)',CapUpPeriod(s)',[ncs,1]),Par.cssize*Par.chargekw*Par.Beta/60);
-CapDownPeriodCS=min(accumarray(u(s)',CapDownPeriod(s)',[ncs,1]),Par.cssize*Par.chargekw*Par.Beta/60);
+CapUpPeriodCS=min(accumarray(u(s)',CapUpPeriod(s)',[ncs,1]),Par.cssize*Par.chargekw*Par.SPlength/60);
+CapDownPeriodCS=min(accumarray(u(s)',CapDownPeriod(s)',[ncs,1]),Par.cssize*Par.chargekw*Par.SPlength/60);
 
 % set point for fleet for each time step (kWh)
 SetPoints(1)=min(SetPointUpPeriod,sum(CapUpPeriodCS))/H;  % set point of aggregate fleet (kWh) UP

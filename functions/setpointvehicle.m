@@ -74,30 +74,38 @@ e=CapUp*eRatioUp-CapDown*eRatioDown;
 
 %% FCR provision
 
-af=Par.fcrcontracted*1000/Par.battery/60*Par.Epsilon;    % FCR rate per time step (normalized)
+if f~=0 && Par.fcrcontracted>0
 
-% needed FCR power
-FCRNeed=(f-50)/(Par.fcrlimits(2)-Par.fcrlimits(1))*2;
-FCRNeedUp=af*min(1,max(0,FCRNeed)); % charge
-FCRNeedDown=af*min(1,max(0,-FCRNeed)); % discharge
+    af=Par.fcrcontracted*1000/Par.battery/60*Par.Epsilon;    % FCR rate per time step (normalized)
 
-% available power from fleet
-AvailableUp=s.*min(Par.ac-max(0,e),1-(q+e)); % charge
-AvailableDown=s.*min(Par.ac-max(0,-e),(q+e)-Par.minsoc); % discharge
+    % needed FCR power
+    FCRNeed=(f-50)/(Par.fcrlimits(2)-Par.fcrlimits(1))*2;
+    FCRNeedUp=af*min(1,max(0,FCRNeed)); % charge
+    FCRNeedDown=af*min(1,max(0,-FCRNeed)); % discharge
 
-% calculate ratios
-if sum(AvailableUp)>0
-    FCRRatioUp=min(1,FCRNeedUp/sum(AvailableUp));
+    % available power from fleet
+    AvailableUp=s.*min(Par.ac-max(0,e),1-(q+e)); % charge
+    AvailableDown=s.*min(Par.ac-max(0,-e),(q+e)-Par.minsoc); % discharge
+
+    % calculate ratios
+    if sum(AvailableUp)>0
+        FCRRatioUp=min(1,FCRNeedUp/sum(AvailableUp));
+    else
+        FCRRatioUp=0;
+    end
+    if sum(AvailableDown)>0
+        FCRRatioDown=min(1,FCRNeedDown/sum(AvailableDown));
+    else
+        FCRRatioDown=0;
+    end
+
+    % calculate FCR power contributions
+    ef=AvailableUp.*FCRRatioUp-AvailableDown.*FCRRatioDown;
+
 else
-    FCRRatioUp=0;
+    
+    ef=0;
+    
 end
-if sum(AvailableDown)>0
-    FCRRatioDown=min(1,FCRNeedDown/sum(AvailableDown));
-else
-    FCRRatioDown=0;
-end
-
-% calculate FCR power contributions
-ef=AvailableUp.*FCRRatioUp-AvailableDown.*FCRRatioDown;
 
 end
