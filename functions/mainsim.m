@@ -242,6 +242,9 @@ end
 tariff=ones(nc^2,ceil(tsim/tp))*P.Pricing.basetariffkm;
 surcharge=zeros(nc*2,ceil(tsim/tp));
 
+% station sizes
+simplifiedCsRelocation=prod(isinf(chargingStations(:,2)));
+
 
 %% initial states
 
@@ -252,7 +255,7 @@ q(1,:)=P.Operations.initialsoc.*ones(1,P.m);
 if isfield(P.Operations,'uinit')
     u(1,:)=P.Operations.uinit;
 else
-    u(1,:)=chargingStations(randi(nc,1,P.m),1);
+    u(1,:)=chargingStations(randi(ncs,1,P.m),1);
 end
 
 % initial delay
@@ -261,7 +264,9 @@ if isfield(P.Operations,'dinit')
 end
 
 % initial status
-atChargingStation=sum(u(1,:)==chargingStations(:,1));
+mat1=(u(1,:)==chargingStations(:,1));
+atChargingStation=sum(mat1);
+whichcs=(1:ncs)*mat1;
 s(1,:)=logical(atChargingStation.*(d(1,:)==0));
 s(2,:)=logical(~atChargingStation.*(d(1,:)==0));
 

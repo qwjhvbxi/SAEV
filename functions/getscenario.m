@@ -11,13 +11,6 @@ DataFolder=getdatafolder();
 
 load([DataFolder 'scenarios/' scenario '.mat'],'T','C','D','Clusters','clusterIDs','chargingStations');
 
-
-%% setup clustering
-
-if exist('Clusters','var')
-    clusters=Clusters;
-end
-
 if ~exist('T','var')
     k=strfind(scenario,'_');
     scenarioRoot=scenario(1:k(end)-1);
@@ -31,17 +24,28 @@ else
     n=size(T(1).traveltime,1);
 end
 
-if ~exist('Clusters','var')
+
+%% setup charging stations
+
+if ~exist('chargingStations','var')
     chargingStations=(1:n)';
-    clusters=(1:n)';
 end
 
 if size(chargingStations,2)==1
     chargingStations=[chargingStations , Inf(length(chargingStations),1)];
 end
 
-if ~exist('clusterIDs','var')
-    clusterIDs=chargingStations(:,1);
+
+%% setup clustering
+
+if exist('Clusters','var')
+    clusters=Clusters;
+    if ~exist('clusterIDs','var') % legacy
+        clusterIDs=chargingStations(:,1);
+    end
+else
+    clusters=(1:n)';
+    clusterIDs=(1:n)';
 end
 
 
