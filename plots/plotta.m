@@ -67,5 +67,17 @@ switch PlotType
         ylabel('vehicles')
         legend({'connected';'idle';'moving';'relocating';'reloc. to CS'})
         
+    case 'waiting'
+        
+        % waiting times
+        prettyfigure
+        plotwaitingtimes(Res.Params.cumulativeTripArrivals,Res.Sim.waiting,10,Res.Sim.dropped)
+        xlim([0,24])
+        xticks(xt)
+        xlabel('hours')
+%         if sum(Res.Sim.dropped)>0
+%             legend({'waiting','dropped'})
+%         end
+        
 end
 

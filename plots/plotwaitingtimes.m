@@ -1,10 +1,11 @@
 function plotwaitingtimes(Atimes,waiting,binsize,dropped)
 
-if nargin>3
+if nargin>3 && sum(dropped)>0
     plotdropped=true;
 else 
     plotdropped=false;
 end
+
 
 
 if length(Atimes)<length(waiting)
@@ -46,12 +47,15 @@ else
         
 end
 
-plot(1:T,attese./arrivi)
-
+x=linspace(0,24,T);
+plot(x,attese./arrivi)
+ylabel('avg. wait (minutes)')
+        
 if plotdropped
     hold on
     yyaxis right
-    plot(1:T,drops);
+    plot(x,drops'./arrivi*100);
+    ylabel('dropped requests (%)')
 end
 
 end
