@@ -91,7 +91,8 @@ Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Opera
     'battery',P.Tech.battery,'maxwait',P.Operations.maxwait,'VOT',P.Pricing.VOT,'traveltimecost',P.Pricing.traveltimecost,...
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'SPlength',1,...
     'cyclingcost',P.Tech.cyclingcost,'carbonprice',P.carbonprice,'v2g',P.Operations.v2g,'fastchargesoc',0,'slowchargeratio',1,...
-    'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption,'cssize',chargingStations(:,2));
+    'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption,...
+    'cspos',chargingStations(:,1),'cssize',chargingStations(:,2));
 
 % distances
 if ~isstruct(T)
@@ -311,17 +312,32 @@ for i=1:tsim
     
     %% move idle vehicles back to charging stations
     
-    if nc<n
-        idleTime=g.*(1-atChargingStation);
-        IdleReached=(idleTime>=P.Operations.maxidle/P.Sim.e);
-        ui(IdleReached)=chargingStations(closestCS(ui(IdleReached)),1);
-        relodistCS=Tr(sub2ind(size(Tr),u(i,IdleReached),ui(IdleReached)));
-        relodistCSkm=D(sub2ind(size(D),u(i,IdleReached),ui(IdleReached)));
-        di(IdleReached)=relodistCS;
-        s(2,IdleReached)=0;
-        s(5,IdleReached)=1;
-        relodist(i)=relodist(i)+sum(relodistCS);
-        relodistkm(i)=relodistkm(i)+sum(relodistCSkm);
+    if ncs<n
+        
+        selected=[];
+        
+        % find relocation actions
+        if simplifiedCsRelocation
+            uinew=ui;
+            idleTime=g.*(1-atChargingStation);
+            IdleReached=(idleTime>=P.Operations.maxidle/P.Sim.e);
+            selected=IdleReached;
+            uinew(selected)=chargingStations(closestCS(uinew(selected)),1);
+        elseif rem(i-1,10)==0
+            [uinew,selected]=movetocs(Par,ui,g,q(i,:));            
+        end 
+        
+        % implement actions
+        if ~isempty(selected)
+            relodistCS=Tr(sub2ind(size(Tr),ui(selected),uinew(selected)));
+            relodistCSkm=D(sub2ind(size(D),ui(selected),uinew(selected)));
+            ui=uinew;
+            di(selected)=relodistCS;
+            s(2,selected)=0;
+            s(5,selected)=1;
+            relodist(i)=relodist(i)+sum(relodistCS);
+            relodistkm(i)=relodistkm(i)+sum(relodistCSkm);
+        end
     end
     
     
@@ -656,6 +672,7 @@ Params.Tr=uint8(Tr);
 Params.elep=elep;
 Params.co2=co2;
 Params.tsim=tsim;
+Params.chargingStations=chargingStations;
 
 % Res struct generation
 Res.Params=Params;
