@@ -1,56 +1,59 @@
-%% generateClusters(scenario,K,Plots)
-% generate a new scenario file with K charging stations/clusters found with
-% k-means. The new scenario is named 'scenario_K'
-% If Plots==true, it plots the corresponding scenario
+%% generateClusters(scenario,K,J[,kmed])
+% generate a new scenario file with J charging stations and K clusters found with
+% k-medoids (kmed=1) or k-means. The new scenario is named 'scenario_J-K'
 
-function generatescenarioclusters(scenario,K,Plots)
+function generatescenarioclusters(scenario,K,J,kmed)
+
+if nargin<3
+    J=K;
+end
+if nargin<4
+    kmed=true;
+end
 
 addpath functions
 DataFolder=getdatafolder();
 
-if nargin<3 || ~Plots
+load([DataFolder 'scenarios/' scenario],'T','C')
 
-    load([DataFolder 'scenarios/' scenario],'T','C')
-    
-    T=gettraveltimenow(T,0);
-    
-    % remove nan values if they exist
-    nanT=isnan(T(:,1));
-    realT=find(1-nanT);
-    tempC=C;
-    tempC(nanT,:)=[];
+T=gettraveltimenow(T,0);
 
+% remove nan values if they exist
+nanT=isnan(T(:,1));
+realT=find(1-nanT);
+tempC=C;
+tempC(nanT,:)=[];
+
+if kmed
+
+    % generate clusters
+    [IDX,~,~,~,nodeIdClusters] =kmedoids(tempC,K);
+    
     % generate charging stations
-    [IDX,CS,~,D] =kmeans(tempC,K);
-
-    % find closest node to station
-    [~,nodeID]=min(D);
-
-    % associate to real node number
-    chargingStations=realT(nodeID);
-    Clusters=zeros(length(T),1);
-    for i=1:length(IDX)
-        Clusters(realT(i))=IDX(i);
-    end
-
-    T(isnan(T))=0;
-
-    save([DataFolder 'scenarios/' scenario '_' num2str(K)],'Clusters','chargingStations')
-
+    [~,~,~,~,nodeIdCs] =kmedoids(tempC,J);
+    
+%     [~,CS2,~,D,nodeIdCs0] =kmedoids(CS,J);
+%     nodeIdCs=nodeIdClusters(nodeIdCs0)
+    
 else
     
-    load([DataFolder 'scenarios/' scenario],'C');
-    load([DataFolder 'scenarios/' scenario '_' num2str(K)],'Clusters','chargingStations')
-
-    c=2
-
-    figure
-    hold on
-    scatter(C(:,1),C(:,2))
-    scatter(C(chargingStations,1),C(chargingStations,2),'filled')
-    scatter(C(Clusters==c,1),C(Clusters==c,2),'s')
-    axis equal tight
+    % generate clusters
+    [IDX,~,~,D] =kmeans(tempC,K);
+    [~,nodeIdClusters]=min(D); % find closest node to station
+    
+    % generate charging stations
+    [~,~,~,D] =kmeans(tempC,J);
+    [~,nodeIdCs]=min(D); % find closest node to station
     
 end
 
+% associate to real node number
+chargingStations=realT(nodeIdCs);
+clusterIDs=realT(nodeIdClusters);
+Clusters=zeros(length(T),1);
+for i=1:length(IDX)
+    Clusters(realT(i))=IDX(i);
+end
+
+save([DataFolder 'scenarios/' scenario '_' num2str(K)],'Clusters','clusterIDs','chargingStations')
 
