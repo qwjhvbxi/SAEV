@@ -9,6 +9,11 @@ if n==1
     return
 end
 
+if n==0
+    av=nan;
+    return
+end
+
 if (rem(n,1)==0)
     
     if (n>0)
