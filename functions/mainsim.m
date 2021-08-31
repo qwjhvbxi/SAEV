@@ -93,7 +93,7 @@ Par=struct('D',D,'Epsilon',P.Sim.e,'minsoc',P.Operations.minsoc,'maxsoc',P.Opera
     'LimitFCR',0,'chargepenalty',1,'v2gminsoc',P.Operations.v2gminsoc,'efficiency',P.Tech.efficiency,'SPlength',1,...
     'cyclingcost',P.Tech.cyclingcost,'carbonprice',P.carbonprice,'v2g',P.Operations.v2g,'fastchargesoc',0,'slowchargeratio',1,...
     'refillmaxsoc',0,'aggregateratio',1,'chargekw',P.Tech.chargekw,'consumption',P.Tech.consumption,...
-    'cspos',chargingStations(:,1),'cssize',chargingStations(:,2));
+    'cspos',chargingStations(:,1),'cssize',chargingStations(:,2),'Beta',P.Charging.beta);
 
 % distances
 if ~isstruct(T)
@@ -130,52 +130,21 @@ end
 
 %% setup charging module
 
-dynamicCharging=false;
-Beta=0;
-setPoints=[];
-
-if isfield(P,'Charging') && ~isempty(P.Charging)
+if Par.Beta>0
     
-    if strcmp(P.Charging,'night')
-        
-        % night charging
-        limitHour=5;        % charging hour limit
-        Par.refillmaxsoc=0.6;   % min. soc to trigger charging during day
-        zmacro=[ [1;0;1;0]*ones(1,60*limitHour/P.Sim.e) , [0;0;1;0]*ones(1,60*(24-limitHour)/P.Sim.e) ];
-        
-%         TODO: both night and non dynamic charge as much as possible, but for
-%         night, these parameters change after a certain time:
-%         Par.slowchargeratio=0;
-%         Par.fastchargesoc=0.6;
-        
-    else
-    
-        dynamicCharging=true;
-        
-        % inputs
-        Beta=P.Charging.beta;
-        chargingHorizon=round(P.Charging.mthor/Beta);
-        
-        % variables
-        etsim=floor(1440/Beta); % number of charging decisions
-        melep=average2(elepMinute,Beta);
-        mco2=average2(co2Minute,Beta);
-        
-        % energy layer variable: static values
-        Par.Beta=Beta;
-        Par.chargingHorizon=chargingHorizon;
-        Par.minsocfleet=Par.minsoc+P.Charging.extrasoc;
-        
-        % matrix of optimal control variables for energy layer
-        zmacro=zeros(4,etsim+chargingHorizon); 
-        
-    end
+    % variables
+    Par.chargingHorizon=round(P.Charging.mthor/Par.Beta);
+    Par.minsocfleet=Par.minsoc+P.Charging.extrasoc;
+    etsim=floor(1440/Par.Beta); % number of charging decisions
+    melep=average2(elepMinute,Par.Beta);
+    mco2=average2(co2Minute,Par.Beta);
 
+    % matrix of optimal control variables for energy layer
+    zmacro=zeros(4,etsim+Par.chargingHorizon); 
+    
 else
-    
-    % charge as much as possible
-    zmacro=[1;0;1;0]*ones(1,tsim);
-    
+    zmacro=[0;0];
+    t=1;
 end
 
 
@@ -193,19 +162,19 @@ if isfield(P,'Charging') && isfield(P,'FCR') && ~isempty(P.FCR)
     Par.fastchargesoc=P.FCR.fastchargesoc;
     Par.slowchargeratio=P.FCR.slowchargeratio;
     
-    Par.SPlength=Beta;
+    Par.SPlength=Par.Beta;
     
 end
 
 
 %% generate aggregate trip statistics
 
-emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Beta) '.mat'];
+emdFileName=[DataFolder 'temp/emd-' P.tripfolder '-' num2str(P.tripday) '-' num2str(Par.Beta) '.mat'];
 if exist(emdFileName,'file')
     load(emdFileName,'dkemd','dkod');
 else
-    dkod=computetraveltime(A,Atimes,T,Beta); % TODO: should be on prediction
-    dkemd=computeemd(fo,fd,Ts,Beta); 
+    dkod=computetraveltime(A,Atimes,T,Par.Beta); % TODO: should be on prediction
+    dkemd=computeemd(fo,fd,Ts,Par.Beta); 
     save(emdFileName,'dkemd','dkod');
 end
 
@@ -521,26 +490,18 @@ for i=1:tsim
     
     %% charging optimization
     
-    if dynamicCharging
-        
-        if rem(i,Beta/P.Sim.e)==1
+    if rem(i,Par.Beta/Par.Epsilon)==1
 
-            % index of energy layer
-            t=(i-1)/(Beta/P.Sim.e)+1;
-            
-            dktripnow=dkod(t:t+chargingHorizon-1)+dkemd(t:t+chargingHorizon-1);    % minutes spent traveling during this horizon
-            melepnow=melep(t:t+chargingHorizon-1)/1000; % convert to [$/kWh]
-            mco2now=mco2(t:t+chargingHorizon-1); % [g/kWh]
+        % index of energy layer
+        t=(i-1)/(Par.Beta/Par.Epsilon)+1;
 
-            currentsp=chargingmodule(Par,q(i,:),dktripnow,melepnow,mco2now);
-            
-            zmacro(:,t)=currentsp;
+        dktripnow=dkod(t:t+Par.chargingHorizon-1)+dkemd(t:t+Par.chargingHorizon-1);    % minutes spent traveling during this horizon
+        melepnow=melep(t:t+Par.chargingHorizon-1)/1000; % convert to [$/kWh]
+        mco2now=mco2(t:t+Par.chargingHorizon-1); % [g/kWh]
 
-        end
-        
-    else
-        
-        t=i;
+        currentsp=chargingmodule(Par,q(i,:),dktripnow,melepnow,mco2now);
+
+        zmacro(:,t)=currentsp;
         
     end
     
@@ -551,28 +512,19 @@ for i=1:tsim
     atChargingStation=sum(mat1);
     whichcs=(1:ncs)*mat1;
     
-%     Par.slowchargeratio=P.Charging.slowchargeratio(min(ceil(i/60*P.Sim.e),length(P.Charging.slowchargeratio)));
-    
-    if dynamicCharging
+    Par.slowchargeratio=P.Charging.slowchargeratio(min(ceil(i/60*P.Sim.e),length(P.Charging.slowchargeratio)));
         
-        % advanced charging algorithm
-        
-        if rem(i-1,Par.SPlength/P.Sim.e)==0
-        
-            setPoints=setpointfleet(Par,q(i,:),s(1,:),whichcs,zmacro(1:2,t));
-            
-        end
-        
-        [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),whichcs,setPoints,f(i));
-        
-    else
-    
-        % basic legacy charging algorithm: does not consider station sizes or frequency reserve
-        
-        ei=simplecharging(Par,q(i,:),s(1,:),zmacro(1:3,t));
-        efi=0;
-    
+    if rem(i-1,Par.SPlength/P.Sim.e)==0
+
+        setPoints=setpointfleet(Par,q(i,:),s(1,:),whichcs,zmacro(1:2,t));
+
     end
+
+    [ei,efi]=setpointvehicle(Par,q(i,:),s(1,:),whichcs,setPoints,f(i));
+        
+%     % basic legacy charging algorithm: does not consider station sizes or frequency reserve
+%     ei=simplecharging(Par,q(i,:),s(1,:),zmacro(1:3,t));
+%     efi=0;
     
     e(i,:)=ei;
     ef(i,:)=efi;

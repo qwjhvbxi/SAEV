@@ -84,6 +84,29 @@ if isfield(P,'FCR') && ~isempty(P.FCR) && ~isfield(P.FCR,'aggregatechargeratio')
    	P.FCR.aggregatechargeratio=1;
 end
 
+if isfield(P,'Charging') && ~isempty(P.Charging)
+    
+    if strcmp(P.Charging,'night')
+        P.Charging=[];
+        P.Charging.beta=0;
+        P.Charging.slowchargeratio=[ones(1,5),zeros(1,19)];
+        P.Charging.fastchargesoc=0.6;
+        P.Charging.mthor=0;
+        P.Charging.extrasoc=0;
+    end
+    
+else
+    P.Charging=[];
+    P.Charging.beta=0;
+    P.Charging.mthor=0;
+    P.Charging.extrasoc=0;
+end
+
+if ~isfield(P.Charging,'slowchargeratio')
+    P.Charging.slowchargeratio=1;
+end
+
+
 
 %% legacy pricing conversions
 
