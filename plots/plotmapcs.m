@@ -8,8 +8,15 @@ cspos=chargingStations(:,1);
 
 figure
 hold on
-scatter(C(:,1),C(:,2))
+if length(clusterIDs)<length(clusters)
+    for i=1:length(clusterIDs)
+        thispos=(clusters==i);
+        scatter(C(thispos,1),C(thispos,2))
+    end
+else
+    scatter(C(:,1),C(:,2))
+end
 scatter(C(cspos,1),C(cspos,2),'x')
 text(C(cspos,1),C(cspos,2),num2str(cspos))
-
+axis equal tight
 end
