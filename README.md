@@ -113,6 +113,8 @@ Additional optional fields:
 | mthor     | int   | Time horizon for charging optimization (minutes) |
 | extrasoc  | double| Extra charge level over min. SoC for charging optimization [0,1] |
 | beta      | int   | Lenght of charging optimization interval (minutes) |
+| fastchargesoc     | double | SoC at which vehicles start charging slower | 
+| slowchargeratio   | double | Ratio of slow to fast charging | 
 
 #### `Relocation`
 
@@ -154,8 +156,6 @@ For 'Simplified' algorithm, which uses aggregate predictions:
 | filename      | char | ... | 
 | limits        | double [1x2] | ... | 
 | contracted        | double | Service contract amount (MW) | 
-| fastchargesoc     | double | SoC at which vehicles start charging slower | 
-| slowchargeratio   | double | Ratio of slow to fast charging | 
 | aggregatechargeratio  | double | Equivalent power exchange visible by charging module aggregator | 
 
 ### Data preparation
