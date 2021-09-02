@@ -106,7 +106,7 @@ if ~isfield(P.Charging,'slowchargeratio')
     P.Charging.slowchargeratio=1;
 end
 if ~isfield(P.Charging,'fastchargesoc')
-    P.Charging.slowchargeratio=1;
+    P.Charging.fastchargesoc=1;
 end
 
 
