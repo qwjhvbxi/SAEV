@@ -39,7 +39,7 @@ ncs=length(chargingStations);   % number of CS
 
 % Aforecast is a t x n^2 matrix with probabilities of each OD pair at each
 % time interval (needed only for pricing optimization/modechoice)
-[fo,fd,dkod,Aforecast]=loadpredictions(P,As,Atimes);
+[fo,fd,~,Aforecast]=loadpredictions(P,As,Atimes);
 % [fo,fd,dkod,dkemd,Aforecast]=loadpredictions(P,As,Atimes,Ts);
 
 
@@ -114,20 +114,37 @@ end
 tripDistances=nan(r,1);
 tripDistancesKm=D(sub2ind(size(D),A(:,1),A(:,2)));
 
+% CS relocation depending on station sizes
+simplifiedCsRelocation=prod(isinf(chargingStations(:,2))); 
+
 
 %% setup relocation module
 
-if isfield(P,'Relocation') && ~isempty(P.Relocation)
-    ts=round(P.Relocation.ts/P.Sim.e);
-    tr=round(P.Relocation.tr/P.Sim.e);
-    tx=round(P.Relocation.tx/P.Sim.e);
-    b=zeros(ceil(tsim/tx),nc,'double');  % imbalance
+% if isfield(P,'Relocation') &&  ~isempty(P.Relocation)
+%     ts=round(P.Relocation.ts/P.Sim.e);
+%     tr=round(P.Relocation.tr/P.Sim.e);
+%     tx=round(P.Relocation.tx/P.Sim.e);
+%     b=zeros(ceil(tsim/tx),nc,'double');  % imbalance
+%     autoRelocation=1;
+% else
+%     b=NaN;
+%     autoRelocation=0;
+% end
+if isfield(P,'Relocation') 
     autoRelocation=1;
+    if ~isempty(P.Relocation)
+        ts=round(P.Relocation.ts/P.Sim.e);
+        tr=round(P.Relocation.tr/P.Sim.e);
+        tx=round(P.Relocation.tx/P.Sim.e);
+        b=zeros(ceil(tsim/tx),nc,'double');  % imbalance
+    else
+        tx=NaN;
+        b=NaN;
+    end
 else
     b=NaN;
     autoRelocation=0;
 end
-
 
 %% setup charging module
 
@@ -191,13 +208,18 @@ perDistanceTariff=ones(nc,nc).*P.Pricing.basetariffkm;  % matrix of fares
 surchargeMat=zeros(nc,nc);                              % matrix of surcharges per stations
 
 if isfield(P.Pricing,'alternativecost') && ~isempty(P.Pricing.alternativecost)
-    Aaltp=P.Pricing.alternativecost;
+    Aaltp=double(P.Pricing.alternativecost);
 elseif isfield(P.Pricing,'alternativecostfile') && ~isempty(P.Pricing.alternativecostfile)
     load([DataFolder 'trips/' P.tripfolder '/' P.Pricing.alternativecostfile],'alternativecost');
-    Aaltp=alternativecost{P.tripday};
+    Aaltp=double(alternativecost{P.tripday});
 else
     % alternative price for each user calculated with trip distances in km
-    Aaltp=P.Pricing.alternativecostkm*tripDistancesKm; 
+    Aaltp=double(P.Pricing.alternativecostkm)*tripDistancesKm; 
+end
+
+% check if there is time based cost
+if size(Aaltp,2)>1
+    Aaltp=Aaltp(:,1)+Aaltp(:,2)*P.Pricing.VOT/60;
 end
 
 if P.Pricing.dynamic
@@ -211,9 +233,6 @@ end
 % initialization for dynamic pricing
 tariff=ones(nc^2,ceil(tsim/tp))*P.Pricing.basetariffkm;
 surcharge=zeros(nc*2,ceil(tsim/tp));
-
-% station sizes
-simplifiedCsRelocation=prod(isinf(chargingStations(:,2)));
 
 
 %% initial states
@@ -321,7 +340,6 @@ for i=1:tsim
             %       price of alternative option should be dependent on OD, not single
             %       passenger (the one seen by optimization). Specific cost only for
             %       mode choice module
-            
             % TODO / PRICING: at the end should be only OD pricing, no matter how it's
             % found! (OD based or node based)
             % TODO / PRICING: mintariff in pricing optimization module
