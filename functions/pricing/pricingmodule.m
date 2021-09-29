@@ -1,9 +1,9 @@
-%% [perDistanceTariff,surcharges]=PRICINGMODULE(Pricing,forecastOD,alternativeCosts,ui)
+%% [distancebasedtariff,surcharges,prices]=PRICINGMODULE(Pricing,forecastOD,alternativeCosts,ui)
 % Launch pricing module optimization.
 %
 % See also: mainsim
 
-function [perDistanceTariff,surcharges]=pricingmodule(Pricing,forecastOD,alternativeCosts,ui)
+function [distancebasedtariff,surcharges,prices]=pricingmodule(Pricing,forecastOD,alternativeCosts,ui)
 
 % TODO: output should just be OD pricing, either calculated directly for
 % each OD, or by distance+inboud/outboud node
@@ -11,7 +11,7 @@ function [perDistanceTariff,surcharges]=pricingmodule(Pricing,forecastOD,alterna
 n=size(Pricing.c,1);
     
 % initialize matrix of fare per minute
-perDistanceTariff=ones(n,n).*Pricing.basetariffkm;
+distancebasedtariff=ones(n,n).*Pricing.basetariffkm;
 
 % initialize surcharges per stations
 surcharges=zeros(2*n,1);
@@ -33,7 +33,7 @@ if ~isempty(forecastOD)
 
         if ~nodebased
 
-            [perDistanceTariff,~,~]=nlpricingod(Pricing); % OD-pair-based pricing
+            [distancebasedtariff,~,~]=nlpricingod(Pricing); % OD-pair-based pricing
 
         else 
 
@@ -44,5 +44,8 @@ if ~isempty(forecastOD)
     end
 
 end
+
+surchargemat=surcharges(1:n)+surcharges(n+1:2*n)';
+prices=max(Pricing.mintariff,distancebasedtariff.*Pricing.c)+surchargemat;
 
 end
